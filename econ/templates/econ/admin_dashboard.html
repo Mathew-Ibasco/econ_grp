@@ -1,0 +1,13 @@
+{% extends 'econ/layout.html' %}
+{% load static %}
+{% load i18n %}
+{% block title %}
+Admin Dashboard
+{% endblock %}
+{% block content %}
+    <strong class="message">Good day, Administrator.</strong>
+    <br>
+    <p>
+        It's {{ date | date:"l, d F, Y" }} at {{ date | time:"H:i:s" }}
+    </p>
+{% endblock %}
