@@ -25,20 +25,25 @@
         <section>
             <h2 class="section-title">What is Rail Transport?</h2>
             <div class="card-grid">
+                <!-- Card 1: What is it? -->
                 <div class="info-card">
                     <i class="fas fa-train"></i>
-                    <h3>Definition</h3>
-                    <p>Rail transport moves passengers and goods by train along metal tracks — above ground, underground, or elevated. It's efficient for high-volume movement, reducing congestion and pollution compared to road transport.</p>
+                    <h3>What is Rail Transport?</h3>
+                    <p>Moving passengers and goods by train along metal tracks above ground, underground, or elevated. It is efficient for long-distance travel and heavy cargo.</p>
                 </div>
+               
+                <!-- Card 2: History -->
                 <div class="info-card">
-                    <i class="fas fa-globe-asia"></i>
-                    <h3>Global Evolution</h3>
-                    <p>From ancient Greek rutways to steam locomotives (Industrial Revolution) and today’s high-speed rail & digital tracking — rail remains a backbone of sustainable mobility.</p>
+                    <i class="fas fa-history"></i>
+                    <h3>Historical Evolution</h3>
+                    <p>Early forms traced back to ancient Greece and was developed greatly during the Industrial Revolution with steam-powered locomotives in the 18th-19th centuries.</p>
                 </div>
+               
+                <!-- Card 3: Modern Impact -->
                 <div class="info-card">
-                    <i class="fas fa-chart-line"></i>
-                    <h3>Urban Impact</h3>
-                    <p>Efficient rail networks improve access to jobs, education & healthcare. They reduce traffic, enhance economic productivity, and support inclusive urban growth.</p>
+                    <i class="fas fa-microchip"></i>
+                    <h3>Modern Railways</h3>
+                    <p>Today's systems feature high-speed trains and digital tracking, making passenger travel and freight movement more effective across the globe.</p>
                 </div>
             </div>
         </section>
@@ -46,25 +51,53 @@
         <!-- Philippines rail context -->
         <section>
             <h2 class="section-title">Railways in the Philippines</h2>
-            <p style="margin-bottom: 1.5rem; font-size: 1.05rem;">Currently, the Philippines has three major railway systems: MRT, LRT, and PNR. Most active services are in Luzon, particularly Metro Manila, serving millions of commuters daily. These systems are heavily used but remain concentrated; expansions like the Metro Manila Subway and North-South Commuter Railway aim to transform connectivity nationwide.</p>
-            
-            <!-- LRT/MRT Map placeholder (map image from the doc) -->
-            <div class="map-section">
-                <div class="map-figure">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Metro_Manila_LRT_and_MRT_Map.svg/1280px-Metro_Manila_LRT_and_MRT_Map.svg.png" alt="Manila LRT-MRT network map" onerror="this.src='https://ik.imagekit.io/tvlk/blog/2025/01/p2EtANCG-image.jpeg'">
-                    <div class="map-caption">
-                        <i class="fas fa-map-marked-alt"></i> Metro Manila Rail Network: LRT-1 (Yellow), LRT-2 (Purple), MRT-3 (Blue). Key corridors that improve urban mobility.
+            <div class="railway-flex" style="
+                display: flex;
+                flex-wrap: nowrap;          
+                align-items: flex-start;
+                gap: 2rem;
+                margin-top: 1rem;
+                justify-content: space-between;
+            ">
+               
+                <!-- Text side (now left) -->
+                <div class="definition-side" style="
+                    flex: 0 0 48%;            
+                    max-width: 600px;
+                    font-size: 1.50rem;
+                    line-height: 1.6;
+                ">
+                    <p>
+                        Currently, the Philippines has three major railway systems: the Manila Metro Rail Transit (MRT), the Light Rail Transit (LRT), and the Philippine National Railways (PNR). At present, active railway services are mainly located in Luzon, which means rail transport is not yet widely available across the entire country. These systems are concentrated in limited areas, particularly in and around Metro Manila and parts of Luzon, but they remain heavily used by many Filipino commuters.
+                    </p>
+                </div>
+               
+                <!-- Map side (now right) -->
+                <div class="map-side" style="
+                    flex: 0 0 48%;            
+                    background: #eef3fa;
+                    padding: 1rem;
+                    border-radius: 24px;
+                    text-align: center;
+                ">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Manila_LRT-MRT_map.png/1280px-Manila_LRT-MRT_map.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail&_=20101102101703"
+                        alt="Manila LRT-MRT network map"
+                        style="width:100%; height:auto; border-radius:12px;">
+                    <div class="map-caption" style="margin-top: 0.75rem; font-size: 0.85rem;">
+                        <i class="fas fa-map-marked-alt"></i> Metro Manila Rail Network: LRT-1 (Yellow), LRT-2 (Purple), MRT-3 (Blue).
                     </div>
                 </div>
+               
             </div>
-            
+        </section>
+           
             <div class="rail-lineup">
                 <!-- LRT1 Card -->
                 <div class="rail-card">
                     <img src="https://ik.imagekit.io/tvlk/blog/2025/01/p2EtANCG-image.jpeg" alt="LRT Line 1 train">
                     <div class="rail-card-content">
                         <h4>LRT Line 1 (Yellow)</h4>
-                        <p>First LRT in Southeast Asia, opened 1984. Runs 15 km from Baclaran to Roosevelt, serving Taft Avenue–Rizal route. Extended to North Avenue, improving interchange with MRT-7 & common station.</p>
+                        <p>Southeast Asia's first LRT system (1984). 15-km elevated railway from Baclaran to Monumento, later extended via Rizal Line and North Extension (Balintawak, Roosevelt).</p>
                     </div>
                 </div>
                 <!-- LRT2 Card -->
@@ -80,7 +113,7 @@
                     <img src="https://media.philstar.com/images/articles/met2-mrt-3_2018-04-02_20-32-49.jpg" alt="MRT-3 along EDSA">
                     <div class="rail-card-content">
                         <h4>MRT-3 (Blue Line)</h4>
-                        <p>16.9 km along EDSA from North Avenue to Taft Avenue. Decongests the busiest corridor, serving Cubao, Ortigas, Ayala, and Taft.</p>
+                        <p>16.9 km along EDSA from North Avenue to Taft Avenue. Decongests the busiest route, serving Cubao, Ortigas, Ayala, and Taft.</p>
                     </div>
                 </div>
                 <!-- PNR Card -->
@@ -88,57 +121,57 @@
                     <img src="https://www.rappler.com/tachyon/2023/06/pnr-commuters-philippine-national-railways-train-dotr-june-2-2023-003-scaled.jpg" alt="PNR train commuters">
                     <div class="rail-card-content">
                         <h4>Philippine National Railways</h4>
-                        <p>Historic line since 1892, currently serving commuter routes. Vision to expand Manila-Legazpi and cargo links, vital for inter-regional connectivity.</p>
+                        <p>Historic line since 1892, currently serving commuter routes. Vision to expand Manila-Legazpi and cargo movements, vital for inter-regional connectivity.</p>
                     </div>
                 </div>
             </div>
             <p class="caption-img" style="margin-top: 1rem;"><i class="fas fa-camera"></i> Above: Key rail systems serving the Philippine capital region. Investments in modernisation are reshaping daily commutes.</p>
         </section>
 
-        <!-- Accessibility & Mobility + Economic Relations double section -->
+         <!-- Accessibility & Mobility + Economic Relations double section -->
         <section>
             <h2 class="section-title">Accessibility, Mobility & The Economy</h2>
-            <div class="split-columns">
-                <div class="split-item">
-                    <i class="fas fa-wheelchair" style="font-size: 2rem; color:#1c6e8f;"></i>
-                    <h3 style="margin-top: 10px;">Accessibility & Urban Mobility</h3>
-                    <p>As cities grow, reliable public transport becomes vital. Rail systems move masses efficiently, reducing traffic congestion and improving access to workplaces, schools, and healthcare. In Metro Manila, congestion costs billions annually — better rail networks ease this burden and make cities more inclusive.</p>
-                    <img src="https://www.moneymax.ph/hs-fs/hubfs/commuter%20problems%20-%20Poor%20Public%20Transportation%20System.jpg?width=1440&name=commuter%20problems%20-%20Poor%20Public%20Transportation%20" alt="Manila commuter congestion" style="width:100%; border-radius: 18px; margin-top: 15px;">
-                    <div class="caption-img">Heavy road congestion highlights the need for mass rail transit.</div>
+            <div class="split-columns" style="display: flex; flex-wrap: wrap; gap: 2rem;">
+               
+                <!-- 1st Card -->
+                <div class="split-item" style="
+                    flex: 1 1 45%;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                ">
+                    <div>
+                        <i class="fas fa-wheelchair" style="font-size: 2rem; color:#1c6e8f;"></i>
+                        <h3 style="margin-top: 10px;">Accessibility & Urban Mobility</h3>
+                        <p>As cities grow, reliable public transport becomes vital. Rail systems move masses efficiently, reducing traffic congestion and improving access to workplaces, schools, and healthcare. In Metro Manila, congestion costs billions annually, but better rail networks ease this burden and make cities more inclusive.</p>
+                    </div>
+                    <div>
+                        <img src="https://www.moneymax.ph/hs-fs/hubfs/commuter%20problems%20-%20Poor%20Public%20Transportation%20System.jpg?width=1440&name=commuter%20problems%20-%20Poor%20Public%20Transportation%20"
+                            alt="Manila commuter congestion"
+                            style="width:100%; border-radius: 18px; margin-top: 15px; object-fit: cover; height: 180px;">
+                        <div class="caption-img" style="font-size: 0.85rem; margin-top: 5px;">Heavy road congestion highlights the need for mass rail transit.</div>
+                    </div>
                 </div>
-                <div class="split-item">
-                    <i class="fas fa-chart-simple" style="font-size: 2rem; color:#1c6e8f;"></i>
-                    <h3 style="margin-top: 10px;">Economic Relations</h3>
-                    <p>Government spending on rail infrastructure acts as an economic injection — creating jobs, supporting firms, and improving productivity. Efficient railways lower travel costs, boost business access, and strengthen the circular flow of income. The Philippines' "Build Better More" program prioritises rail to unlock regional growth.</p>
-                    <img src="https://media.philstar.com/photos/2019/12/11/nat_2019-12-11_21-33-23.jpg" alt="Philippines railway construction economic impact" style="width:100%; border-radius: 18px; margin-top: 15px;">
-                    <div class="caption-img">Infrastructure investments fuel employment and urban competitiveness.</div>
+               
+                <!-- 2nd Card -->
+                <div class="split-item" style="
+                    flex: 1 1 45%;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                ">
+                    <div>
+                        <i class="fas fa-chart-simple" style="font-size: 2rem; color:#1c6e8f;"></i>
+                        <h3 style="margin-top: 10px;">Economic Relations</h3>
+                        <p>Government spending on rail infrastructure acts as an economic injection that creates jobs, supports firms, and improves productivity. Efficient railways lower travel costs, boost business access, and strengthen the circular flow of income. The Philippines' "Build Better More" program prioritises rail to unlock regional growth.</p>
+                    </div>
+                    <div>
+                        <img src="https://media.philstar.com/photos/2019/12/11/nat_2019-12-11_21-33-23.jpg"
+                            alt="Philippines railway construction economic impact"
+                            style="width:100%; border-radius: 18px; margin-top: 15px; object-fit: cover; height: 180px;">
+                        <div class="caption-img" style="font-size: 0.85rem; margin-top: 5px;">Infrastructure investments fuel employment and urban competitiveness.</div>
+                    </div>
                 </div>
-            </div>
-        </section>
-
-        <!-- Additional: sustainable vision & journal references teaser -->
-        <section>
-            <h2 class="section-title">Why Rail Matters for the Future</h2>
-            <div class="card-grid">
-                <div class="info-card">
-                    <i class="fas fa-leaf"></i>
-                    <h3>Sustainability</h3>
-                    <p>Trains emit far less CO₂ per passenger than cars. Expanding rail reduces pollution and supports green urban development. The shift to electric and hybrid rail systems aligns with global climate goals.</p>
-                </div>
-                <div class="info-card">
-                    <i class="fas fa-hand-holding-heart"></i>
-                    <h3>Social Equity</h3>
-                    <p>Affordable and accessible rail improves mobility for low-income groups, elderly and PWDs. Stations with universal design create more inclusive cities.</p>
-                </div>
-                <div class="info-card">
-                    <i class="fas fa-city"></i>
-                    <h3>Integrated Planning</h3>
-                    <p>Successful cities like London, Tokyo, and Singapore prove that rail-oriented development boosts property values and reduces car dependency. The Philippines can replicate this through transit-oriented design.</p>
-                </div>
-            </div>
-            <div style="background: #eaf3f9; padding: 1.3rem; border-radius: 24px; margin-top: 1.5rem;">
-                <p><i class="fas fa-graduation-cap"></i> <strong>Research spotlight:</strong> According to academic papers (see Journals section), railway stations act as hubs for sustainable transformation — improving intermodality, economic activity and public realm. Cross-regional analysis shows rail enhances accessibility by up to 12% under congested conditions. Our full Journals tab provides deeper insights into urban accessibility governance and social equity.</p>
-            </div>
         </section>
 
         <!-- Photo gallery teaser (fulfilling 10 photos requirement but shown as preview with captions) -->
