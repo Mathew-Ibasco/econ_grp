@@ -1,0 +1,13 @@
+/*test to verify connection*/
+.message {
+    font-weight: 600;
+    color: blue;
+}
+
+/*open dropdowns on mouse hover*/
+@media (min-width: 992px) {
+    .navbar .dropdown:hover > .dropdown-menu {
+        display: block;
+        margin-top: 0;
+    }
+}
