@@ -132,3 +132,39 @@ def index(request):
             'date': datetime.now()
         }
     )
+
+def blog(request):
+    return render(
+        request,
+        'econ/blog.html',
+        {
+            'date': datetime.now()
+        }
+    )
+
+def journal(request):
+    return render(
+        request,
+        'econ/journal.html',
+        {
+            'date': datetime.now()
+        }
+    )
+
+def vlog(request):
+    return render(
+        request,
+        'econ/vlog.html',
+        {
+            'date': datetime.now()
+        }
+    )
+
+def gallery(request):
+    return render(
+        request,
+        'econ/gallery.html',
+        {
+            'date': datetime.now()
+        }
+    )
