@@ -5,9 +5,541 @@
 Landing page
 {% endblock %}
 {% block content %}
-    <strong class="message">Good day.</strong>
-    <br>
-    <p>
-        It's {{ date | date:"l, d F, Y" }} at {{ date | time:"H:i:s" }}
-    </p>
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Rail Transport & Urban Mobility | Home</title>
+    <!-- Google Fonts for clean typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6 (free icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7fc;
+            color: #1e2a3e;
+            scroll-behavior: smooth;
+            line-height: 1.5;
+        }
+
+        /* container utility */
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* header / navigation */
+        .site-header {
+            background: #0b2b3b;
+            color: white;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+        }
+
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo h1 {
+            font-size: 1.65rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .logo p {
+            font-size: 0.75rem;
+            color: #bbdef5;
+            margin-top: 4px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: 0.2s;
+            border-bottom: 2px solid transparent;
+            padding-bottom: 4px;
+        }
+
+        .nav-links a:hover, .nav-links .active {
+            border-bottom-color: #ffb347;
+            color: #ffdd99;
+        }
+
+        /* hero section */
+        .hero {
+            background: linear-gradient(97deg, #1c4e6f 0%, #0f3b4f 100%);
+            color: white;
+            padding: 3.5rem 0;
+        }
+
+        .hero-grid {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .hero-text {
+            flex: 1.2;
+        }
+
+        .hero-text h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .hero-text p {
+            font-size: 1.1rem;
+            margin-bottom: 1.8rem;
+            opacity: 0.9;
+        }
+
+        .hero-img {
+            flex: 0.9;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 20px 30px -10px rgba(0,0,0,0.3);
+        }
+
+        .hero-img img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .hero-img img:hover {
+            transform: scale(1.02);
+        }
+
+        .btn-soft {
+            background: #ffb347;
+            color: #1e2a3e;
+            border: none;
+            padding: 12px 28px;
+            font-weight: 600;
+            border-radius: 40px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .btn-soft:hover {
+            background: #ffa01e;
+            transform: translateY(-2px);
+        }
+
+        /* general sections */
+        section {
+            padding: 3rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            position: relative;
+            display: inline-block;
+        }
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: #ffb347;
+            border-radius: 4px;
+        }
+
+        .card-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            flex: 1 1 280px;
+            transition: all 0.25s;
+            border: 1px solid #eef2f6;
+        }
+        .info-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 16px 28px rgba(0,0,0,0.1);
+        }
+        .info-card i {
+            font-size: 2.2rem;
+            color: #1c6e8f;
+            margin-bottom: 1rem;
+        }
+        .info-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .info-card p {
+            color: #334155;
+        }
+
+        /* rail lines */
+        .rail-lineup {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .rail-card {
+            background: white;
+            border-radius: 24px;
+            overflow: hidden;
+            flex: 1 1 280px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: 0.2s;
+        }
+        .rail-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+        .rail-card-content {
+            padding: 1.2rem;
+        }
+        .rail-card-content h4 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .rail-card-content p {
+            font-size: 0.9rem;
+            color: #2c3e4e;
+        }
+
+        /* map caption */
+        .map-section {
+            background: #eef3fa;
+            border-radius: 32px;
+            margin: 2rem 0;
+            padding: 1.8rem;
+        }
+        .map-figure {
+            text-align: center;
+        }
+        .map-figure img {
+            max-width: 100%;
+            border-radius: 24px;
+            border: 1px solid #cbdde9;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.05);
+        }
+        .map-caption {
+            margin-top: 1rem;
+            font-style: italic;
+            font-weight: 500;
+            color: #1f5068;
+        }
+
+        /* accessibility & economy double section */
+        .split-columns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        .split-item {
+            flex: 1;
+            background: #ffffffcc;
+            backdrop-filter: blur(2px);
+            background: white;
+            border-radius: 28px;
+            padding: 1.8rem;
+            box-shadow: 0 5px 12px rgba(0,0,0,0.03);
+            border: 1px solid #e2edf2;
+        }
+        .split-item img {
+            width: 100%;
+            max-height: 220px;
+            object-fit: cover;
+            border-radius: 20px;
+            margin-top: 1rem;
+        }
+
+        /* footer */
+        .footer {
+            background: #0b2b3b;
+            color: #cbdbe6;
+            padding: 2rem 0;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 800px) {
+            .header-inner {
+                flex-direction: column;
+                text-align: center;
+            }
+            .hero-text h2 {
+                font-size: 1.9rem;
+            }
+            .container {
+                padding: 0 20px;
+            }
+        }
+
+        .caption-img {
+            font-size: 0.75rem;
+            color: #4a627a;
+            margin-top: 6px;
+            text-align: center;
+        }
+
+        hr {
+            margin: 0.5rem 0;
+        }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container header-inner">
+        <div class="logo">
+            <h1>Rail Transport & Urban Mobility</h1>
+            <p>Understanding rail systems | Sustainable City Development</p>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#" class="active">Home</a></li>
+            <li><a href="#">Blogs</a></li>
+            <li><a href="#">Journals</a></li>
+            <li><a href="#">Media</a></li>
+            <li><a href="#">Gallery</a></li>
+        </ul>
+    </div>
+</header>
+
+<main>
+    <!-- Hero section intro -->
+    <div class="hero">
+        <div class="container hero-grid">
+            <div class="hero-text">
+                <h2>Fast, Safe, Connected:<br>Railways shaping our cities</h2>
+                <p>Rail transport plays a vital role in improving urban accessibility and mobility — helping people travel faster, safer, and more efficiently across metropolitan areas. In the Philippines, stronger rail systems like MRT, LRT, the Metro Manila Subway, and the North-South Commuter Railway can connect communities to jobs, education, and essential services.</p>
+                <a href="#" class="btn-soft">Explore insights <i class="fas fa-arrow-right"></i></a>
+            </div>
+            <div class="hero-img">
+                <img src="https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg" alt="Modern light rail transit system">
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- What is rail transport? -->
+        <section>
+            <h2 class="section-title">What is Rail Transport?</h2>
+            <div class="card-grid">
+                <div class="info-card">
+                    <i class="fas fa-train"></i>
+                    <h3>Definition</h3>
+                    <p>Rail transport moves passengers and goods by train along metal tracks — above ground, underground, or elevated. It's efficient for high-volume movement, reducing congestion and pollution compared to road transport.</p>
+                </div>
+                <div class="info-card">
+                    <i class="fas fa-globe-asia"></i>
+                    <h3>Global Evolution</h3>
+                    <p>From ancient Greek rutways to steam locomotives (Industrial Revolution) and today’s high-speed rail & digital tracking — rail remains a backbone of sustainable mobility.</p>
+                </div>
+                <div class="info-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Urban Impact</h3>
+                    <p>Efficient rail networks improve access to jobs, education & healthcare. They reduce traffic, enhance economic productivity, and support inclusive urban growth.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Philippines rail context -->
+        <section>
+            <h2 class="section-title">Railways in the Philippines</h2>
+            <p style="margin-bottom: 1.5rem; font-size: 1.05rem;">Currently, the Philippines has three major railway systems: MRT, LRT, and PNR. Most active services are in Luzon, particularly Metro Manila, serving millions of commuters daily. These systems are heavily used but remain concentrated; expansions like the Metro Manila Subway and North-South Commuter Railway aim to transform connectivity nationwide.</p>
+            
+            <!-- LRT/MRT Map placeholder (map image from the doc) -->
+            <div class="map-section">
+                <div class="map-figure">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Metro_Manila_LRT_and_MRT_Map.svg/1280px-Metro_Manila_LRT_and_MRT_Map.svg.png" alt="Manila LRT-MRT network map" onerror="this.src='https://ik.imagekit.io/tvlk/blog/2025/01/p2EtANCG-image.jpeg'">
+                    <div class="map-caption">
+                        <i class="fas fa-map-marked-alt"></i> Metro Manila Rail Network: LRT-1 (Yellow), LRT-2 (Purple), MRT-3 (Blue). Key corridors that improve urban mobility.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="rail-lineup">
+                <!-- LRT1 Card -->
+                <div class="rail-card">
+                    <img src="https://ik.imagekit.io/tvlk/blog/2025/01/p2EtANCG-image.jpeg" alt="LRT Line 1 train">
+                    <div class="rail-card-content">
+                        <h4>LRT Line 1 (Yellow)</h4>
+                        <p>First LRT in Southeast Asia, opened 1984. Runs 15 km from Baclaran to Roosevelt, serving Taft Avenue–Rizal route. Extended to North Avenue, improving interchange with MRT-7 & common station.</p>
+                    </div>
+                </div>
+                <!-- LRT2 Card -->
+                <div class="rail-card">
+                    <img src="https://files01.pna.gov.ph/ograph/2025/04/14/lrt2-2025april-bbriones-2.jpg" alt="LRT Line 2 Megatren">
+                    <div class="rail-card-content">
+                        <h4>LRT Line 2 (Purple Line)</h4>
+                        <p>13.8-km line through Pasig, Quezon City, Manila. Modern trains with CCTV, elevators, and accessibility features. Connects Santolan to Recto.</p>
+                    </div>
+                </div>
+                <!-- MRT3 Card -->
+                <div class="rail-card">
+                    <img src="https://media.philstar.com/images/articles/met2-mrt-3_2018-04-02_20-32-49.jpg" alt="MRT-3 along EDSA">
+                    <div class="rail-card-content">
+                        <h4>MRT-3 (Blue Line)</h4>
+                        <p>16.9 km along EDSA from North Avenue to Taft Avenue. Decongests the busiest corridor, serving Cubao, Ortigas, Ayala, and Taft.</p>
+                    </div>
+                </div>
+                <!-- PNR Card -->
+                <div class="rail-card">
+                    <img src="https://www.rappler.com/tachyon/2023/06/pnr-commuters-philippine-national-railways-train-dotr-june-2-2023-003-scaled.jpg" alt="PNR train commuters">
+                    <div class="rail-card-content">
+                        <h4>Philippine National Railways</h4>
+                        <p>Historic line since 1892, currently serving commuter routes. Vision to expand Manila-Legazpi and cargo links, vital for inter-regional connectivity.</p>
+                    </div>
+                </div>
+            </div>
+            <p class="caption-img" style="margin-top: 1rem;"><i class="fas fa-camera"></i> Above: Key rail systems serving the Philippine capital region. Investments in modernisation are reshaping daily commutes.</p>
+        </section>
+
+        <!-- Accessibility & Mobility + Economic Relations double section -->
+        <section>
+            <h2 class="section-title">Accessibility, Mobility & The Economy</h2>
+            <div class="split-columns">
+                <div class="split-item">
+                    <i class="fas fa-wheelchair" style="font-size: 2rem; color:#1c6e8f;"></i>
+                    <h3 style="margin-top: 10px;">Accessibility & Urban Mobility</h3>
+                    <p>As cities grow, reliable public transport becomes vital. Rail systems move masses efficiently, reducing traffic congestion and improving access to workplaces, schools, and healthcare. In Metro Manila, congestion costs billions annually — better rail networks ease this burden and make cities more inclusive.</p>
+                    <img src="https://www.moneymax.ph/hs-fs/hubfs/commuter%20problems%20-%20Poor%20Public%20Transportation%20System.jpg?width=1440&name=commuter%20problems%20-%20Poor%20Public%20Transportation%20" alt="Manila commuter congestion" style="width:100%; border-radius: 18px; margin-top: 15px;">
+                    <div class="caption-img">Heavy road congestion highlights the need for mass rail transit.</div>
+                </div>
+                <div class="split-item">
+                    <i class="fas fa-chart-simple" style="font-size: 2rem; color:#1c6e8f;"></i>
+                    <h3 style="margin-top: 10px;">Economic Relations</h3>
+                    <p>Government spending on rail infrastructure acts as an economic injection — creating jobs, supporting firms, and improving productivity. Efficient railways lower travel costs, boost business access, and strengthen the circular flow of income. The Philippines' "Build Better More" program prioritises rail to unlock regional growth.</p>
+                    <img src="https://media.philstar.com/photos/2019/12/11/nat_2019-12-11_21-33-23.jpg" alt="Philippines railway construction economic impact" style="width:100%; border-radius: 18px; margin-top: 15px;">
+                    <div class="caption-img">Infrastructure investments fuel employment and urban competitiveness.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Additional: sustainable vision & journal references teaser -->
+        <section>
+            <h2 class="section-title">Why Rail Matters for the Future</h2>
+            <div class="card-grid">
+                <div class="info-card">
+                    <i class="fas fa-leaf"></i>
+                    <h3>Sustainability</h3>
+                    <p>Trains emit far less CO₂ per passenger than cars. Expanding rail reduces pollution and supports green urban development. The shift to electric and hybrid rail systems aligns with global climate goals.</p>
+                </div>
+                <div class="info-card">
+                    <i class="fas fa-hand-holding-heart"></i>
+                    <h3>Social Equity</h3>
+                    <p>Affordable and accessible rail improves mobility for low-income groups, elderly and PWDs. Stations with universal design create more inclusive cities.</p>
+                </div>
+                <div class="info-card">
+                    <i class="fas fa-city"></i>
+                    <h3>Integrated Planning</h3>
+                    <p>Successful cities like London, Tokyo, and Singapore prove that rail-oriented development boosts property values and reduces car dependency. The Philippines can replicate this through transit-oriented design.</p>
+                </div>
+            </div>
+            <div style="background: #eaf3f9; padding: 1.3rem; border-radius: 24px; margin-top: 1.5rem;">
+                <p><i class="fas fa-graduation-cap"></i> <strong>Research spotlight:</strong> According to academic papers (see Journals section), railway stations act as hubs for sustainable transformation — improving intermodality, economic activity and public realm. Cross-regional analysis shows rail enhances accessibility by up to 12% under congested conditions. Our full Journals tab provides deeper insights into urban accessibility governance and social equity.</p>
+            </div>
+        </section>
+
+        <!-- Photo gallery teaser (fulfilling 10 photos requirement but shown as preview with captions) -->
+        <section>
+            <h2 class="section-title">Gallery Snapshot: Rail in Action</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(230px,1fr)); gap: 1.2rem;">
+                <div><img src="https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg" style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" alt="Modern light rail"><div class="caption-img">Modern light rail, Changchun, China</div></div>
+                <div><img src="https://ik.imagekit.io/tvlk/blog/2025/01/p2EtANCG-image.jpeg" style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" alt="LRT-1 train"><div class="caption-img">LRT-1 Baclaran Station, Manila</div></div>
+                <div><img src="https://files01.pna.gov.ph/ograph/2025/04/14/lrt2-2025april-bbriones-2.jpg" style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" alt="LRT-2 Purple Line"><div class="caption-img">LRT-2 Megatren, modern rolling stock</div></div>
+                <div><img src="https://media.philstar.com/images/articles/met2-mrt-3_2018-04-02_20-32-49.jpg" style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" alt="MRT-3 EDSA"><div class="caption-img">MRT-3 navigating EDSA corridor</div></div>
+                <div><img src="https://www.rappler.com/tachyon/2023/06/pnr-commuters-philippine-national-railways-train-dotr-june-2-2023-003-scaled.jpg" style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" alt="PNR Commuters"><div class="caption-img">PNR commuters, busy day in Manila</div></div>
+                <div><img src="https://www.moneymax.ph/hs-fs/hubfs/commuter%20problems%20-%20Poor%20Public%20Transportation%20System.jpg?width=1440&name=commuter%20problems%20-%20Poor%20Public%20Transportation%20" style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" alt="traffic congestion"><div class="caption-img">Urban road congestion vs. rail efficiency</div></div>
+                <div><img src="https://media.philstar.com/photos/2019/12/11/nat_2019-12-11_21-33-23.jpg" style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" alt="Rail construction"><div class="caption-img">DOTr railway projects under construction</div></div>
+                <!--Pending lang for working links pls ignore for now-->
+                <img src="https://www.lrta.gov.ph/images/linesystem-map.jpg" style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" alt="Metro Manila LRT and MRT system map">
+                <div><img src="https://www.worldbank.org/content/dam/photos/780x439/2023/mar-2023/rail-transit-ph-780.jpg" style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" alt="future subway" onerror="this.src='https://www.dof.gov.ph/wp-content/uploads/2023/02/MMSP-TBM-Launching-scaled.jpg'"><div class="caption-img">Metro Manila Subway (under construction)</div></div>
+                <div><img src="https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg" style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" alt="High speed train concept"><div class="caption-img">Efficient rail reduces travel time globally</div></div>
+            </div>
+            <p class="caption-img" style="margin-top: 1rem;"><i class="fas fa-images"></i> Ten curated images showing Philippine rail systems and international references. Each emphasizes rail’s role in accessibility and mobility.</p>
+        </section>
+        
+        <!-- Relevant links (sources) -->
+        <section>
+            <h2 class="section-title">Key Resources & References</h2>
+            <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between;">
+                <div style="flex:1; min-width:200px;">
+                    <ul style="list-style: none;">
+                        <li><i class="fas fa-external-link-alt"></i> <a href="https://www.ebsco.com/research-starters/history/rail-transport" target="_blank">Rail Transport History</a></li>
+                        <li><i class="fas fa-train"></i> <a href="https://www.dotrmrt3.gov.ph/about-us" target="_blank">MRT-3 About</a></li>
+                        <li><i class="fas fa-subway"></i> <a href="https://www.lrta.gov.ph/railway-operations/" target="_blank">LRTA Operations</a></li>
+                    </ul>
+                </div>
+                <div style="flex:1; min-width:200px;">
+                    <ul style="list-style: none;">
+                        <li><i class="fas fa-building"></i> <a href="https://icrs.gcg.gov.ph/profiles/pnr/" target="_blank">PNR Profile</a></li>
+                        <li><i class="fas fa-chart-line"></i> <a href="https://www.worldbank.org/en/results/2024/03/13/promoting-livable-cities-by-investing-in-urban-mobility" target="_blank">World Bank: Livable Cities</a></li>
+                        <li><i class="fas fa-dollar-sign"></i> <a href="https://www.dof.gov.ph/opening-remarksmetro-manila-subway-project-mmspworksite-visit-and-press-briefing/" target="_blank">DOF: Metro Manila Subway</a></li>
+                    </ul>
+                </div>
+                <div style="flex:1; min-width:200px;">
+                    <p><i class="fas fa-book-open"></i> <strong>Academic journals:</strong> ScienceDirect, MDPI, Taylor & Francis – full articles available via project resources (see Journals page).</p>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <p><i class="fas fa-train"></i> Rail Transport and Urban Mobility | Understanding the importance of rail systems in improving urban accessibility, mobility, and sustainable city development.</p>
+        <p style="margin-top: 12px;">© 2025 Group Research Project — Jose Luis De Jesus, Lucy Allyson Garcia, Mathew Ibasco, Raphael Jimeno, Anna Bianca Mendoza, Beatrice Dorothy Royales, Francine Chelsy Vivar</p>
+        <p>Five blogs · Academic Journals · Video resources · Photo gallery with captions · Relevant links</p>
+    </div>
+</footer>
+
+</body>
+</html>
 {% endblock %}
