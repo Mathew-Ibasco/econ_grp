@@ -31,35 +31,6 @@ class caption (models.Model):
     class Meta:
         db_table = "caption"
 
-class post(models.Model):
-    POST_TYPES = [
-        ("blog", "Blog"),
-        ("journal", "Journal"),
-    ]
-
-    postID = models.AutoField(primary_key=True)
-    type = models.CharField(max_length=20, choices=POST_TYPES)
-    header = models.CharField(max_length=300)
-    text = models.TextField()
-    sources = models.TextField(blank=True)
-    tags = models.CharField(max_length=300, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "post"
-
-class post_section(models.Model):
-    sectionID = models.AutoField(primary_key=True)
-    post = models.ForeignKey(post, on_delete=models.CASCADE, related_name="sections")
-    subheader = models.CharField(max_length=300, blank=True)
-    text = models.TextField()
-    order = models.PositiveIntegerField()
-    # controls order
-
-    class Meta:
-        db_table = "post_section"
-        ordering = ["order"]
-
 class BlogPost(models.Model):
     title = models.CharField(max_length=300)
     slug = models.SlugField(max_length=320, unique=True)

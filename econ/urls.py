@@ -17,4 +17,7 @@ urlpatterns = [
     path("vlog/", views.vlog, name="vlog"),
     path("gallery/", views.gallery, name="gallery"),
     path("journal/", views.journal, name="journal"),
+    path('download_sql_dump', views.download_sql_dump, name='download_sql_dump'),
+    path('upload_sql_process', views.upload_sql_process, name='upload_sql_process'),
+    path('upload_sql', views.upload_sql, name='upload_sql'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

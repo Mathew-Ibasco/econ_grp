@@ -1,10 +1,15 @@
 from datetime import datetime, date
+
 from django.shortcuts import render, redirect, get_object_or_404
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.http import StreamingHttpResponse
+
+import os, re, sys, html, calendar, json, subprocess, sqlite3
 
 from .models import BlogPost, Bookmark, JournalEntry, MediaGalleryEntry, User
 
@@ -309,4 +314,99 @@ def gallery(request):
             'date': datetime.now(),
             'gallery_entries': MediaGalleryEntry.objects.order_by("order", "id"),
         }
+    )
+
+############################################# SQL ##############################################################################
+
+def upload_sql(request):
+    return render(
+        request,
+        'econ/upload_sql.html',
+        {
+            'date': datetime.now()
+        }
+    )
+
+def download_sql_dump(request):
+    db_path = settings.DATABASES['default']['NAME']
+    filename = f"dump_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
+
+    def stream():
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        yield f"-- SQL Dump: {os.path.basename(db_path)}\n".encode()
+        yield f"-- Generated: {datetime.now()}\n\n".encode()
+        yield b"PRAGMA foreign_keys = OFF;\n\n"
+
+        # Get all user tables (exclude sqlite internal tables)
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+        tables = [row[0] for row in cursor.fetchall()]
+
+        for table in tables:
+            # Table structure
+            cursor.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,))
+            create_table = cursor.fetchone()[0]
+            yield f"-- Table: {table}\n".encode()
+            yield f"DROP TABLE IF EXISTS \"{table}\";\n".encode()
+            yield f"{create_table};\n\n".encode()
+
+            # Table data
+            cursor.execute(f'SELECT * FROM "{table}"')
+            rows = cursor.fetchall()
+            if rows:
+                for row in rows:
+                    values = ', '.join(
+                        'NULL' if val is None
+                        else f"'{str(val).replace(chr(39), chr(39)*2)}'"
+                        for val in row
+                    )
+                    yield f'INSERT INTO "{table}" VALUES ({values});\n'.encode()
+                yield b"\n"
+
+        yield b"PRAGMA foreign_keys = ON;\n"
+        cursor.close()
+        conn.close()
+
+    response = StreamingHttpResponse(stream(), content_type='application/sql')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+def upload_sql_process(request):
+    if request.method == 'POST' and request.FILES.get('sql_file'):
+        db_path = settings.DATABASES['default']['NAME']
+        sql_file = request.FILES['sql_file']
+
+        conn = sqlite3.connect(db_path)
+
+        try:
+            cursor = conn.cursor()
+            sql = sql_file.read().decode('utf-8')
+
+            # Drop all existing user tables first
+            cursor.execute("PRAGMA foreign_keys = OFF;")
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+            existing_tables = [row[0] for row in cursor.fetchall()]
+            for table in existing_tables:
+                cursor.execute(f'DROP TABLE IF EXISTS "{table}"')
+            conn.commit()
+
+            # executescript() is SQLite's native multi-statement parser —
+            # it handles semicolons inside string literals and quoted identifiers
+            # correctly, unlike a naive split(';').
+            # It also issues a COMMIT before running, so we commit the drops above first.
+            conn.executescript(sql)
+
+            messages.success(request, "SQL dump applied successfully.")
+        except Exception as e:
+            conn.rollback()
+            messages.error(request, f"Failed to apply dump: {str(e)}")
+        finally:
+            cursor.close()
+            conn.close()
+
+    return render(
+        request,
+        'econ/upload_sql.html',
+        {'date': datetime.now()}
     )
