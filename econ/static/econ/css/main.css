@@ -2013,3 +2013,176 @@ hr {
         font-size: 2rem;
     }
 }
+
+.home-public-panel {
+    margin-top: 0;
+    padding-top: 1.2rem;  
+}
+
+.hero {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.railway-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-top: 1rem;
+    justify-content: space-between;
+}
+
+.definition-side {
+    flex: 0 0 48%;
+    max-width: 600px;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.map-side {
+    flex: 0 0 48%;
+    background: #eef3fa;
+    padding: 1rem;
+    border-radius: 24px;
+    text-align: center;
+}
+
+.map-side img {
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+}
+
+.map-caption {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+}
+
+.split-columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.split-item {
+    flex: 1 1 45%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.split-item i {
+    font-size: 2rem;
+    color: #1c6e8f;
+}
+
+.split-item h3 {
+    margin-top: 10px;
+}
+
+.split-item img {
+    width: 100%;
+    border-radius: 18px;
+    margin-top: 15px;
+    object-fit: cover;
+    height: 180px;
+}
+
+#rail-gallery > div {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 1.2rem;
+}
+
+#rail-gallery img {
+    width: 100%;
+    border-radius: 20px;
+    height: 150px;
+    object-fit: cover;
+}
+
+.caption-img {
+    font-size: 0.85rem;
+    margin-top: 5px;
+}
+
+.resources-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.resource-list {
+    flex: 1;
+    min-width: 200px;
+    list-style: none;
+    padding-left: 0;
+}
+
+.resource-list li {
+    margin-bottom: 0.5rem;
+}
+
+.resource-note {
+    flex: 1;
+    min-width: 200px;
+}
+
+.rail-lineup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.rail-card {
+    flex: 1;
+    min-width: 200px;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.rail-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.rail-card-content {
+    padding: 1rem;
+}
+
+/* ========== RESPONSIVE FIXES ========== */
+@media (max-width: 768px) {
+    .definition-side,
+    .map-side,
+    .split-item {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .railway-flex {
+        flex-wrap: wrap;
+    }
+    
+    .hero-grid {
+        flex-direction: column;
+    }
+}
+
+.home-page .site-header {
+    margin-bottom: 0 !important;
+}
+
+.home-public-panel {
+    margin-top: 0 !important;
+    padding-top: 0 !important;  
+}
+
+.home-page .hero {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
