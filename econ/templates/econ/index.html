@@ -13,16 +13,39 @@
 {% block content %}
 <main class="home-page">
     {% if show_dashboard %}
-        <section class="dashboard-hero dashboard-home-hero" id="dashboard-overview">
-            <div class="container dashboard-hero-grid">
-                <div>
+        <section class="dashboard-hero dashboard-home-hero member-hero" id="dashboard-overview">
+            <div class="container hero-grid">
+                <div class="hero-text">
                     <p class="dashboard-kicker">Welcome, {{ request.user.username|title }}</p>
                     <h2>Your Rail Mobility Dashboard</h2>
-                    <p>Track saved topics, continue study progress, and jump back into rail transport resources from one place.</p>
+                    <p>Track saved topics, continue study progress, and jump back into rail transport resources from one focused workspace.</p>
+                    <a href="#saved-topics" class="btn-soft">Continue studying <i class="fas fa-arrow-down"></i></a>
                 </div>
-                <div class="dashboard-stats">
-                    <div><strong>{{ saved_bookmarks|length }}</strong><span>Saved topics</span></div>
-                    <div><strong>{{ available_topics_count }}</strong><span>Available topics</span></div>
+                <div class="member-hero-panel">
+                    <div class="member-panel-head">
+                        <span>Your workspace</span>
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="dashboard-stats member-stats">
+                        <div><strong>{{ saved_bookmarks|length }}</strong><span>Saved topics</span></div>
+                        <div><strong>{{ available_topics_count }}</strong><span>Available topics</span></div>
+                    </div>
+                    <div class="member-next">
+                        <h3>Recommended next</h3>
+                        {% if recommended_items %}
+                            {% for item in recommended_items|slice:":2" %}
+                                <a href="{{ item.url }}">
+                                    <i class="fas {{ item.icon }}"></i>
+                                    <span>
+                                        <strong>{{ item.topic.title }}</strong>
+                                        <small>{{ item.kind }}: {{ item.title }}</small>
+                                    </span>
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <p>Your saved list is fully stocked.</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </section>
@@ -32,12 +55,83 @@
                 <div>
                     <p class="dashboard-kicker">Study workspace</p>
                     <h2 class="section-title">Your Rail Mobility Dashboard</h2>
-                    <p>Saved topics, progress, and recommended readings are collected here so the homepage stays useful while you work.</p>
+                    <p>Saved topics, progress, key concepts, and recommended readings are collected here so the dashboard still carries the full rail mobility context while you work.</p>
+                </div>
+            </section>
+
+            <section class="dashboard-section dashboard-context-section">
+                <div class="dashboard-section-heading">
+                    <div>
+                        <h2 class="section-title">Rail Mobility Overview</h2>
+                        <p>Review the core ideas from the homepage without leaving your study workspace.</p>
+                    </div>
+                </div>
+                <div class="card-grid dashboard-context-grid">
+                    <div class="info-card"><i class="fas fa-train"></i><h3>Rail Transport</h3><p>Moving passengers and goods by train along metal tracks above ground, underground, or elevated. It is efficient for long-distance travel and heavy cargo.</p></div>
+                    <div class="info-card"><i class="fas fa-history"></i><h3>Historical Evolution</h3><p>Early systems developed greatly during the Industrial Revolution, when steam-powered locomotives reshaped trade, cities, and daily movement.</p></div>
+                    <div class="info-card"><i class="fas fa-microchip"></i><h3>Modern Railways</h3><p>Modern systems use high-speed trains, digital tracking, accessibility improvements, and integrated networks to move people more reliably.</p></div>
+                </div>
+            </section>
+
+            <section class="dashboard-section dashboard-context-section">
+                <div class="dashboard-section-heading">
+                    <div>
+                        <h2 class="section-title">Philippine Rail Systems</h2>
+                        <p>MRT, LRT, and PNR remain central to the country's urban mobility story, especially in Metro Manila and Luzon.</p>
+                    </div>
+                </div>
+                <div class="railway-flex dashboard-rail-overview">
+                    <div class="definition-side">
+                        <p>Rail transport improves access to jobs, education, healthcare, and essential services. In the Philippines, expanding and modernizing rail systems can reduce road congestion, support regional growth, and make daily commutes more predictable.</p>
+                    </div>
+                    <div class="map-side">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Manila_LRT-MRT_map.png/1280px-Manila_LRT-MRT_map.png" alt="Manila LRT-MRT network map">
+                        <div class="map-caption"><i class="fas fa-map-marked-alt"></i> Metro Manila Rail Network: LRT-1, LRT-2, and MRT-3.</div>
+                    </div>
+                </div>
+                <div class="rail-lineup dashboard-rail-cards">
+                    <div class="rail-card">
+                        <img src="https://ik.imagekit.io/tvlk/blog/2025/01/p2EtANCG-image.jpeg" alt="LRT Line 1 train">
+                        <div class="rail-card-content"><h4>LRT Line 1</h4><p>Southeast Asia's first LRT system, serving a major elevated corridor through Metro Manila.</p></div>
+                    </div>
+                    <div class="rail-card">
+                        <img src="https://files01.pna.gov.ph/ograph/2025/04/14/lrt2-2025april-bbriones-2.jpg" alt="LRT Line 2 train">
+                        <div class="rail-card-content"><h4>LRT Line 2</h4><p>A modern east-west corridor connecting key urban districts and transfer points.</p></div>
+                    </div>
+                    <div class="rail-card">
+                        <img src="https://media.philstar.com/images/articles/met2-mrt-3_2018-04-02_20-32-49.jpg" alt="MRT-3 along EDSA">
+                        <div class="rail-card-content"><h4>MRT-3</h4><p>A high-demand route along EDSA that helps move commuters through the capital region.</p></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="dashboard-section dashboard-context-section">
+                <div class="dashboard-section-heading">
+                    <div>
+                        <h2 class="section-title">Accessibility, Mobility & The Economy</h2>
+                        <p>Rail investments connect people to opportunity while supporting productivity, employment, and more sustainable city growth.</p>
+                    </div>
+                </div>
+                <div class="split-columns">
+                    <div class="split-item">
+                        <div>
+                            <i class="fas fa-wheelchair"></i>
+                            <h3>Accessibility & Urban Mobility</h3>
+                            <p>Reliable rail systems can move large numbers of people efficiently, reduce travel stress, and make cities more inclusive for commuters with different needs.</p>
+                        </div>
+                    </div>
+                    <div class="split-item">
+                        <div>
+                            <i class="fas fa-chart-simple"></i>
+                            <h3>Economic Relations</h3>
+                            <p>Infrastructure spending creates jobs, lowers travel costs, improves business access, and strengthens the circular flow of income across connected regions.</p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
             {# Saved Section #}
-            <section class="dashboard-section">
+            <section class="dashboard-section" id="saved-topics">
                 <div class="dashboard-section-heading">
                     <div>
                         <h2 class="section-title">Saved for Later</h2>

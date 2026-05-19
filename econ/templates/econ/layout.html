@@ -37,7 +37,9 @@
       </div>
       {% with current_name=request.resolver_match.url_name|default:'' %}
       <ul class="nav-links">
-        <li><a href="{% url 'index' %}" class="{% if current_name == 'index' %}active{% endif %}">Home</a></li>
+        {% if not request.user.is_authenticated %}
+          <li><a href="{% url 'index' %}" class="{% if current_name == 'index' %}active{% endif %}">Home</a></li>
+        {% endif %}
         {% if request.user.is_authenticated %}
           <li><a href="{% url 'dashboard' %}" class="{% if current_name == 'dashboard' %}active{% endif %}">Dashboard</a></li>
         {% endif %}
