@@ -954,6 +954,7 @@ body {
     justify-content: center;
     padding: 0.55rem 0.85rem;
     border-radius: 999px;
+    text-decoration: none;
 }
 
 .bookmark-btn:hover,
@@ -1509,6 +1510,10 @@ hr {
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
+.journal-card-link {
+    width: 100%;
+}
+
 .blog-card:visited,
 .blog-card:hover,
 .blog-card:focus,
@@ -1532,6 +1537,7 @@ hr {
 
 .blog-card-media {
     background: #e9f3f8;
+    position: relative;
 }
 
 .blog-card-media img,
@@ -1545,6 +1551,25 @@ hr {
 
 .blog-card-media img {
     height: 220px;
+}
+
+.blog-card-viewed-pill {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(220, 252, 231, 0.96);
+    color: #15803d;
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    box-shadow: 0 10px 22px rgba(11, 43, 59, 0.12);
+    pointer-events: none;
 }
 
 .blog-card-body {

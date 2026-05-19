@@ -389,12 +389,27 @@ def index(request):
     )
 
 def blog(request):
+    blog_posts = list(BlogPost.objects.order_by("order", "id"))
+    if request.user.is_authenticated and blog_posts:
+        viewed_blog_ids = set(
+            StudyItemProgress.objects.filter(
+                user=request.user,
+                item_type="blog",
+                item_id__in=[blog.id for blog in blog_posts],
+            ).values_list("item_id", flat=True)
+        )
+        for blog_post in blog_posts:
+            blog_post.learning = SimpleNamespace(completed=blog_post.id in viewed_blog_ids)
+    else:
+        for blog_post in blog_posts:
+            blog_post.learning = SimpleNamespace(completed=False)
+
     return render(
         request,
         'econ/blog.html',
         {
             'date': datetime.now(),
-            'blog_posts': BlogPost.objects.order_by("order", "id"),
+            'blog_posts': blog_posts,
         }
     )
 

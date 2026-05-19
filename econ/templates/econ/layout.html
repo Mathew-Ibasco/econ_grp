@@ -124,8 +124,10 @@
         var modal = document.getElementById(button.getAttribute('data-quiz-target'));
         if (modal) {
           document.querySelectorAll('.quiz-modal.is-open').forEach(function (openModal) {
-            openModal.classList.remove('is-open');
-            openModal.setAttribute('aria-hidden', 'true');
+            if (openModal.getAttribute('data-journal-actions-modal') !== 'true') {
+              openModal.classList.remove('is-open');
+              openModal.setAttribute('aria-hidden', 'true');
+            }
           });
           modal.classList.add('is-open');
           modal.setAttribute('aria-hidden', 'false');
@@ -133,21 +135,84 @@
       });
     });
 
+    var journalActionsStorageKey = 'econ-journal-actions-modal';
+
+    var openJournalActionsModal = function (journalId) {
+      var modal = document.getElementById('journal-actions-' + journalId);
+      if (!modal) {
+        return;
+      }
+
+      document.querySelectorAll('.quiz-modal.is-open[data-journal-actions-modal="true"]').forEach(function (openModal) {
+        if (openModal !== modal) {
+          openModal.classList.remove('is-open');
+          openModal.setAttribute('aria-hidden', 'true');
+        }
+      });
+
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+    };
+
+    var hasOpenNonActionModal = function () {
+      return !!document.querySelector('.quiz-modal.is-open:not([data-journal-actions-modal="true"])');
+    };
+
+    var restoreJournalActionsModal = function () {
+      var storedJournalActionsId = window.sessionStorage.getItem(journalActionsStorageKey);
+      if (storedJournalActionsId && !hasOpenNonActionModal()) {
+        openJournalActionsModal(storedJournalActionsId);
+      }
+    };
+
+    var closeModal = function (modal) {
+      if (!modal) {
+        return;
+      }
+
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+
+      if (modal.getAttribute('data-journal-actions-modal') === 'true') {
+        window.sessionStorage.removeItem(journalActionsStorageKey);
+        return;
+      }
+
+      restoreJournalActionsModal();
+    };
+
+    document.querySelectorAll('[data-journal-actions-target]').forEach(function (link) {
+      link.addEventListener('click', function () {
+        var journalId = link.getAttribute('data-journal-actions-target').replace('journal-actions-', '');
+        if (journalId) {
+          window.sessionStorage.setItem(journalActionsStorageKey, journalId);
+          openJournalActionsModal(journalId);
+        }
+      });
+    });
+
+    restoreJournalActionsModal();
+
+    window.addEventListener('pageshow', restoreJournalActionsModal);
+    window.addEventListener('focus', restoreJournalActionsModal);
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) {
+        restoreJournalActionsModal();
+      }
+    });
+
     document.querySelectorAll('[data-quiz-close]').forEach(function (button) {
       button.addEventListener('click', function () {
         var modal = button.closest('.quiz-modal');
-        if (modal) {
-          modal.classList.remove('is-open');
-          modal.setAttribute('aria-hidden', 'true');
-        }
+        closeModal(modal);
       });
     });
 
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') {
         document.querySelectorAll('.quiz-modal.is-open').forEach(function (modal) {
-          modal.classList.remove('is-open');
-          modal.setAttribute('aria-hidden', 'true');
+          closeModal(modal);
         });
       }
     });
