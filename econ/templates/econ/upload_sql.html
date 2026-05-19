@@ -1,0 +1,21 @@
+{% extends 'econ/layout.html' %}
+{% load static %}
+{% load i18n %}
+{% block title %}
+Upload MySQL Dump
+{% endblock %}
+
+{% block content %}
+    <br>
+    <a class="dropdown-item" href="{% url 'download_sql_dump' %}">Download MySQL Dump</a>
+    <br>
+    <h1>{% trans "Upload MySQL Dump" %}</h1>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="sql_file" accept=".sql" required>
+        <br>
+        <button class="adminAddBtn" formaction="upload_sql_process" type="submit" style="border: none; font-weight: bold;">Upload & Apply</button>
+    </form>
+
+{% endblock %}

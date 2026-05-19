@@ -81,11 +81,11 @@ if DB_ENGINE == "mysql":
             "ENGINE": "django.db.backends.mysql",
             "NAME": "econdb",
             "USER": "root",
-            "PASSWORD": "322533", #server
+            "PASSWORD": "2009-0161", #server
             "HOST": "localhost",
             "PORT": "3306",
             "OPTIONS": {
-                "charset": "utf8",
+                "charset": "utf8mb4",
             }
         }
     }
