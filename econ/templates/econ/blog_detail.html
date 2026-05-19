@@ -22,7 +22,7 @@
         </div>
     </section>
 
-    <section class="container blog-detail-shell">
+    <section class="container blog-detail-shell {% if not request.user.is_authenticated %}guest-detail-shell{% endif %}">
         <div class="blog-detail-layout">
             <article class="blog-detail-main">
                 <div class="blog-detail-content">
@@ -192,6 +192,17 @@
                 </div>
             </aside>
         </div>
+        {% if not request.user.is_authenticated %}
+            <div class="guest-access-card" role="dialog" aria-labelledby="guest-blog-access-title">
+                <div class="guest-access-icon"><i class="fas fa-lock"></i></div>
+                <h2 id="guest-blog-access-title">Want to read the full blog?</h2>
+                <p>Create a free account or log in to read the full blog and use study tools.</p>
+                <div class="guest-access-actions">
+                    <a href="{% url 'registration' %}" class="profile-primary-btn">Create Account</a>
+                    <a href="{% url 'login' %}" class="profile-cancel-btn">Log In</a>
+                </div>
+            </div>
+        {% endif %}
     </section>
 </main>
 {% endblock %}

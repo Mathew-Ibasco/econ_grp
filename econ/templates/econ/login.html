@@ -25,6 +25,7 @@ Login page
             {% if errors.password %}<p class="field-error">{{ errors.password }}</p>{% endif %}
 
             <button class="submitBtn" formaction="{% url 'login_process' %}" type="submit">Login</button>
+            <p class="auth-switch">Don't have an account? <a href="{% url 'registration' %}">Sign up here</a>.</p>
             {% if error %}<p class="auth-error">{{ error }}</p>{% endif %}
         </form>
     </main>

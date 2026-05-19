@@ -74,7 +74,6 @@
           </li>
         {% else %}
           <li><a href="{% url 'login' %}" class="{% if current_name == 'login' %}active{% endif %}">Login</a></li>
-          <li><a href="{% url 'registration' %}" class="{% if current_name == 'registration' %}active{% endif %}">Register</a></li>
         {% endif %}
       </ul>
       {% endwith %}
@@ -178,6 +177,21 @@
         if (icon) {
           icon.classList.toggle('fa-eye', !isHidden);
           icon.classList.toggle('fa-eye-slash', isHidden);
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-profile-password-toggle]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var fields = document.querySelector('[data-profile-password-fields]');
+        if (!fields) {
+          return;
+        }
+        fields.classList.add('is-visible');
+        button.setAttribute('hidden', 'hidden');
+        var input = document.getElementById('profile-new-password');
+        if (input) {
+          input.focus();
         }
       });
     });

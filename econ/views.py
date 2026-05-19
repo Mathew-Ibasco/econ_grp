@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login as auth_login, logout
+from django.contrib.auth import authenticate, login as auth_login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
@@ -278,7 +278,7 @@ def login_process(request):
         user = authenticate(request, username=account.username, password=password)
         if user is not None:
             auth_login(request, user)
-            return redirect("dashboard")
+            return redirect("index")
         else:
             errors["password"] = "Incorrect password."
             return render(request, "econ/login.html", _auth_context(values, errors), status=400)
@@ -290,12 +290,97 @@ def logout_process(request):
 
 @login_required
 def profile(request):
+    user = request.user
+    edit_mode = request.GET.get("edit") == "1"
+    values = {
+        "username": user.username,
+        "email": user.email,
+        "bio": user.bio,
+    }
+    errors = {}
+    bio_limit = 250
+
+    if request.method == "POST":
+        edit_mode = True
+        username = request.POST.get("username", "").strip()
+        email = request.POST.get("email", "").strip()
+        bio = request.POST.get("bio", "").strip()
+        new_password = request.POST.get("new_password", "")
+        confirm_password = request.POST.get("confirm_password", "")
+        wants_password_change = bool(new_password or confirm_password)
+        values = {
+            "username": username,
+            "email": email,
+            "bio": bio,
+        }
+
+        if not username:
+            errors["username"] = "Username cannot be blank."
+        elif len(username) > 20:
+            errors["username"] = "Username cannot be more than 20 characters."
+        elif User.objects.filter(username__iexact=username).exclude(pk=user.pk).exists():
+            errors["username"] = "Username already exists."
+
+        if not email:
+            errors["email"] = "Email cannot be blank."
+        else:
+            try:
+                validate_email(email)
+            except ValidationError:
+                errors["email"] = "Enter a valid email address with @."
+            else:
+                if User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
+                    errors["email"] = "Email already exists."
+
+        if not bio:
+            errors["bio"] = "Bio cannot be blank."
+        elif len(bio) > bio_limit:
+            errors["bio"] = f"Bio cannot be more than {bio_limit} characters."
+
+        if wants_password_change:
+            if not new_password:
+                errors["new_password"] = "New password cannot be blank."
+            elif len(new_password) < 8:
+                errors["new_password"] = "New password must be at least 8 characters."
+            elif user.check_password(new_password):
+                errors["new_password"] = "New password cannot be the same as your current password."
+
+            if not confirm_password:
+                errors["confirm_password"] = "Confirm password cannot be blank."
+            elif new_password and new_password != confirm_password:
+                errors["confirm_password"] = "New password and confirm password must match."
+
+        profile_changed = (
+            username != user.username
+            or email != user.email
+            or bio != user.bio
+        )
+        if not errors and not profile_changed and not wants_password_change:
+            errors["form"] = "No changes were made."
+
+        if not errors:
+            user.username = username
+            user.email = email
+            user.bio = bio
+            if wants_password_change:
+                user.set_password(new_password)
+            user.save()
+            if wants_password_change:
+                update_session_auth_hash(request, user)
+            messages.success(request, "Profile updated successfully.")
+            return redirect("profile")
+
     return render(
         request,
         "econ/profile.html",
         {
             "date": datetime.now(),
+            "edit_mode": edit_mode,
+            "values": values,
+            "errors": errors,
+            "bio_limit": bio_limit,
         },
+        status=400 if errors else 200,
     )
 
 def _dashboard_page_context(request):
@@ -494,6 +579,10 @@ def toggle_bookmark(request):
     return redirect("index")
 
 def index(request):
+    if request.user.is_authenticated:
+        context = _dashboard_page_context(request)
+        context["show_dashboard"] = True
+        return render(request, "econ/index.html", context)
     return render(request, "econ/index.html", {"date": datetime.now(), "show_dashboard": False})
 
 @login_required

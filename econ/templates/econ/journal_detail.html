@@ -123,7 +123,7 @@
         </div>
     </section>
 
-    <section class="container blog-detail-shell">
+    <section class="container blog-detail-shell {% if not request.user.is_authenticated %}guest-detail-shell{% endif %}">
         <div class="blog-detail-layout">
             <article class="blog-detail-main">
                 <div class="blog-detail-content">
@@ -308,6 +308,17 @@
                 {% endif %}
             </aside>
         </div>
+        {% if not request.user.is_authenticated %}
+            <div class="guest-access-card" role="dialog" aria-labelledby="guest-journal-access-title">
+                <div class="guest-access-icon"><i class="fas fa-lock"></i></div>
+                <h2 id="guest-journal-access-title">Want to read the full journal?</h2>
+                <p>Create a free account or log in to unlock the abstract, source details, and study tools.</p>
+                <div class="guest-access-actions">
+                    <a href="{% url 'registration' %}" class="profile-primary-btn">Create Account</a>
+                    <a href="{% url 'login' %}" class="profile-cancel-btn">Log In</a>
+                </div>
+            </div>
+        {% endif %}
     </section>
 </main>
 {% endblock %}

@@ -341,7 +341,7 @@
     </div>
   </section>
 
-  <section class="container vlog-detail-shell">
+  <section class="container vlog-detail-shell {% if not request.user.is_authenticated %}guest-detail-shell{% endif %}">
     <div class="vlog-detail-layout">
       <article class="vlog-player-card">
         <div class="vlog-player-frame">
@@ -515,6 +515,17 @@
         {% endif %}
       </aside>
     </div>
+    {% if not request.user.is_authenticated %}
+      <div class="guest-access-card" role="dialog" aria-labelledby="guest-media-access-title">
+        <div class="guest-access-icon"><i class="fas fa-lock"></i></div>
+        <h2 id="guest-media-access-title">Want to watch the full media resource?</h2>
+        <p>Create a free account or log in to unlock the video details and study tools.</p>
+        <div class="guest-access-actions">
+          <a href="{% url 'registration' %}" class="profile-primary-btn">Create Account</a>
+          <a href="{% url 'login' %}" class="profile-cancel-btn">Log In</a>
+        </div>
+      </div>
+    {% endif %}
   </section>
 </main>
 {% endblock %}

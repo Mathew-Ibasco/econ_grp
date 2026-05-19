@@ -13,24 +13,29 @@
 {% block content %}
 <main class="home-page">
     {% if show_dashboard %}
-        {# ========== DASHBOARD VIEW ========== #}
-        <section class="dashboard-hero">
-            <div class="container">
-                <div class="dashboard-hero-grid">
-                    <div>
-                        <p class="dashboard-kicker">Welcome, {{ request.user.username|title }}</p>
-                        <h2>Your Rail Mobility Dashboard</h2>
-                        <p>Keep track of the rail transport topics, references, and media that matter most to your economics project.</p>
-                    </div>
-                    <div class="dashboard-stats">
-                        <div><strong>{{ saved_bookmarks|length }}</strong><span>Saved topics</span></div>
-                        <div><strong>{{ available_topics_count }}</strong><span>Available topics</span></div>
-                    </div>
+        <section class="dashboard-hero dashboard-home-hero" id="dashboard-overview">
+            <div class="container dashboard-hero-grid">
+                <div>
+                    <p class="dashboard-kicker">Welcome, {{ request.user.username|title }}</p>
+                    <h2>Your Rail Mobility Dashboard</h2>
+                    <p>Track saved topics, continue study progress, and jump back into rail transport resources from one place.</p>
+                </div>
+                <div class="dashboard-stats">
+                    <div><strong>{{ saved_bookmarks|length }}</strong><span>Saved topics</span></div>
+                    <div><strong>{{ available_topics_count }}</strong><span>Available topics</span></div>
                 </div>
             </div>
         </section>
 
-        <div class="container dashboard-shell">
+        <div class="container dashboard-shell combined-dashboard-shell">
+            <section class="dashboard-section dashboard-workspace-intro">
+                <div>
+                    <p class="dashboard-kicker">Study workspace</p>
+                    <h2 class="section-title">Your Rail Mobility Dashboard</h2>
+                    <p>Saved topics, progress, and recommended readings are collected here so the homepage stays useful while you work.</p>
+                </div>
+            </section>
+
             {# Saved Section #}
             <section class="dashboard-section">
                 <div class="dashboard-section-heading">
