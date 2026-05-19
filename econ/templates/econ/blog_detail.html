@@ -60,15 +60,33 @@
                                 {% if learning.completed %}Viewed{% else %}Mark Viewed{% endif %}
                             </button>
                         </form>
-                        <form method="POST" action="{% url 'save_item_note' %}" class="topic-note-form">
-                            {% csrf_token %}
-                            <input type="hidden" name="item_type" value="{{ learning_item_type }}">
-                            <input type="hidden" name="item_id" value="{{ learning_item_id }}">
-                            <input type="hidden" name="next" value="{{ request.path }}">
-                            <textarea name="note" placeholder="Add a private note for this blog.">{% if learning.note %}{{ learning.note.note }}{% endif %}</textarea>
-                            <button type="submit" class="bookmark-btn">Save note</button>
-                        </form>
+                        {% if learning.notes_count >= 5 %}
+                            <p class="dashboard-muted">You have reached the 5-note limit for this blog.</p>
+                        {% else %}
+                            <form method="POST" action="{% url 'save_item_note' %}" class="topic-note-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+                                <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                                <textarea name="note" maxlength="50" placeholder="Add a private note for this blog."></textarea>
+                                <p class="note-help-text">50 characters max. {{ learning.notes_count }} / 5 notes used.</p>
+                                <button type="submit" class="bookmark-btn">Save note</button>
+                            </form>
+                        {% endif %}
                     </div>
+                    {% if learning.notes %}
+                    <div class="detail-card item-notes-card">
+                        <h2>Notes</h2>
+                        <ul class="item-notes-list">
+                            {% for note in learning.notes %}
+                                <li class="item-note">
+                                    <p>{{ note.note }}</p>
+                                    <time datetime="{{ note.updated_at|date:'c' }}">{{ note.updated_at|date:"M j, Y g:i A" }}</time>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
                     <div class="detail-card learning-card">
                         <h2>Mini Checkpoint</h2>
                         <p class="quiz-score">Perfect rounds: {{ learning.perfect_rounds }} / 3</p>

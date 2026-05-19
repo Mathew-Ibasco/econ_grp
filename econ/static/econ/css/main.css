@@ -37,7 +37,7 @@ body {
 .site-header {
     background: #0b2b3b;
     color: white;
-    padding: 1rem 0;
+    padding: 0;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -50,19 +50,33 @@ body {
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 1rem;
+    min-height: 96px;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.logo {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-self: stretch;
 }
 
 .logo h1 {
+    margin: 0;
     font-size: 1.65rem;
     font-weight: 700;
     letter-spacing: -0.3px;
     font-family: 'Plus Jakarta Sans', sans-serif;
+    line-height: 1.18;
 }
 
 .logo p {
+    margin: 0;
     font-size: 0.75rem;
     color: #bbdef5;
-    margin-top: 4px;
+    padding-top: 0.35rem;
+    line-height: 1.35;
 }
 
 .nav-links {
@@ -289,17 +303,35 @@ body {
     white-space: nowrap;
 }
 
+.nav-links .profile-dropdown-link,
 .nav-links .profile-logout {
     display: flex;
     align-items: center;
     gap: 0.55rem;
     margin-top: 0.55rem;
     padding: 0.65rem 0.6rem;
-    color: #9a3412;
     border: 0;
     border-radius: 10px;
     font-weight: 800;
     text-decoration: none;
+}
+
+.nav-links .profile-dropdown-link {
+    color: #1c6e8f;
+}
+
+.nav-links .profile-dropdown-link:hover {
+    background: #e9f3f8;
+    color: #0b2b3b;
+    border: 0;
+}
+
+.profile-dropdown-link i {
+    color: #1c6e8f;
+}
+
+.nav-links .profile-logout {
+    color: #9a3412;
 }
 
 .nav-links .profile-logout:hover {
@@ -620,6 +652,12 @@ body {
     resize: vertical;
 }
 
+.topic-note-form textarea:disabled {
+    background: #eef4f8;
+    color: #64748b;
+    cursor: not-allowed;
+}
+
 .topic-note-form textarea:focus {
     outline: none;
     background: #ffffff;
@@ -630,6 +668,51 @@ body {
 .topic-note-form .bookmark-btn,
 .topic-quiz-form .bookmark-btn {
     width: fit-content;
+}
+
+.note-help-text {
+    margin: -0.2rem 0 0;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.item-notes-card {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.item-notes-list {
+    display: grid;
+    gap: 0.65rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.item-note {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid #dce9f1;
+    border-radius: 12px;
+    background: #f8fbfd;
+}
+
+.item-note p {
+    margin: 0;
+    color: #1e2a3e;
+    font-weight: 700;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.item-note time {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .topic-quiz-form {
@@ -1021,6 +1104,28 @@ body {
     text-decoration: none;
 }
 
+.quick-links a span,
+.quick-link-static span {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.quick-links a strong,
+.quick-link-static strong {
+    color: inherit;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.quick-links a small,
+.quick-link-static small {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
 .quick-links a:hover {
     border-color: #ffb347;
     color: #1c6e8f;
@@ -1036,6 +1141,103 @@ body {
     color: #64748b;
     font-size: 0.88rem;
     font-weight: 700;
+}
+
+/* profile page */
+.profile-page {
+    min-height: calc(100vh - 96px);
+    background: #f4f7fc;
+    padding-bottom: 4rem;
+}
+
+.profile-hero {
+    padding: 3rem 0;
+    background: #123d52;
+    color: #ffffff;
+}
+
+.profile-hero-inner {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+
+.profile-avatar {
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #ffb347;
+    font-size: 2.5rem;
+}
+
+.profile-hero h2 {
+    margin-bottom: 0.35rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2.15rem;
+    font-weight: 800;
+}
+
+.profile-hero p {
+    margin-bottom: 0;
+    color: #d8edf6;
+}
+
+.profile-shell {
+    padding-top: 2rem;
+}
+
+.profile-card {
+    max-width: 760px;
+    padding: 1.5rem;
+    border: 1px solid #dce9f1;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 12px 26px rgba(11, 43, 59, 0.08);
+}
+
+.profile-card h3 {
+    margin-bottom: 1rem;
+    color: #0b2b3b;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.profile-details {
+    display: grid;
+    gap: 0;
+    margin: 0;
+}
+
+.profile-details div {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 1rem;
+    padding: 0.9rem 0;
+    border-top: 1px solid #e5eef4;
+}
+
+.profile-details div:first-child {
+    border-top: 0;
+}
+
+.profile-details dt {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.profile-details dd {
+    margin: 0;
+    color: #17384a;
+    font-weight: 700;
+    overflow-wrap: anywhere;
 }
 
 /* authentication pages */
@@ -1097,6 +1299,37 @@ body {
     color: #1e2a3e;
     font: inherit;
     transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.auth-panel .password-field {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.auth-panel .password-field input {
+    margin-bottom: 0;
+    padding-right: 3rem;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.45rem;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #1c6e8f;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.password-toggle:hover {
+    background: #e9f3f8;
+    color: #0b2b3b;
 }
 
 .auth-panel textarea {
@@ -1378,6 +1611,13 @@ section {
     .header-inner {
         flex-direction: column;
         text-align: center;
+    }
+    .logo {
+        align-self: center;
+    }
+    .profile-details div {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
     }
     .dashboard-hero-grid {
         grid-template-columns: 1fr;

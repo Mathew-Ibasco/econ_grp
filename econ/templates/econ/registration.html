@@ -23,11 +23,21 @@ Registration page
             <textarea id="bio" name="bio" placeholder="Tell us about yourself">{{ values.bio|default:'' }}</textarea>
 
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Password" {% if errors.password %}class="field-invalid" aria-invalid="true"{% endif %}>
+            <div class="password-field">
+                <input type="password" id="password" name="password" placeholder="Password" {% if errors.password %}class="field-invalid" aria-invalid="true"{% endif %}>
+                <button type="button" class="password-toggle" data-password-toggle="password" aria-label="Show password">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
             {% if errors.password %}<p class="field-error">{{ errors.password }}</p>{% endif %}
 
             <label for="confirm">Confirm Password</label>
-            <input type="password" id="confirm" name="confirm" placeholder="Confirm Password" {% if errors.confirm %}class="field-invalid" aria-invalid="true"{% endif %}>
+            <div class="password-field">
+                <input type="password" id="confirm" name="confirm" placeholder="Confirm Password" {% if errors.confirm %}class="field-invalid" aria-invalid="true"{% endif %}>
+                <button type="button" class="password-toggle" data-password-toggle="confirm" aria-label="Show confirm password">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
             {% if errors.confirm %}<p class="field-error">{{ errors.confirm }}</p>{% endif %}
 
             <button class="submitBtn" formaction="{% url 'registration_process' %}" type="submit">Register</button>

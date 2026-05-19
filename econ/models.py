@@ -224,14 +224,12 @@ class ItemNote(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="item_notes")
     item_type = models.CharField(max_length=20, choices=ITEM_TYPES)
     item_id = models.PositiveIntegerField()
-    note = models.TextField(blank=True)
+    note = models.CharField(max_length=50)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "item_note"
-        constraints = [
-            models.UniqueConstraint(fields=["user", "item_type", "item_id"], name="unique_user_item_note")
-        ]
+        ordering = ["-updated_at"]
 
 class ItemQuizQuestion(models.Model):
     ITEM_TYPES = [

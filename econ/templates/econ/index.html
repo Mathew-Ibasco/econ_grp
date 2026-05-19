@@ -184,12 +184,15 @@
             <section class="dashboard-section">
                 <h2 class="section-title">Recommended Next</h2>
                 <div class="quick-links">
-                    {% if recommended_topics %}
-                        {% for topic in recommended_topics %}
-                            <div class="quick-link-static">
-                                <i class="fas {{ topic.icon }}"></i>
-                                <span>{{ topic.title }}</span>
-                            </div>
+                    {% if recommended_items %}
+                        {% for item in recommended_items %}
+                            <a href="{{ item.url }}">
+                                <i class="fas {{ item.icon }}"></i>
+                                <span>
+                                    <strong>{{ item.topic.title }}</strong>
+                                    <small>{{ item.kind }}: {{ item.title }}</small>
+                                </span>
+                            </a>
                         {% endfor %}
                     {% else %}
                         <p class="dashboard-muted">You saved every available topic. Nice, your dashboard is fully stocked.</p>

@@ -89,30 +89,6 @@
       line-height: 1.5;
   }
 
-  .journal-quiz-details {
-      display: grid;
-      gap: 0.85rem;
-  }
-
-  .journal-quiz-details > summary {
-      list-style: none;
-  }
-
-  .journal-quiz-details > summary::-webkit-details-marker {
-      display: none;
-  }
-
-  .journal-quiz-details > summary.bookmark-btn {
-      width: fit-content;
-  }
-
-  .journal-quiz-details[open] > summary {
-      margin-bottom: 0.35rem;
-  }
-
-  .journal-quiz-inline-form {
-      margin-top: 0.25rem;
-  }
 {% endblock %}
 {% block content %}
 <main class="blogs-page">
@@ -170,15 +146,34 @@
                                 {% if learning.completed %}Viewed{% else %}Mark Viewed{% endif %}
                             </button>
                         </form>
-                        <form method="POST" action="{% url 'save_item_note' %}" class="topic-note-form">
-                            {% csrf_token %}
-                            <input type="hidden" name="item_type" value="{{ learning_item_type }}">
-                            <input type="hidden" name="item_id" value="{{ learning_item_id }}">
-                            <input type="hidden" name="next" value="{{ request.path }}">
-                            <textarea name="note" placeholder="Add a private note for this journal.">{% if learning.note %}{{ learning.note.note }}{% endif %}</textarea>
-                            <button type="submit" class="bookmark-btn">Save note</button>
-                        </form>
+                        {% if learning.notes_count >= 5 %}
+                            <p class="dashboard-muted">You have reached the 5-note limit for this journal.</p>
+                        {% else %}
+                            <form method="POST" action="{% url 'save_item_note' %}" class="topic-note-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+                                <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                                <textarea name="note" maxlength="50" placeholder="Add a private note for this journal."></textarea>
+                                <p class="note-help-text">50 characters max. {{ learning.notes_count }} / 5 notes used.</p>
+                                <button type="submit" class="bookmark-btn">Save note</button>
+                            </form>
+                        {% endif %}
                     </div>
+
+                    {% if learning.notes %}
+                    <div class="detail-card item-notes-card">
+                        <h2>Notes</h2>
+                        <ul class="item-notes-list">
+                            {% for note in learning.notes %}
+                                <li class="item-note">
+                                    <p>{{ note.note }}</p>
+                                    <time datetime="{{ note.updated_at|date:'c' }}">{{ note.updated_at|date:"M j, Y g:i A" }}</time>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
 
                     <div class="detail-card learning-card">
                         <h2>Mini Checkpoint</h2>
@@ -192,32 +187,23 @@
                                 <span>Mastered</span>
                                 <p>You perfected all checkpoint rounds for this content.</p>
                             </div>
-                        {% else %}
-                            {% if learning.result_attempt %}
-                                <div class="quiz-result-list">
-                                    {% for result in learning.result_questions %}
-                                        <div class="quiz-result-item {% if result.is_correct %}is-correct{% else %}is-wrong{% endif %}">
-                                            <h3>{{ result.question }}</h3>
-                                            <p>Your answer: <strong>{{ result.selected_text|default:"No answer" }}</strong></p>
-                                            {% if learning.result_is_perfect %}
-                                                <p>Correct answer: <strong>{{ result.correct_text }}</strong></p>
-                                            {% endif %}
-                                            <span>{% if result.is_correct %}Correct{% else %}Needs review{% endif %}</span>
+                        {% elif learning.questions %}
+                            <button type="button" class="bookmark-btn quiz-modal-trigger" data-quiz-target="quiz-journal-{{ learning_item_id }}">
+                                Answer Quiz
+                            </button>
+                            <div class="quiz-modal" id="quiz-journal-{{ learning_item_id }}" aria-hidden="true">
+                                <div class="quiz-modal-backdrop" data-quiz-close></div>
+                                <div class="quiz-modal-panel" role="dialog" aria-modal="true" aria-labelledby="quiz-journal-title-{{ learning_item_id }}">
+                                    <div class="quiz-modal-head">
+                                        <div>
+                                            <p class="blog-eyebrow">Mini Checkpoint</p>
+                                            <h2 id="quiz-journal-title-{{ learning_item_id }}">Answer the Quiz: Round {{ learning.current_round }}</h2>
                                         </div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-
-                            {% if learning.questions %}
-                                <details class="journal-quiz-details">
-                                    <summary class="bookmark-btn">
-                                        {% if learning.result_attempt %}
-                                            {% if learning.result_is_perfect %}Answer New Quiz{% else %}Retake Quiz{% endif %}
-                                        {% else %}
-                                            Answer Quiz
-                                        {% endif %}
-                                    </summary>
-                                    <form method="POST" action="{% url 'submit_item_quiz' %}" class="topic-quiz-form journal-quiz-inline-form">
+                                        <button type="button" class="icon-action" data-quiz-close aria-label="Close quiz">
+                                            <i class="fas fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                    <form method="POST" action="{% url 'submit_item_quiz' %}" class="topic-quiz-form">
                                         {% csrf_token %}
                                         <input type="hidden" name="item_type" value="{{ learning_item_type }}">
                                         <input type="hidden" name="item_id" value="{{ learning_item_id }}">
@@ -232,10 +218,45 @@
                                         {% endfor %}
                                         <button type="submit" class="bookmark-btn">Submit Quiz</button>
                                     </form>
-                                </details>
-                            {% else %}
-                                <p class="dashboard-muted">No quiz is available for this journal yet.</p>
-                            {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <p class="dashboard-muted">No quiz is available for this journal yet.</p>
+                        {% endif %}
+                        {% if learning.result_attempt %}
+                            <div class="quiz-modal is-open" id="quiz-result-journal-{{ learning_item_id }}" aria-hidden="false">
+                                <div class="quiz-modal-backdrop" data-quiz-close></div>
+                                <div class="quiz-modal-panel" role="dialog" aria-modal="true" aria-labelledby="quiz-result-journal-title-{{ learning_item_id }}">
+                                    <div class="quiz-modal-head">
+                                        <div>
+                                            <p class="blog-eyebrow">Quiz Result</p>
+                                            <h2 id="quiz-result-journal-title-{{ learning_item_id }}">Round {{ learning.result_attempt.round_number }}: You scored {{ learning.result_attempt.score }} / {{ learning.result_attempt.total }}</h2>
+                                        </div>
+                                        <button type="button" class="icon-action" data-quiz-close aria-label="Close result">
+                                            <i class="fas fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                    <div class="quiz-result-list">
+                                        {% for result in learning.result_questions %}
+                                            <div class="quiz-result-item {% if result.is_correct %}is-correct{% else %}is-wrong{% endif %}">
+                                                <h3>{{ result.question }}</h3>
+                                                <p>Your answer: <strong>{{ result.selected_text|default:"No answer" }}</strong></p>
+                                                {% if learning.result_is_perfect %}
+                                                    <p>Correct answer: <strong>{{ result.correct_text }}</strong></p>
+                                                {% endif %}
+                                                <span>{% if result.is_correct %}Correct{% else %}Needs review{% endif %}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if not learning.mastered and learning.questions %}
+                                        <div class="quiz-result-actions">
+                                            <button type="button" class="bookmark-btn quiz-modal-trigger" data-quiz-target="quiz-journal-{{ learning_item_id }}">
+                                                {% if learning.result_is_perfect %}Answer New Quiz{% else %}Retake Quiz{% endif %}
+                                            </button>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         {% endif %}
                     </div>
                 {% endif %}

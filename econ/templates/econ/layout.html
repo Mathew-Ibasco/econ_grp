@@ -61,6 +61,10 @@
                   <i class="fas fa-circle-user"></i>
                   <span>{{ request.user.username }}</span>
                 </div>
+                <a class="profile-dropdown-link" href="{% url 'profile' %}">
+                  <i class="fas fa-id-card"></i>
+                  <span>Profile</span>
+                </a>
                 <a class="profile-logout" href="{% url 'logout_process' %}">
                   <i class="fas fa-right-from-bracket"></i>
                   <span>Logout</span>
@@ -158,6 +162,24 @@
           closeModal(modal);
         });
       }
+    });
+
+    document.querySelectorAll('[data-password-toggle]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var input = document.getElementById(button.getAttribute('data-password-toggle'));
+        var icon = button.querySelector('i');
+        if (!input) {
+          return;
+        }
+
+        var isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        button.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+        if (icon) {
+          icon.classList.toggle('fa-eye', !isHidden);
+          icon.classList.toggle('fa-eye-slash', isHidden);
+        }
+      });
     });
   </script>
 

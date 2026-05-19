@@ -245,6 +245,12 @@
     text-decoration: underline;
   }
 
+  .vlog-detail-page .vlog-study-tools .item-learning-panel {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
   @media (max-width: 900px) {
     .vlog-detail-page .vlog-detail-hero-inner,
     .vlog-detail-page .vlog-detail-layout {
@@ -346,6 +352,55 @@
             </a>
           {% endif %}
         </div>
+
+        {% if request.user.is_authenticated and learning %}
+          <div class="detail-card learning-card vlog-study-tools">
+            <h3>Study Tools</h3>
+            <div class="item-learning-panel">
+              <form method="POST" action="{% url 'toggle_study_progress' %}" class="learning-action-row">
+                {% csrf_token %}
+                <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+                <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="bookmark-btn {% if learning.completed %}is-saved{% endif %}">
+                  <i class="fas {% if learning.completed %}fa-check{% else %}fa-plus{% endif %}"></i>
+                  {% if learning.completed %}Viewed{% else %}Mark Viewed{% endif %}
+                </button>
+              </form>
+
+              <details>
+                <summary>Add note</summary>
+                {% if learning.notes_count >= 5 %}
+                  <p class="dashboard-muted">You have reached the 5-note limit for this video.</p>
+                {% else %}
+                  <form method="POST" action="{% url 'save_item_note' %}" class="topic-note-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+                    <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <textarea name="note" maxlength="50" placeholder="Add a private note for this video."></textarea>
+                    <p class="note-help-text">50 characters max. {{ learning.notes_count }} / 5 notes used.</p>
+                    <button type="submit" class="bookmark-btn">Save note</button>
+                  </form>
+                {% endif %}
+              </details>
+            </div>
+          </div>
+
+          {% if learning.notes %}
+            <div class="detail-card item-notes-card">
+              <h3>Notes</h3>
+              <ul class="item-notes-list">
+                {% for note in learning.notes %}
+                  <li class="item-note">
+                    <p>{{ note.note }}</p>
+                    <time datetime="{{ note.updated_at|date:'c' }}">{{ note.updated_at|date:"M j, Y g:i A" }}</time>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        {% endif %}
       </aside>
     </div>
   </section>

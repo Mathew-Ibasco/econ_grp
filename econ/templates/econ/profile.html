@@ -1,0 +1,47 @@
+{% extends 'econ/layout.html' %}
+{% load static %}
+
+{% block title %}
+    {{ request.user.username }} | Profile
+{% endblock %}
+
+{% block content %}
+<main class="profile-page">
+    <section class="profile-hero">
+        <div class="container profile-hero-inner">
+            <div class="profile-avatar">
+                <i class="fas fa-circle-user"></i>
+            </div>
+            <div>
+                <p class="dashboard-kicker">Account Profile</p>
+                <h2>{{ request.user.username }}</h2>
+                <p>Your account details from registration are collected here.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="container profile-shell">
+        <article class="profile-card">
+            <h3>Profile Details</h3>
+            <dl class="profile-details">
+                <div>
+                    <dt>Username</dt>
+                    <dd>{{ request.user.username }}</dd>
+                </div>
+                <div>
+                    <dt>Email</dt>
+                    <dd>{{ request.user.email|default:"No email added" }}</dd>
+                </div>
+                <div>
+                    <dt>Bio</dt>
+                    <dd>{{ request.user.bio|default:"No bio added yet." }}</dd>
+                </div>
+                <div>
+                    <dt>Date joined</dt>
+                    <dd>{{ request.user.date_joined|date:"M j, Y" }}</dd>
+                </div>
+            </dl>
+        </article>
+    </section>
+</main>
+{% endblock %}

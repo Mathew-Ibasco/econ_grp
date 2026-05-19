@@ -47,10 +47,69 @@ def _topic_study_items(topic):
             "type": "video",
             "id": video_entry.vlogID,
             "title": video_entry.title,
-            "url": video_entry.video_url,
+            "url": reverse("vlog_detail", args=[video_entry.vlogID]),
             "kind": "Video",
         })
     return items
+
+
+def _topic_recommendation_candidates(topic):
+    candidates_by_kind = {
+        "blog": [
+            SimpleNamespace(
+                topic=topic,
+                title=post.title,
+                kind="Blog",
+                icon="fa-newspaper",
+                url=reverse("blog_detail", args=[post.slug]),
+            )
+            for post in topic.blog_posts.order_by("order", "id")
+        ],
+        "journal": [
+            SimpleNamespace(
+                topic=topic,
+                title=entry.title,
+                kind="Journal",
+                icon="fa-book-open",
+                url=reverse("journal_detail", args=[entry.id]),
+            )
+            for entry in topic.journal_entries.order_by("order", "id")
+        ],
+        "video": [
+            SimpleNamespace(
+                topic=topic,
+                title=entry.title,
+                kind="Media",
+                icon="fa-circle-play",
+                url=reverse("vlog_detail", args=[entry.vlogID]),
+            )
+            for entry in topic.vlog_entries.order_by("order", "vlogID")
+        ],
+        "gallery": [
+            SimpleNamespace(
+                topic=topic,
+                title=entry.title,
+                kind="Gallery",
+                icon="fa-images",
+                url=reverse("gallery"),
+            )
+            for entry in topic.media_entries.order_by("order", "id")
+        ],
+    }
+
+    if "gallery" in topic.key:
+        priority = ["gallery", "video", "blog", "journal"]
+    elif "history" in topic.key:
+        priority = ["journal", "blog", "gallery", "video"]
+    elif "mobility" in topic.key or "world-bank" in topic.key:
+        priority = ["journal", "video", "blog", "gallery"]
+    else:
+        priority = ["blog", "journal", "video", "gallery"]
+
+    candidates = []
+    for kind in priority:
+        candidates.extend(candidates_by_kind[kind])
+    return candidates
 
 
 def _item_topic(item_type, item_id):
@@ -70,6 +129,7 @@ def _item_topic(item_type, item_id):
 def _item_learning_context(user, item_type, item_id):
     if not user.is_authenticated:
         return None
+    notes = ItemNote.objects.filter(user=user, item_type=item_type, item_id=item_id)
     result_attempt = None
     result_questions = []
     quiz_progress, _ = ItemQuizProgress.objects.get_or_create(
@@ -84,7 +144,9 @@ def _item_learning_context(user, item_type, item_id):
         round_number=current_round,
     ).order_by("order", "id")
     return {
-        "note": ItemNote.objects.filter(user=user, item_type=item_type, item_id=item_id).first(),
+        "note": notes.first(),
+        "notes": notes,
+        "notes_count": notes.count(),
         "questions": questions,
         "latest_attempt": ItemQuizAttempt.objects.filter(user=user, item_type=item_type, item_id=item_id).first(),
         "result_attempt": result_attempt,
@@ -216,7 +278,7 @@ def login_process(request):
         user = authenticate(request, username=account.username, password=password)
         if user is not None:
             auth_login(request, user)
-            return redirect("index")
+            return redirect("dashboard")
         else:
             errors["password"] = "Incorrect password."
             return render(request, "econ/login.html", _auth_context(values, errors), status=400)
@@ -225,6 +287,16 @@ def login_process(request):
 def logout_process(request):
     logout(request)
     return redirect("index")
+
+@login_required
+def profile(request):
+    return render(
+        request,
+        "econ/profile.html",
+        {
+            "date": datetime.now(),
+        },
+    )
 
 def _dashboard_page_context(request):
     context = {
@@ -285,6 +357,20 @@ def _dashboard_page_context(request):
                 progress_percent=progress_percent,
             ))
 
+        recommended_items = []
+        recommended_urls = set()
+        for topic in dashboard_topics:
+            if topic.key in saved_item_keys:
+                continue
+            for recommendation in _topic_recommendation_candidates(topic):
+                if recommendation.url in recommended_urls:
+                    continue
+                recommended_items.append(recommendation)
+                recommended_urls.add(recommendation.url)
+                break
+            if len(recommended_items) == 3:
+                break
+
         context.update(
             {
                 "dashboard_topics": dashboard_topics,
@@ -292,9 +378,7 @@ def _dashboard_page_context(request):
                 "study_boards": study_boards,
                 "saved_item_keys": saved_item_keys,
                 "available_topics_count": dashboard_topics.exclude(key__in=saved_item_keys).count(),
-                "recommended_topics": [
-                    topic for topic in dashboard_topics if topic.key not in saved_item_keys
-                ][:3],
+                "recommended_items": recommended_items,
             }
         )
 
@@ -509,11 +593,28 @@ def save_item_note(request):
         messages.error(request, "That note could not be saved.")
         return redirect(request.POST.get("next") or "index")
 
-    ItemNote.objects.update_or_create(
+    if not note_text:
+        messages.error(request, "Please enter a note before saving.")
+        return redirect(request.POST.get("next") or "index")
+
+    if len(note_text) > 50:
+        messages.error(request, "Notes can only be up to 50 characters.")
+        return redirect(request.POST.get("next") or "index")
+
+    notes_count = ItemNote.objects.filter(
         user=request.user,
         item_type=item_type,
         item_id=int(item_id),
-        defaults={"note": note_text},
+    ).count()
+    if notes_count >= 5:
+        messages.error(request, "You can only save up to 5 notes for this item.")
+        return redirect(request.POST.get("next") or "index")
+
+    ItemNote.objects.create(
+        user=request.user,
+        item_type=item_type,
+        item_id=int(item_id),
+        note=note_text,
     )
     messages.success(request, "Saved your note.")
     return redirect(request.POST.get("next") or "index")
@@ -525,7 +626,7 @@ def submit_item_quiz(request):
 
     item_type = request.POST.get("item_type", "").strip()
     item_id = request.POST.get("item_id", "").strip()
-    if item_type not in {"blog", "journal", "video"} or not item_id.isdigit():
+    if item_type not in {"blog", "journal"} or not item_id.isdigit():
         messages.error(request, "That quiz could not be submitted.")
         return redirect(request.POST.get("next") or "index")
 
@@ -630,16 +731,6 @@ def vlog(request):
     for entry in vlog_entries:
         entry.embed_url = _youtube_embed_url(entry.video_url)
         entry.preview_url = entry.thumbnail_url or _youtube_thumbnail_url(entry.video_url)
-    if request.user.is_authenticated:
-        for entry in vlog_entries:
-            entry.learning = _item_learning_context(request.user, "video", entry.vlogID)
-            entry.learning = _attach_quiz_result(
-                entry.learning,
-                request.user,
-                "video",
-                entry.vlogID,
-                request.GET.get("quiz_attempt"),
-            )
 
     return render(
         request,
@@ -654,6 +745,15 @@ def vlog_detail(request, vlog_id):
     video = get_object_or_404(VlogEntry.objects.prefetch_related("topics"), pk=vlog_id)
     video.embed_url = _youtube_embed_url(video.video_url)
     video.preview_url = video.thumbnail_url or _youtube_thumbnail_url(video.video_url)
+    learning = None
+    if request.user.is_authenticated:
+        notes = ItemNote.objects.filter(user=request.user, item_type="video", item_id=video.vlogID)
+        learning = {
+            "note": notes.first(),
+            "notes": notes,
+            "notes_count": notes.count(),
+            "completed": StudyItemProgress.objects.filter(user=request.user, item_type="video", item_id=video.vlogID).exists(),
+        }
 
     return render(
         request,
@@ -661,6 +761,9 @@ def vlog_detail(request, vlog_id):
         {
             "date": datetime.now(),
             "video": video,
+            "learning": learning,
+            "learning_item_type": "video",
+            "learning_item_id": video.vlogID,
         }
     )
 
