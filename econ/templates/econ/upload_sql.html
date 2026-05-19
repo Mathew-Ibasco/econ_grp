@@ -1,21 +1,224 @@
 {% extends 'econ/layout.html' %}
 {% load static %}
 {% load i18n %}
+
 {% block title %}
-Upload MySQL Dump
+    Upload SQL Dump
+{% endblock %}
+
+{% block style %}
+  .upload-sql-page {
+    padding-bottom: 4rem;
+  }
+
+  .upload-sql-hero {
+    padding: 3rem 0 2rem;
+    background: linear-gradient(135deg, #0b2b3b 0%, #123d52 100%);
+    color: #ffffff;
+  }
+
+  .upload-sql-hero-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.5rem;
+    align-items: end;
+  }
+
+  .upload-sql-eyebrow {
+    margin-bottom: 0.65rem;
+    color: #ffcf8a;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .upload-sql-title {
+    margin-bottom: 0.8rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2.35rem;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+
+  .upload-sql-intro {
+    max-width: 760px;
+    color: #d6ebf4;
+    font-size: 1.02rem;
+  }
+
+  .upload-sql-hero-card {
+    display: grid;
+    min-width: 180px;
+    padding: 1rem 1.1rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    text-align: center;
+  }
+
+  .upload-sql-hero-card strong {
+    color: #ffb347;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.95rem;
+    line-height: 1;
+  }
+
+  .upload-sql-hero-card span {
+    color: #edf7fb;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .upload-sql-shell {
+    padding-top: 2rem;
+  }
+
+  .upload-sql-card {
+    padding: 1.6rem;
+    border: 1px solid #dce9f1;
+    border-radius: 24px;
+    background: #ffffff;
+    box-shadow: 0 12px 26px rgba(11, 43, 59, 0.08);
+  }
+
+  .upload-sql-card h2 {
+    margin-bottom: 0.75rem;
+    color: #0b2b3b;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+  }
+
+  .upload-sql-card p {
+    margin-bottom: 1rem;
+    color: #42576d;
+    line-height: 1.6;
+  }
+
+  .upload-sql-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1.25rem 0 1.5rem;
+  }
+
+  .upload-sql-link,
+  .upload-sql-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    border: 0;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  .upload-sql-link {
+    background: #eef6fa;
+    color: #1c6e8f;
+  }
+
+  .upload-sql-link:hover {
+    color: #0b2b3b;
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(11, 43, 59, 0.08);
+  }
+
+  .upload-sql-submit {
+    background: #ffb347;
+    color: #0b2b3b;
+    cursor: pointer;
+  }
+
+  .upload-sql-submit:hover {
+    background: #ffa01e;
+    color: #0b2b3b;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(255, 179, 71, 0.25);
+  }
+
+  .upload-sql-form {
+    display: grid;
+    gap: 1rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e5eef4;
+  }
+
+  .upload-sql-file {
+    padding: 0.9rem 1rem;
+    border: 1px solid #c9dce8;
+    border-radius: 14px;
+    background: #f8fbfd;
+    color: #31465b;
+    font-size: 0.95rem;
+  }
+
+  .upload-sql-note {
+    margin: 0;
+    color: #5f7386;
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 900px) {
+    .upload-sql-hero-inner {
+      grid-template-columns: 1fr;
+    }
+
+    .upload-sql-title {
+      font-size: 2rem;
+    }
+  }
 {% endblock %}
 
 {% block content %}
-    <br>
-    <a class="dropdown-item" href="{% url 'download_sql_dump' %}">Download MySQL Dump</a>
-    <br>
-    <h1>{% trans "Upload MySQL Dump" %}</h1>
+<main class="blogs-page upload-sql-page">
+  <section class="upload-sql-hero">
+    <div class="container upload-sql-hero-inner">
+      <div>
+        <p class="upload-sql-eyebrow">Admin tools</p>
+        <h1 class="upload-sql-title">{% trans "Upload SQL Dump" %}</h1>
+        <p class="upload-sql-intro">Upload a `.sql` file to replace the current database contents. Use this page carefully, since the import will apply directly to the active data store.</p>
+      </div>
+      <div class="upload-sql-hero-card">
+        <strong>SQL</strong>
+        <span>database import</span>
+      </div>
+    </div>
+  </section>
 
-    <form method="post" enctype="multipart/form-data">
+  <section class="container upload-sql-shell">
+    <div class="upload-sql-card">
+      <h2>{% trans "Database Dump" %}</h2>
+      <p>{% trans "Download the current dump first if you want a backup, then upload the replacement file below." %}</p>
+
+      <div class="upload-sql-links">
+        <a class="upload-sql-link" href="{% url 'download_sql_dump' %}">
+          <i class="fas fa-download"></i>
+          <span>{% trans "Download SQL Dump" %}</span>
+        </a>
+      </div>
+
+      <form class="upload-sql-form" method="post" enctype="multipart/form-data" action="{% url 'upload_sql_process' %}">
         {% csrf_token %}
-        <input type="file" name="sql_file" accept=".sql" required>
-        <br>
-        <button class="adminAddBtn" formaction="upload_sql_process" type="submit" style="border: none; font-weight: bold;">Upload & Apply</button>
-    </form>
+        <input class="upload-sql-file" type="file" name="sql_file" accept=".sql" required>
+        <p class="upload-sql-note">{% trans "Only upload trusted SQL dumps. This will run against the selected database immediately." %}</p>
+        <button class="upload-sql-submit" type="submit">
+          <i class="fas fa-cloud-arrow-up"></i>
+          <span>{% trans "Upload & Apply" %}</span>
+        </button>
+      </form>
+    </div>
+  </section>
+</main>
 
 {% endblock %}

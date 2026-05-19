@@ -29,7 +29,7 @@
                     </div>
                     <div class="blog-card-body">
                         <div class="blog-card-meta">
-                            <span class="saved-type">Blog {{ forloop.counter }}</span>
+                            <span class="saved-type">Blog {{ blog.order|default:forloop.counter }}</span>
                         </div>
                         <h3><span class="blog-card-title">{{ blog.title }}</span></h3>
                         <p class="blog-card-excerpt">{{ blog.excerpt }}</p>

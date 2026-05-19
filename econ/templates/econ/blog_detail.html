@@ -7,6 +7,10 @@
 <main class="blogs-page">
     <section class="blog-detail-hero">
         <div class="container blog-detail-hero-inner">
+            <a class="back-link blog-detail-back-link" href="{% url 'blog' %}">
+                <i class="fas fa-arrow-left"></i>
+                Back to all blogs
+            </a>
             <div>
                 <p class="blog-eyebrow">Rail transport blog</p>
                 <h1>{{ blog_post.title }}</h1>
@@ -19,11 +23,6 @@
     </section>
 
     <section class="container blog-detail-shell">
-        <a class="back-link" href="{% url 'blog' %}">
-            <i class="fas fa-arrow-left"></i>
-            Back to all blogs
-        </a>
-
         <div class="blog-detail-layout">
             <article class="blog-detail-main">
                 <div class="blog-detail-content">
