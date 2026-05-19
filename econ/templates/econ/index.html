@@ -2,11 +2,15 @@
 {% load static %}
 {% load i18n %}
 {% block title %}
-    Rail Transport & Urban Mobility | Home
+    {% if show_dashboard %}
+        Rail Transport & Urban Mobility | Dashboard
+    {% else %}
+        Rail Transport & Urban Mobility | Home
+    {% endif %}
 {% endblock %}
 {% block content %}
-<main>
-    {% if request.user.is_authenticated %}
+<main class="home-page">
+    {% if show_dashboard %}
         <section class="dashboard-hero">
             <div class="container">
                 <div class="dashboard-hero-grid">
@@ -194,6 +198,7 @@
             </section>
         </div>
     {% else %}
+    <section class="home-public-panel">
 
     <!-- Hero section intro -->
     <div class="hero">
@@ -469,6 +474,7 @@
             </div>
         </section>
     </div>
+    </section>
     {% endif %}
 </main>
 {% endblock %}

@@ -38,9 +38,12 @@
       {% with current_name=request.resolver_match.url_name|default:'' %}
       <ul class="nav-links">
         <li><a href="{% url 'index' %}" class="{% if current_name == 'index' %}active{% endif %}">Home</a></li>
+        {% if request.user.is_authenticated %}
+          <li><a href="{% url 'dashboard' %}" class="{% if current_name == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+        {% endif %}
         <li><a href="{% url 'blog' %}" class="{% if current_name == 'blog' or current_name == 'blog_detail' %}active{% endif %}">Blogs</a></li>
-        <li><a href="{% url 'journal' %}" class="{% if current_name == 'journal' %}active{% endif %}">Journals</a></li>
-        <li><a href="{% url 'vlog' %}" class="{% if current_name == 'vlog' %}active{% endif %}">Media</a></li>
+        <li><a href="{% url 'journal' %}" class="{% if current_name == 'journal' or current_name == 'journal_detail' %}active{% endif %}">Journals</a></li>
+        <li><a href="{% url 'vlog' %}" class="{% if current_name == 'vlog' or current_name == 'vlog_detail' %}active{% endif %}">Media</a></li>
         <li><a href="{% url 'gallery' %}" class="{% if current_name == 'gallery' %}active{% endif %}">Gallery</a></li>
         {% if request.user.is_authenticated %}
           {% if request.user.is_superuser %}
@@ -182,12 +185,15 @@
     };
 
     document.querySelectorAll('[data-journal-actions-target]').forEach(function (link) {
-      link.addEventListener('click', function () {
+      link.addEventListener('click', function (event) {
+        event.preventDefault();
         var journalId = link.getAttribute('data-journal-actions-target').replace('journal-actions-', '');
         if (journalId) {
           window.sessionStorage.setItem(journalActionsStorageKey, journalId);
           openJournalActionsModal(journalId);
         }
+
+        window.open(link.href, '_blank', 'noopener,noreferrer');
       });
     });
 

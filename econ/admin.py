@@ -32,9 +32,9 @@ class MediaGalleryEntryAdmin(admin.ModelAdmin):
 
 @admin.register(vlog)
 class VlogAdmin(admin.ModelAdmin):
-    list_display = ("title", "date", "order", "created_at")
+    list_display = ("title", "channel_name", "date", "order", "created_at")
     list_editable = ("order",)
-    search_fields = ("title", "description")
+    search_fields = ("title", "channel_name", "description")
     filter_horizontal = ("topics",)
     ordering = ("order", "title")
 
