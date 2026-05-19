@@ -38,54 +38,77 @@
                     </div>
                 </div>
 
-                {% if saved_bookmarks %}
+                {% if study_boards %}
                     <div class="saved-grid">
-                        {% for bookmark in saved_bookmarks %}
+                        {% for board in study_boards %}
                             <article class="saved-card">
                                 <div class="saved-card-top">
                                     <span class="saved-type">Topic</span>
                                     <form method="POST" action="{% url 'toggle_bookmark' %}">
                                         {% csrf_token %}
-                                        <input type="hidden" name="item_key" value="{{ bookmark.item_key }}">
-                                        <button type="submit" class="icon-action" title="Remove bookmark" aria-label="Remove {{ bookmark.title }}">
+                                        <input type="hidden" name="item_key" value="{{ board.bookmark.item_key }}">
+                                        <button type="submit" class="icon-action" title="Remove bookmark" aria-label="Remove {{ board.bookmark.title }}">
                                             <i class="fas fa-bookmark"></i>
                                         </button>
                                     </form>
                                 </div>
-                                <h3>{{ bookmark.title }}</h3>
-                                <p>{{ bookmark.summary }}</p>
-                                {% if bookmark.topic %}
-                                    {% with topic=bookmark.topic %}
-                                        {% if topic.blog_posts.all %}
+                                <h3>{{ board.bookmark.title }}</h3>
+                                <p>{{ board.bookmark.summary }}</p>
+                                <div class="study-progress">
+                                    <div class="study-progress-top">
+                                        <span>{{ board.completed_items }} / {{ board.total_items }} viewed</span>
+                                        <strong>{{ board.progress_percent }}%</strong>
+                                    </div>
+                                    <div class="study-progress-track">
+                                        <div class="study-progress-fill" style="width: {{ board.progress_percent }}%;"></div>
+                                    </div>
+                                </div>
+                                <p class="dashboard-muted study-board-hint">Open a blog, journal, or video to add notes and take checkpoints.</p>
+                                {% with topic=board.topic %}
+                                    <details class="study-resources">
+                                        <summary>Related Resources</summary>
+                                        {% if board.blog_items %}
                                             <div class="saved-related">
                                                 <h4>Blogs</h4>
-                                                {% for blog in topic.blog_posts.all %}
-                                                    <a href="{% url 'blog_detail' blog.slug %}" class="text-link">{{ blog.title }}</a>
+                                                {% for item in board.blog_items %}
+                                                    <a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}">
+                                                        <span>{{ item.title }}</span>
+                                                        {% if item.completed %}<strong>Viewed</strong>{% endif %}
+                                                    </a>
                                                 {% endfor %}
                                             </div>
                                         {% endif %}
-                                        {% if topic.journal_entries.all %}
+                                        {% if board.journal_items %}
                                             <div class="saved-related">
                                                 <h4>Journals</h4>
-                                                {% for journal in topic.journal_entries.all %}
-                                                    <a href="{{ journal.journal_url }}" class="text-link" target="_blank" rel="noopener noreferrer">{{ journal.title }}</a>
+                                                {% for item in board.journal_items %}
+                                                    <a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}" target="_blank" rel="noopener noreferrer">
+                                                        <span>{{ item.title }}</span>
+                                                        {% if item.completed %}<strong>Viewed</strong>{% endif %}
+                                                    </a>
                                                 {% endfor %}
                                             </div>
                                         {% endif %}
-                                        {% if topic.media_entries.all %}
+                                        {% if board.media_items %}
                                             <div class="saved-related">
                                                 <h4>Media</h4>
-                                                {% for media in topic.media_entries.all %}
-                                                    <span class="dashboard-muted">{{ media.title }}</span>
+                                                {% for item in board.media_items %}
+                                                    <span class="resource-status-link {% if item.completed %}is-viewed{% endif %}">
+                                                        <span>{{ item.title }}</span>
+                                                        {% if item.completed %}<strong>Viewed</strong>{% endif %}
+                                                    </span>
                                                 {% endfor %}
                                                 <a href="{% url 'gallery' %}" class="text-link">Open gallery <i class="fas fa-arrow-right"></i></a>
                                             </div>
                                         {% endif %}
-                                        {% if topic.vlog_entries.all %}
+                                        {% if board.video_items %}
                                             <div class="saved-related">
                                                 <h4>Videos</h4>
-                                                {% for video in topic.vlog_entries.all %}
-                                                    <a href="{{ video.video_url }}" class="text-link" target="_blank" rel="noopener noreferrer">{{ video.title }}</a>
+                                                {% for item in board.video_items %}
+                                                    <a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}" target="_blank" rel="noopener noreferrer">
+                                                        <span>{{ item.title }}</span>
+                                                        {% if item.completed %}<strong>Viewed</strong>{% endif %}
+                                                    </a>
                                                 {% endfor %}
                                                 <a href="{% url 'vlog' %}" class="text-link">Open videos <i class="fas fa-arrow-right"></i></a>
                                             </div>
@@ -96,8 +119,8 @@
                                                 <a href="{{ topic.source_url }}" class="text-link" target="_blank" rel="noopener noreferrer">Open source <i class="fas fa-arrow-right"></i></a>
                                             </div>
                                         {% endif %}
-                                    {% endwith %}
-                                {% endif %}
+                                    </details>
+                                {% endwith %}
                             </article>
                         {% endfor %}
                     </div>

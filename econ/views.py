@@ -1,6 +1,8 @@
 from datetime import datetime, date
+from types import SimpleNamespace
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout
@@ -11,7 +13,128 @@ from django.http import StreamingHttpResponse
 
 import os, re, sys, html, calendar, json, subprocess, sqlite3
 
-from .models import BlogPost, Bookmark, JournalEntry, MediaGalleryEntry, Topic, User, vlog as VlogEntry
+from .models import BlogPost, Bookmark, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, StudyItemProgress, Topic, TopicNote, User, vlog as VlogEntry
+
+
+def _topic_study_items(topic):
+    items = []
+    for blog_post in topic.blog_posts.all():
+        items.append({
+            "type": "blog",
+            "id": blog_post.id,
+            "title": blog_post.title,
+            "url": reverse("blog_detail", args=[blog_post.slug]),
+            "kind": "Blog",
+        })
+    for journal_entry in topic.journal_entries.all():
+        items.append({
+            "type": "journal",
+            "id": journal_entry.id,
+            "title": journal_entry.title,
+            "url": journal_entry.journal_url,
+            "kind": "Journal",
+        })
+    for media_entry in topic.media_entries.all():
+        items.append({
+            "type": "media",
+            "id": media_entry.id,
+            "title": media_entry.title,
+            "url": reverse("gallery"),
+            "kind": "Media",
+        })
+    for video_entry in topic.vlog_entries.all():
+        items.append({
+            "type": "video",
+            "id": video_entry.vlogID,
+            "title": video_entry.title,
+            "url": video_entry.video_url,
+            "kind": "Video",
+        })
+    return items
+
+
+def _item_topic(item_type, item_id):
+    if item_type == "blog":
+        item = BlogPost.objects.prefetch_related("topics").filter(id=item_id).first()
+    elif item_type == "journal":
+        item = JournalEntry.objects.prefetch_related("topics").filter(id=item_id).first()
+    elif item_type == "video":
+        item = VlogEntry.objects.prefetch_related("topics").filter(vlogID=item_id).first()
+    else:
+        return None
+    if item is None:
+        return None
+    return item.topics.order_by("order", "id").first()
+
+
+def _item_learning_context(user, item_type, item_id):
+    if not user.is_authenticated:
+        return None
+    result_attempt = None
+    result_questions = []
+    quiz_progress, _ = ItemQuizProgress.objects.get_or_create(
+        user=user,
+        item_type=item_type,
+        item_id=item_id,
+    )
+    current_round = min(quiz_progress.perfect_rounds + 1, 3)
+    questions = ItemQuizQuestion.objects.filter(
+        item_type=item_type,
+        item_id=item_id,
+        round_number=current_round,
+    ).order_by("order", "id")
+    return {
+        "note": ItemNote.objects.filter(user=user, item_type=item_type, item_id=item_id).first(),
+        "questions": questions,
+        "latest_attempt": ItemQuizAttempt.objects.filter(user=user, item_type=item_type, item_id=item_id).first(),
+        "result_attempt": result_attempt,
+        "result_questions": result_questions,
+        "quiz_progress": quiz_progress,
+        "current_round": current_round,
+        "perfect_rounds": quiz_progress.perfect_rounds,
+        "mastered": quiz_progress.mastered,
+        "completed": StudyItemProgress.objects.filter(user=user, item_type=item_type, item_id=item_id).exists(),
+    }
+
+
+def _attach_quiz_result(learning, user, item_type, item_id, attempt_id):
+    if not learning or not attempt_id:
+        return learning
+    attempt = ItemQuizAttempt.objects.filter(
+        id=attempt_id,
+        user=user,
+        item_type=item_type,
+        item_id=item_id,
+    ).first()
+    if attempt is None:
+        return learning
+
+    result_questions = []
+    question_ids = [int(question_id) for question_id in attempt.answers.keys() if str(question_id).isdigit()]
+    questions_by_id = {
+        question.id: question
+        for question in ItemQuizQuestion.objects.filter(id__in=question_ids)
+    }
+    for question_id in question_ids:
+        question = questions_by_id.get(question_id)
+        if question is None:
+            continue
+        selected = attempt.answers.get(str(question.id), "")
+        correct_text = getattr(question, f"option_{question.correct_option.lower()}")
+        selected_text = getattr(question, f"option_{selected.lower()}", "") if selected in {"A", "B", "C"} else ""
+        result_questions.append(SimpleNamespace(
+            question=question.question,
+            selected=selected,
+            selected_text=selected_text,
+            correct=question.correct_option,
+            correct_text=correct_text,
+            is_correct=selected == question.correct_option,
+        ))
+
+    learning["result_attempt"] = attempt
+    learning["result_questions"] = result_questions
+    learning["result_is_perfect"] = attempt.total > 0 and attempt.score == attempt.total
+    return learning
 
 def _auth_context(values=None, errors=None):
     return {
@@ -209,11 +332,49 @@ def index(request):
                 "topic__journal_entries",
                 "topic__media_entries",
                 "topic__vlog_entries",
+                "topic__quiz_questions",
             )
         )
         saved_item_keys = {bookmark.item_key for bookmark in saved_bookmarks}
+        saved_topics = [bookmark.topic for bookmark in saved_bookmarks if bookmark.topic_id]
+        topic_ids = [topic.id for topic in saved_topics]
+        progress_rows = StudyItemProgress.objects.filter(
+            user=request.user,
+            topic_id__in=topic_ids,
+        )
+        completed_keys = {
+            (row.topic_id, row.item_type, row.item_id)
+            for row in progress_rows
+        }
+
+        study_boards = []
+        for bookmark in saved_bookmarks:
+            topic = bookmark.topic
+            if topic is None:
+                continue
+            items = []
+            for item in _topic_study_items(topic):
+                item["completed"] = (topic.id, item["type"], item["id"]) in completed_keys
+                items.append(SimpleNamespace(**item))
+            total_items = len(items)
+            completed_items = sum(1 for item in items if item.completed)
+            progress_percent = round((completed_items / total_items) * 100) if total_items else 0
+            study_boards.append(SimpleNamespace(
+                bookmark=bookmark,
+                topic=topic,
+                items=items,
+                blog_items=[item for item in items if item.type == "blog"],
+                journal_items=[item for item in items if item.type == "journal"],
+                media_items=[item for item in items if item.type == "media"],
+                video_items=[item for item in items if item.type == "video"],
+                total_items=total_items,
+                completed_items=completed_items,
+                progress_percent=progress_percent,
+            ))
+
         context.update({
             'saved_bookmarks': saved_bookmarks,
+            'study_boards': study_boards,
             'saved_item_keys': saved_item_keys,
             'available_topics_count': dashboard_topics.exclude(key__in=saved_item_keys).count(),
             'recommended_topics': [
@@ -239,6 +400,14 @@ def blog(request):
 
 def blog_detail(request, slug):
     blog_post = get_object_or_404(BlogPost, slug=slug)
+    learning = _item_learning_context(request.user, "blog", blog_post.id)
+    learning = _attach_quiz_result(
+        learning,
+        request.user,
+        "blog",
+        blog_post.id,
+        request.GET.get("quiz_attempt"),
+    )
 
     return render(
         request,
@@ -246,26 +415,158 @@ def blog_detail(request, slug):
         {
             "date": datetime.now(),
             "blog_post": blog_post,
+            "learning": learning,
+            "learning_item_type": "blog",
+            "learning_item_id": blog_post.id,
         }
     )
 
+@login_required
+def toggle_study_progress(request):
+    if request.method != "POST":
+        return redirect("index")
+
+    item_type = request.POST.get("item_type", "").strip()
+    item_id = request.POST.get("item_id", "").strip()
+
+    if item_type not in {"blog", "journal", "media", "video"} or not item_id.isdigit():
+        messages.error(request, "That study item could not be updated.")
+        return redirect(request.POST.get("next") or "index")
+
+    topic = _item_topic(item_type, int(item_id))
+    if topic is None:
+        topic_id = request.POST.get("topic_id")
+        topic = get_object_or_404(Topic, id=topic_id)
+
+    progress, created = StudyItemProgress.objects.get_or_create(
+        user=request.user,
+        topic=topic,
+        item_type=item_type,
+        item_id=int(item_id),
+    )
+    if created:
+        messages.success(request, "Marked as done.")
+    else:
+        progress.delete()
+        messages.success(request, "Marked as not done.")
+
+    return redirect(request.POST.get("next") or "index")
+
+@login_required
+def save_item_note(request):
+    if request.method != "POST":
+        return redirect("index")
+
+    item_type = request.POST.get("item_type", "").strip()
+    item_id = request.POST.get("item_id", "").strip()
+    note_text = request.POST.get("note", "").strip()
+    if item_type not in {"blog", "journal", "video"} or not item_id.isdigit():
+        messages.error(request, "That note could not be saved.")
+        return redirect(request.POST.get("next") or "index")
+
+    ItemNote.objects.update_or_create(
+        user=request.user,
+        item_type=item_type,
+        item_id=int(item_id),
+        defaults={"note": note_text},
+    )
+    messages.success(request, "Saved your note.")
+    return redirect(request.POST.get("next") or "index")
+
+@login_required
+def submit_item_quiz(request):
+    if request.method != "POST":
+        return redirect("index")
+
+    item_type = request.POST.get("item_type", "").strip()
+    item_id = request.POST.get("item_id", "").strip()
+    if item_type not in {"blog", "journal", "video"} or not item_id.isdigit():
+        messages.error(request, "That quiz could not be submitted.")
+        return redirect(request.POST.get("next") or "index")
+
+    quiz_progress, _ = ItemQuizProgress.objects.get_or_create(
+        user=request.user,
+        item_type=item_type,
+        item_id=int(item_id),
+    )
+    if quiz_progress.mastered:
+        messages.success(request, "You already mastered this checkpoint.")
+        return redirect(request.POST.get("next") or "index")
+
+    current_round = min(quiz_progress.perfect_rounds + 1, 3)
+    questions = list(ItemQuizQuestion.objects.filter(
+        item_type=item_type,
+        item_id=int(item_id),
+        round_number=current_round,
+    ).order_by("order", "id"))
+    answers = {}
+    score = 0
+    for question in questions:
+        selected = request.POST.get(f"question_{question.id}", "").strip().upper()
+        answers[str(question.id)] = selected
+        if selected == question.correct_option:
+            score += 1
+
+    attempt = ItemQuizAttempt.objects.create(
+        user=request.user,
+        item_type=item_type,
+        item_id=int(item_id),
+        round_number=current_round,
+        score=score,
+        total=len(questions),
+        answers=answers,
+    )
+    if questions and score == len(questions):
+        quiz_progress.perfect_rounds = min(quiz_progress.perfect_rounds + 1, 3)
+        quiz_progress.mastered = quiz_progress.perfect_rounds >= 3
+        quiz_progress.save(update_fields=["perfect_rounds", "mastered", "updated_at"])
+
+    messages.success(request, f"Quiz submitted: {score}/{len(questions)}.")
+    next_url = request.POST.get("next") or reverse("index")
+    separator = "&" if "?" in next_url else "?"
+    return redirect(f"{next_url}{separator}quiz_attempt={attempt.id}")
+
 def journal(request):
+    journal_entries = list(JournalEntry.objects.prefetch_related("topics").order_by("order", "id"))
+    if request.user.is_authenticated:
+        for entry in journal_entries:
+            entry.learning = _item_learning_context(request.user, "journal", entry.id)
+            entry.learning = _attach_quiz_result(
+                entry.learning,
+                request.user,
+                "journal",
+                entry.id,
+                request.GET.get("quiz_attempt"),
+            )
+
     return render(
         request,
         'econ/journal.html',
         {
             'date': datetime.now(),
-            'journal_entries': JournalEntry.objects.order_by("order", "id"),
+            'journal_entries': journal_entries,
         }
     )
 
 def vlog(request):
+    vlog_entries = list(VlogEntry.objects.prefetch_related("topics").order_by("order", "vlogID"))
+    if request.user.is_authenticated:
+        for entry in vlog_entries:
+            entry.learning = _item_learning_context(request.user, "video", entry.vlogID)
+            entry.learning = _attach_quiz_result(
+                entry.learning,
+                request.user,
+                "video",
+                entry.vlogID,
+                request.GET.get("quiz_attempt"),
+            )
+
     return render(
         request,
         'econ/vlog.html',
         {
             'date': datetime.now(),
-            'vlog_entries': VlogEntry.objects.prefetch_related("topics").order_by("order", "vlogID"),
+            'vlog_entries': vlog_entries,
         }
     )
 

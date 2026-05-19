@@ -84,6 +84,110 @@
           <h3>{{ video.title }}</h3>
           {% if video.date %}<small>Date: {{ video.date|date:"M j, Y" }}</small>{% endif %}
           <p>{{ video.description }}</p>
+          {% if request.user.is_authenticated and video.learning %}
+            <div class="item-learning-panel">
+              <form method="POST" action="{% url 'toggle_study_progress' %}" class="learning-action-row">
+                {% csrf_token %}
+                <input type="hidden" name="item_type" value="video">
+                <input type="hidden" name="item_id" value="{{ video.vlogID }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="bookmark-btn {% if video.learning.completed %}is-saved{% endif %}">
+                  <i class="fas {% if video.learning.completed %}fa-check{% else %}fa-plus{% endif %}"></i>
+                  {% if video.learning.completed %}Viewed{% else %}Mark Viewed{% endif %}
+                </button>
+              </form>
+              <details>
+                <summary>Add note</summary>
+                <form method="POST" action="{% url 'save_item_note' %}" class="topic-note-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="item_type" value="video">
+                  <input type="hidden" name="item_id" value="{{ video.vlogID }}">
+                  <input type="hidden" name="next" value="{{ request.path }}">
+                  <textarea name="note" placeholder="Add a private note for this video.">{% if video.learning.note %}{{ video.learning.note.note }}{% endif %}</textarea>
+                  <button type="submit" class="bookmark-btn">Save note</button>
+                </form>
+              </details>
+              {% if video.learning.latest_attempt %}
+                <p class="quiz-score">Latest score: {{ video.learning.latest_attempt.score }} / {{ video.learning.latest_attempt.total }}</p>
+              {% endif %}
+              <p class="quiz-score">Perfect rounds: {{ video.learning.perfect_rounds }} / 3</p>
+              {% if video.learning.mastered %}
+                <div class="mastery-badge">
+                  <i class="fas fa-trophy"></i>
+                  <span>Mastered</span>
+                  <p>You perfected all checkpoint rounds for this content.</p>
+                </div>
+              {% elif video.learning.questions %}
+                <button type="button" class="bookmark-btn quiz-modal-trigger" data-quiz-target="quiz-video-{{ video.vlogID }}">Answer Quiz</button>
+                <div class="quiz-modal" id="quiz-video-{{ video.vlogID }}" aria-hidden="true">
+                  <div class="quiz-modal-backdrop" data-quiz-close></div>
+                  <div class="quiz-modal-panel" role="dialog" aria-modal="true" aria-labelledby="quiz-video-title-{{ video.vlogID }}">
+                    <div class="quiz-modal-head">
+                      <div>
+                        <p class="blog-eyebrow">Mini Checkpoint</p>
+                        <h2 id="quiz-video-title-{{ video.vlogID }}">Answer the Quiz: Round {{ video.learning.current_round }}</h2>
+                      </div>
+                      <button type="button" class="icon-action" data-quiz-close aria-label="Close quiz">
+                        <i class="fas fa-xmark"></i>
+                      </button>
+                    </div>
+                    <form method="POST" action="{% url 'submit_item_quiz' %}" class="topic-quiz-form">
+                      {% csrf_token %}
+                      <input type="hidden" name="item_type" value="video">
+                      <input type="hidden" name="item_id" value="{{ video.vlogID }}">
+                      <input type="hidden" name="next" value="{{ request.path }}">
+                      {% for question in video.learning.questions %}
+                        <fieldset class="quiz-question">
+                          <legend>{{ question.question }}</legend>
+                          <label><input type="radio" name="question_{{ question.id }}" value="A" required> {{ question.option_a }}</label>
+                          <label><input type="radio" name="question_{{ question.id }}" value="B"> {{ question.option_b }}</label>
+                          <label><input type="radio" name="question_{{ question.id }}" value="C"> {{ question.option_c }}</label>
+                        </fieldset>
+                      {% endfor %}
+                      <button type="submit" class="bookmark-btn">Submit Quiz</button>
+                    </form>
+                  </div>
+                </div>
+              {% else %}
+                <p class="dashboard-muted">No quiz is available for this video yet.</p>
+              {% endif %}
+              {% if video.learning.result_attempt %}
+                <div class="quiz-modal is-open" id="quiz-result-video-{{ video.vlogID }}" aria-hidden="false">
+                  <div class="quiz-modal-backdrop" data-quiz-close></div>
+                  <div class="quiz-modal-panel" role="dialog" aria-modal="true" aria-labelledby="quiz-result-video-title-{{ video.vlogID }}">
+                    <div class="quiz-modal-head">
+                      <div>
+                        <p class="blog-eyebrow">Quiz Result</p>
+                        <h2 id="quiz-result-video-title-{{ video.vlogID }}">Round {{ video.learning.result_attempt.round_number }}: You scored {{ video.learning.result_attempt.score }} / {{ video.learning.result_attempt.total }}</h2>
+                      </div>
+                      <button type="button" class="icon-action" data-quiz-close aria-label="Close result">
+                        <i class="fas fa-xmark"></i>
+                      </button>
+                    </div>
+                    <div class="quiz-result-list">
+                      {% for result in video.learning.result_questions %}
+                        <div class="quiz-result-item {% if result.is_correct %}is-correct{% else %}is-wrong{% endif %}">
+                          <h3>{{ result.question }}</h3>
+                          <p>Your answer: <strong>{{ result.selected_text|default:"No answer" }}</strong></p>
+                          {% if video.learning.result_is_perfect %}
+                            <p>Correct answer: <strong>{{ result.correct_text }}</strong></p>
+                          {% endif %}
+                          <span>{% if result.is_correct %}Correct{% else %}Needs review{% endif %}</span>
+                        </div>
+                      {% endfor %}
+                    </div>
+                    {% if not video.learning.mastered and video.learning.questions %}
+                      <div class="quiz-result-actions">
+                        <button type="button" class="bookmark-btn quiz-modal-trigger" data-quiz-target="quiz-video-{{ video.vlogID }}">
+                          {% if video.learning.result_is_perfect %}Answer New Quiz{% else %}Retake Quiz{% endif %}
+                        </button>
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
         </div>
       </div>
     {% empty %}
