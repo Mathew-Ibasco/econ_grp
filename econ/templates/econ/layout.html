@@ -42,10 +42,10 @@
         <li><a href="{% url 'journal' %}" class="{% if current_name == 'journal' %}active{% endif %}">Journals</a></li>
         <li><a href="{% url 'vlog' %}" class="{% if current_name == 'vlog' %}active{% endif %}">Media</a></li>
         <li><a href="{% url 'gallery' %}" class="{% if current_name == 'gallery' %}active{% endif %}">Gallery</a></li>
-        {% if request.user.is_superuser %}
-          <li><a href="{% url 'upload_sql' %}" class="{% if current_name == 'upload_sql' %}active{% endif %}">upload_dump</a></li>
-        {% endif %}
         {% if request.user.is_authenticated %}
+          {% if request.user.is_superuser %}
+            <li><a href="{% url 'upload_sql' %}" class="{% if current_name == 'upload_sql' %}active{% endif %}">upload SQL Dump</a></li>
+          {% endif %}
           <li class="profile-nav">
             <details class="profile-menu">
               <summary class="profile-pill" title="{{ request.user.username }}">

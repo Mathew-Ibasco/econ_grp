@@ -3,78 +3,78 @@
 {% load i18n %}
 
 {% block title %}
-    Vlogs
+    Media
+{% endblock %}
+
+{% block style %}
+  .vlog-page .video-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+    justify-items: center;
+  }
+
+  .vlog-page .video-card {
+    width: 100%;
+    max-width: 500px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+  }
+
+  .vlog-page .video-card:hover {
+    transform: scale(1.02);
+  }
+
+  .vlog-page .video-card img {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+    cursor: pointer;
+  }
+
+  .vlog-page .video-info {
+    padding: 1rem;
+  }
+
+  .vlog-page .video-info h3 {
+    color: #004d73;
+    margin-bottom: 0.5rem;
+  }
+
+  .vlog-page .video-info small {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #777;
+  }
+
+  @media (max-width: 900px) {
+    .vlog-page .video-gallery {
+      grid-template-columns: 1fr;
+    }
+  }
 {% endblock %}
 
 {% block content %}
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f5f7fa;
-      color: #333;
-    }
+<main class="blogs-page vlog-page">
+  <section class="blogs-hero">
+    <div class="container blogs-hero-inner">
+      <div>
+        <p class="blog-eyebrow">Media collection</p>
+        <h1 class="blogs-title">Railway media and video highlights</h1>
+        <p class="blogs-intro">Explore insights and innovations in rail transport through video stories, project coverage, and mobility spotlights.</p>
+      </div>
+      <div class="blogs-hero-card">
+        <strong>{{ vlog_entries|length }}</strong>
+        <span>video stories</span>
+      </div>
+    </div>
+  </section>
 
-    header {
-      text-align: center;
-      padding: 2rem 1rem;
-      background-color: #004d73;
-      color: white;
-    }
-
-    header h1 {
-      margin-bottom: 0.5rem;
-    }
-
-    .video-gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-      gap: 2rem;
-      padding: 2rem;
-      justify-items: center;
-    }
-
-    .video-card {
-      background: white;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease;
-      max-width: 500px;
-    }
-
-    .video-card:hover {
-      transform: scale(1.02);
-    }
-
-    .video-card img {
-      width: 100%;
-      height: 280px;
-      object-fit: cover;
-      cursor: pointer;
-    }
-
-    .video-info {
-      padding: 1rem;
-    }
-
-    .video-info h3 {
-      color: #004d73;
-      margin-bottom: 0.5rem;
-    }
-
-    .video-info small {
-      display: block;
-      margin-bottom: 0.5rem;
-      color: #777;
-    }
-  </style>
-
-  <header>
-    <h1>Railway Media Gallery</h1>
-    <p>Explore insights and innovations in rail transport through video stories.</p>
-  </header>
-
-  <section class="video-gallery">
+  <section class="container video-gallery">
     {% for video in vlog_entries %}
       <div class="video-card">
         <a href="{{ video.video_url }}" target="_blank" rel="noopener noreferrer">
@@ -90,5 +90,5 @@
       <p>No vlog entries have been added yet.</p>
     {% endfor %}
   </section>
-
+</main>
 {% endblock %}

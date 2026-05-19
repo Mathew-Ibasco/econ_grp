@@ -2,131 +2,110 @@
 {% load static %}
 {% load i18n %}
 
-
 {% block title %}
     Gallery
 {% endblock %}
 
+{% block style %}
+  .gallery-page {
+    background-color: #f5f7fa;
+    color: #333;
+  }
+
+  .gallery-page .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .gallery-page .card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+    cursor: pointer;
+  }
+
+  .gallery-page .card:hover {
+    transform: scale(1.03);
+  }
+
+  .gallery-page .card img,
+  .gallery-page .card video {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+  }
+
+  .gallery-page .caption {
+    padding: 1rem;
+  }
+
+  .gallery-page .caption h3 {
+    color: #004d73;
+    margin-bottom: 0.5rem;
+  }
+
+  .gallery-page .lightbox {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .gallery-page .lightbox img {
+    max-width: 80%;
+    max-height: 80%;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  }
+
+  .gallery-page .lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 35px;
+    color: #fff;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .gallery-page .lightbox-close:hover {
+    color: #ccc;
+  }
+
+  @media (max-width: 900px) {
+    .gallery-page .gallery {
+      grid-template-columns: 1fr;
+    }
+  }
+{% endblock %}
 
 {% block content %}
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f5f7fa;
-      color: #333;
-    }
+<main class="blogs-page gallery-page">
+  <section class="blogs-hero">
+    <div class="container blogs-hero-inner">
+      <div>
+        <p class="blog-eyebrow">Gallery collection</p>
+        <h1 class="blogs-title">Urban rail systems gallery</h1>
+        <p class="blogs-intro">Exploring how rail transport transforms cities and improves mobility through images, maps, and visual references.</p>
+      </div>
+      <div class="blogs-hero-card">
+        <strong>{{ gallery_entries|length }}</strong>
+        <span>featured visuals</span>
+      </div>
+    </div>
+  </section>
 
-
-    header {
-      text-align: center;
-      padding: 2rem 1rem;
-      background-color: #004d73;
-      color: white;
-    }
-
-
-    header h1 {
-      margin-bottom: 0.5rem;
-    }
-
-
-    .gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 1.5rem;
-      padding: 2rem;
-    }
-
-
-    .card {
-      background: white;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease;
-      cursor: pointer;
-    }
-
-
-    .card:hover {
-      transform: scale(1.03);
-    }
-
-
-    .card img {
-      width: 100%;
-      height: 220px;
-      object-fit: cover;
-    }
-
-
-    .caption {
-      padding: 1rem;
-    }
-
-
-    .caption h3 {
-      color: #004d73;
-      margin-bottom: 0.5rem;
-    }
-
-
-    footer {
-      text-align: center;
-      padding: 1rem;
-      background-color: #004d73;
-      color: white;
-      font-size: 0.9rem;
-    }
-
-
-    /* Lightbox styles */
-    .lightbox {
-      display: none;
-      position: fixed;
-      z-index: 999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.8);
-      justify-content: center;
-      align-items: center;
-    }
-
-
-    .lightbox img {
-      max-width: 80%;
-      max-height: 80%;
-      border-radius: 8px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    }
-
-
-    .lightbox-close {
-      position: absolute;
-      top: 20px;
-      right: 35px;
-      color: #fff;
-      font-size: 40px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-
-    .lightbox-close:hover {
-      color: #ccc;
-    }
-  </style>
-
-
-  <header>
-    <h1>Urban Rail Systems Gallery</h1>
-    <p>Exploring how rail transport transforms cities and improves mobility.</p>
-  </header>
-
-
-  <section class="gallery">
+  <section class="container gallery">
     {% for entry in gallery_entries %}
       <div class="card">
         {% if entry.media_type == "video" %}
@@ -135,7 +114,7 @@
               <img src="{{ entry.thumbnail_url }}" alt="{{ entry.title }}">
             </a>
           {% else %}
-            <video controls preload="metadata" style="width: 100%; height: 220px; object-fit: cover;">
+            <video controls preload="metadata">
               <source src="{{ entry.video_url }}">
             </video>
           {% endif %}
@@ -151,20 +130,17 @@
       <p>No gallery entries have been added yet.</p>
     {% endfor %}
   </section>
- 
+
   <div id="lightbox" class="lightbox">
     <span class="lightbox-close">&times;</span>
-    <img id="lightbox-img" src="">
+    <img id="lightbox-img" src="" alt="">
   </div>
-
 
   <script>
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
     const closeBtn = document.querySelector('.lightbox-close');
 
-
-   
     document.querySelectorAll('.gallery .card img').forEach(img => {
       img.addEventListener('click', () => {
         lightbox.style.display = 'flex';
@@ -172,14 +148,9 @@
       });
     });
 
-
-   
     closeBtn.addEventListener('click', () => {
       lightbox.style.display = 'none';
     });
-
-
-
 
     lightbox.addEventListener('click', (e) => {
       if (e.target === lightbox) {
@@ -187,7 +158,5 @@
       }
     });
   </script>
+</main>
 {% endblock %}
-
-
-
