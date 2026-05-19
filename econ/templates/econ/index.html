@@ -1,6 +1,7 @@
 {% extends 'econ/layout.html' %}
 {% load static %}
 {% load i18n %}
+
 {% block title %}
     {% if show_dashboard %}
         Rail Transport & Urban Mobility | Dashboard
@@ -8,9 +9,11 @@
         Rail Transport & Urban Mobility | Home
     {% endif %}
 {% endblock %}
+
 {% block content %}
 <main class="home-page">
     {% if show_dashboard %}
+        {# ========== DASHBOARD VIEW ========== #}
         <section class="dashboard-hero">
             <div class="container">
                 <div class="dashboard-hero-grid">
@@ -20,20 +23,15 @@
                         <p>Keep track of the rail transport topics, references, and media that matter most to your economics project.</p>
                     </div>
                     <div class="dashboard-stats">
-                        <div>
-                            <strong>{{ saved_bookmarks|length }}</strong>
-                            <span>Saved topics</span>
-                        </div>
-                        <div>
-                            <strong>{{ available_topics_count }}</strong>
-                            <span>Available topics</span>
-                        </div>
+                        <div><strong>{{ saved_bookmarks|length }}</strong><span>Saved topics</span></div>
+                        <div><strong>{{ available_topics_count }}</strong><span>Available topics</span></div>
                     </div>
                 </div>
             </div>
         </section>
 
         <div class="container dashboard-shell">
+            {# Saved Section #}
             <section class="dashboard-section">
                 <div class="dashboard-section-heading">
                     <div>
@@ -51,7 +49,7 @@
                                     <form method="POST" action="{% url 'toggle_bookmark' %}">
                                         {% csrf_token %}
                                         <input type="hidden" name="item_key" value="{{ board.bookmark.item_key }}">
-                                        <button type="submit" class="icon-action" title="Remove bookmark" aria-label="Remove {{ board.bookmark.title }}">
+                                        <button type="submit" class="icon-action" title="Remove bookmark">
                                             <i class="fas fa-bookmark"></i>
                                         </button>
                                     </form>
@@ -67,62 +65,23 @@
                                         <div class="study-progress-fill" style="width: {{ board.progress_percent }}%;"></div>
                                     </div>
                                 </div>
-                                <p class="dashboard-muted study-board-hint">Open a blog, journal, or video to add notes and take checkpoints.</p>
+                                <p class="dashboard-muted">Open a blog, journal, or video to add notes and take checkpoints.</p>
                                 {% with topic=board.topic %}
                                     <details class="study-resources">
                                         <summary>Related Resources</summary>
                                         {% if board.blog_items %}
-                                            <div class="saved-related">
-                                                <h4>Blogs</h4>
-                                                {% for item in board.blog_items %}
-                                                    <a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}">
-                                                        <span>{{ item.title }}</span>
-                                                        {% if item.completed %}<strong>Viewed</strong>{% endif %}
-                                                    </a>
-                                                {% endfor %}
-                                            </div>
+                                            <div class="saved-related"><h4>Blogs</h4>{% for item in board.blog_items %}<a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}"><span>{{ item.title }}</span>{% if item.completed %}<strong>Viewed</strong>{% endif %}</a>{% endfor %}</div>
                                         {% endif %}
                                         {% if board.journal_items %}
-                                            <div class="saved-related">
-                                                <h4>Journals</h4>
-                                                {% for item in board.journal_items %}
-                                                    <a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}" target="_blank" rel="noopener noreferrer">
-                                                        <span>{{ item.title }}</span>
-                                                        {% if item.completed %}<strong>Viewed</strong>{% endif %}
-                                                    </a>
-                                                {% endfor %}
-                                            </div>
+                                            <div class="saved-related"><h4>Journals</h4>{% for item in board.journal_items %}<a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}" target="_blank"><span>{{ item.title }}</span>{% if item.completed %}<strong>Viewed</strong>{% endif %}</a>{% endfor %}</div>
                                         {% endif %}
                                         {% if board.media_items %}
-                                            <div class="saved-related">
-                                                <h4>Media</h4>
-                                                {% for item in board.media_items %}
-                                                    <span class="resource-status-link {% if item.completed %}is-viewed{% endif %}">
-                                                        <span>{{ item.title }}</span>
-                                                        {% if item.completed %}<strong>Viewed</strong>{% endif %}
-                                                    </span>
-                                                {% endfor %}
-                                                <a href="{% url 'gallery' %}" class="text-link">Open gallery <i class="fas fa-arrow-right"></i></a>
-                                            </div>
+                                            <div class="saved-related"><h4>Media</h4>{% for item in board.media_items %}<span class="resource-status-link"><span>{{ item.title }}</span></span>{% endfor %}<a href="{% url 'gallery' %}" class="text-link">Open gallery <i class="fas fa-arrow-right"></i></a></div>
                                         {% endif %}
                                         {% if board.video_items %}
-                                            <div class="saved-related">
-                                                <h4>Videos</h4>
-                                                {% for item in board.video_items %}
-                                                    <a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}" target="_blank" rel="noopener noreferrer">
-                                                        <span>{{ item.title }}</span>
-                                                        {% if item.completed %}<strong>Viewed</strong>{% endif %}
-                                                    </a>
-                                                {% endfor %}
-                                                <a href="{% url 'vlog' %}" class="text-link">Open videos <i class="fas fa-arrow-right"></i></a>
-                                            </div>
+                                            <div class="saved-related"><h4>Videos</h4>{% for item in board.video_items %}<a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}" target="_blank"><span>{{ item.title }}</span>{% if item.completed %}<strong>Viewed</strong>{% endif %}</a>{% endfor %}<a href="{% url 'vlog' %}" class="text-link">Open videos <i class="fas fa-arrow-right"></i></a></div>
                                         {% endif %}
-                                        {% if topic.source_url %}
-                                            <div class="saved-related">
-                                                <h4>Source</h4>
-                                                <a href="{{ topic.source_url }}" class="text-link" target="_blank" rel="noopener noreferrer">Open source <i class="fas fa-arrow-right"></i></a>
-                                            </div>
-                                        {% endif %}
+                                        {% if topic.source_url %}<div class="saved-related"><h4>Source</h4><a href="{{ topic.source_url }}" class="text-link" target="_blank">Open source <i class="fas fa-arrow-right"></i></a></div>{% endif %}
                                     </details>
                                 {% endwith %}
                             </article>
@@ -137,6 +96,7 @@
                 {% endif %}
             </section>
 
+            {# Explore Section #}
             <section class="dashboard-section">
                 <div class="dashboard-section-heading">
                     <div>
@@ -147,26 +107,15 @@
                 <div class="dashboard-card-grid">
                     {% for topic in dashboard_topics %}
                         <article class="dashboard-card">
-                            <div class="dashboard-card-icon">
-                                <i class="fas {{ topic.icon }}"></i>
-                            </div>
+                            <div class="dashboard-card-icon"><i class="fas {{ topic.icon }}"></i></div>
                             <div>
                                 <span class="saved-type">Topic</span>
                                 <h3>{{ topic.title }}</h3>
                                 <p>{{ topic.summary }}</p>
-                                <p class="dashboard-muted">
-                                    {{ topic.blog_posts.all|length }} blogs ·
-                                    {{ topic.journal_entries.all|length }} journals ·
-                                    {{ topic.media_entries.all|length }} media ·
-                                    {{ topic.vlog_entries.all|length }} videos
-                                </p>
+                                <p class="dashboard-muted">{{ topic.blog_posts.all|length }} blogs · {{ topic.journal_entries.all|length }} journals · {{ topic.media_entries.all|length }} media · {{ topic.vlog_entries.all|length }} videos</p>
                             </div>
                             <div class="dashboard-card-actions">
-                                {% if topic.source_url %}
-                                    <a href="{{ topic.source_url }}" class="text-link" target="_blank" rel="noopener noreferrer">View source</a>
-                                {% else %}
-                                    <span class="dashboard-muted">Topic collection</span>
-                                {% endif %}
+                                {% if topic.source_url %}<a href="{{ topic.source_url }}" class="text-link" target="_blank">View source</a>{% else %}<span class="dashboard-muted">Topic collection</span>{% endif %}
                                 <form method="POST" action="{% url 'toggle_bookmark' %}">
                                     {% csrf_token %}
                                     <input type="hidden" name="item_key" value="{{ topic.key }}">
@@ -181,6 +130,7 @@
                 </div>
             </section>
 
+            {# Recommended Section #}
             <section class="dashboard-section">
                 <h2 class="section-title">Recommended Next</h2>
                 <div class="quick-links">
@@ -200,284 +150,113 @@
                 </div>
             </section>
         </div>
-    {% else %}
-    <section class="home-public-panel">
 
-    <!-- Hero section intro -->
-    <div class="hero">
-        <div class="container hero-grid">
-            <div class="hero-text">
-                <h2>Fast, Safe, Connected:<br>Railways shaping our cities</h2>
-                <p>Rail transport plays a vital role in improving urban accessibility and mobility — helping people travel faster, safer, and more efficiently across metropolitan areas. In the Philippines, stronger rail systems like MRT, LRT, the Metro Manila Subway, and the North-South Commuter Railway can connect communities to jobs, education, and essential services.</p>
-                <a href="#" class="btn-soft">Explore insights <i class="fas fa-arrow-right"></i></a>
+    {% else %}
+        {# ========== PUBLIC HOME VIEW ========== #}
+        <div class="home-public-panel">
+            <div class="hero">
+                <div class="container hero-grid">
+                    <div class="hero-text">
+                        <br><br>
+                        <h2>Fast, Safe, Connected:<br>Railways shaping our cities</h2>
+                        <p>Rail transport plays a vital role in improving urban accessibility and mobility — helping people travel faster, safer, and more efficiently across metropolitan areas. In the Philippines, stronger rail systems like MRT, LRT, the Metro Manila Subway, and the North-South Commuter Railway can connect communities to jobs, education, and essential services.</p>
+                        <a href="#" class="btn-soft">Explore insights <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                    <div class="hero-img">
+                        <img src="https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg" alt="Modern light rail transit system">
+                    </div>
+                </div>
             </div>
-            <div class="hero-img">
-                <img src="https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg" alt="Modern light rail transit system">
+
+            <div class="container">
+                <section class="info-section">
+                    <h2 class="section-title">What is Rail Transport?</h2>
+                    <div class="card-grid">
+                        <div class="info-card"><i class="fas fa-train"></i><h3>What is Rail Transport?</h3><p>Moving passengers and goods by train along metal tracks above ground, underground, or elevated. It is efficient for long-distance travel and heavy cargo.</p></div>
+                        <div class="info-card"><i class="fas fa-history"></i><h3>Historical Evolution</h3><p>Early forms traced back to ancient Greece and was developed greatly during the Industrial Revolution with steam-powered locomotives in the 18th-19th centuries.</p></div>
+                        <div class="info-card"><i class="fas fa-microchip"></i><h3>Modern Railways</h3><p>Today's systems feature high-speed trains and digital tracking, making passenger travel and freight movement more effective across the globe.</p></div>
+                    </div>
+                </section>
+
+                <section class="rail-section">
+                    <h2 class="section-title">Railways in the Philippines</h2>
+                    <div class="railway-flex">
+                        <div class="definition-side">
+                            <p>Currently, the Philippines has three major railway systems: the Manila Metro Rail Transit (MRT), the Light Rail Transit (LRT), and the Philippine National Railways (PNR). At present, active railway services are mainly located in Luzon, which means rail transport is not yet widely available across the entire country. These systems are concentrated in limited areas, particularly in and around Metro Manila and parts of Luzon, but they remain heavily used by many Filipino commuters.</p>
+                        </div>
+                        <div class="map-side">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Manila_LRT-MRT_map.png/1280px-Manila_LRT-MRT_map.png" alt="Manila LRT-MRT network map">
+                            <div class="map-caption"><i class="fas fa-map-marked-alt"></i> Metro Manila Rail Network: LRT-1 (Yellow), LRT-2 (Purple), MRT-3 (Blue).</div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="rail-lineup">
+                    <div class="rail-card">
+                        <img src="https://ik.imagekit.io/tvlk/blog/2025/01/p2EtANCG-image.jpeg" alt="LRT Line 1 train">
+                        <div class="rail-card-content"><h4>LRT Line 1 (Yellow)</h4><p>Southeast Asia's first LRT system (1984). 15-km elevated railway from Baclaran to Monumento, later extended via Rizal Line and North Extension (Balintawak, Roosevelt).</p></div>
+                    </div>
+                    <div class="rail-card">
+                        <img src="https://files01.pna.gov.ph/ograph/2025/04/14/lrt2-2025april-bbriones-2.jpg" alt="LRT Line 2 Megatren">
+                        <div class="rail-card-content"><h4>LRT Line 2 (Purple Line)</h4><p>13.8-km line through Pasig, Quezon City, Manila. Modern trains with CCTV, elevators, and accessibility features. Connects Santolan to Recto.</p></div>
+                    </div>
+                    <div class="rail-card">
+                        <img src="https://media.philstar.com/images/articles/met2-mrt-3_2018-04-02_20-32-49.jpg" alt="MRT-3 along EDSA">
+                        <div class="rail-card-content"><h4>MRT-3 (Blue Line)</h4><p>16.9 km along EDSA from North Avenue to Taft Avenue. Decongests the busiest route, serving Cubao, Ortigas, Ayala, and Taft.</p></div>
+                    </div>
+                    <div class="rail-card">
+                        <img src="https://www.rappler.com/tachyon/2023/06/pnr-commuters-philippine-national-railways-train-dotr-june-2-2023-003-scaled.jpg" alt="PNR train commuters">
+                        <div class="rail-card-content"><h4>Philippine National Railways</h4><p>Historic line since 1892, currently serving commuter routes. Vision to expand Manila-Legazpi and cargo movements, vital for inter-regional connectivity.</p></div>
+                    </div>
+                </div>
+                <p class="caption-img"><i class="fas fa-camera"></i> Above: Key rail systems serving the Philippine capital region. Investments in modernisation are reshaping daily commutes.</p>
+
+                <section class="mobility-section">
+                    <h2 class="section-title">Accessibility, Mobility & The Economy</h2>
+                    <div class="split-columns">
+                        <div class="split-item">
+                            <div>
+                                <i class="fas fa-wheelchair"></i>
+                                <h3>Accessibility & Urban Mobility</h3>
+                                <p>As cities grow, reliable public transport becomes vital. Rail systems move masses efficiently, reducing traffic congestion and improving access to workplaces, schools, and healthcare. In Metro Manila, congestion costs billions annually, but better rail networks ease this burden and make cities more inclusive.</p>
+                            </div>
+                            <div>
+                                <img src="https://www.moneymax.ph/hs-fs/hubfs/commuter%20problems%20-%20Poor%20Public%20Transportation%20System.jpg?width=1440&name=commuter%20problems%20-%20Poor%20Public%20Transportation%20" alt="Manila commuter congestion">
+                                <div class="caption-img">Heavy road congestion highlights the need for mass rail transit.</div>
+                            </div>
+                        </div>
+                        <div class="split-item">
+                            <div>
+                                <i class="fas fa-chart-simple"></i>
+                                <h3>Economic Relations</h3>
+                                <p>Government spending on rail infrastructure acts as an economic injection that creates jobs, supports firms, and improves productivity. Efficient railways lower travel costs, boost business access, and strengthen the circular flow of income. The Philippines' "Build Better More" program prioritises rail to unlock regional growth.</p>
+                            </div>
+                            <div>
+                                <img src="https://media.philstar.com/photos/2019/12/11/nat_2019-12-11_21-33-23.jpg" alt="Philippines railway construction">
+                                <div class="caption-img">Infrastructure investments fuel employment and urban competitiveness.</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="resources-section">
+                    <h2 class="section-title">Key Resources & References</h2>
+                    <div class="resources-grid">
+                        <ul class="resource-list">
+                            <li><i class="fas fa-external-link-alt"></i> <a href="https://www.ebsco.com/research-starters/history/rail-transport" target="_blank">Rail Transport History</a></li>
+                            <li><i class="fas fa-train"></i> <a href="https://www.dotrmrt3.gov.ph/about-us" target="_blank">MRT-3 About</a></li>
+                            <li><i class="fas fa-subway"></i> <a href="https://www.lrta.gov.ph/railway-operations/" target="_blank">LRTA Operations</a></li>
+                        </ul>
+                        <ul class="resource-list">
+                            <li><i class="fas fa-building"></i> <a href="https://icrs.gcg.gov.ph/profiles/pnr/" target="_blank">PNR Profile</a></li>
+                            <li><i class="fas fa-chart-line"></i> <a href="https://www.worldbank.org/en/results/2024/03/13/promoting-livable-cities-by-investing-in-urban-mobility" target="_blank">World Bank: Livable Cities</a></li>
+                            <li><i class="fas fa-dollar-sign"></i> <a href="https://www.dof.gov.ph/opening-remarksmetro-manila-subway-project-mmspworksite-visit-and-press-briefing/" target="_blank">DOF: Metro Manila Subway</a></li>
+                        </ul>
+                        <div class="resource-note"><p><i class="fas fa-book-open"></i> <strong>Academic journals:</strong> ScienceDirect, MDPI, Taylor & Francis – full articles available via project resources (see Journals page).</p></div>
+                    </div>
+                </section>
             </div>
         </div>
-    </div>
-
-    <div class="container">
-        <!-- What is rail transport? -->
-        <section id="rail-transport">
-            <h2 class="section-title">What is Rail Transport?</h2>
-            <div class="card-grid">
-                <!-- Card 1: What is it? -->
-                <div class="info-card">
-                    <i class="fas fa-train"></i>
-                    <h3>What is Rail Transport?</h3>
-                    <p>Moving passengers and goods by train along metal tracks above ground, underground, or elevated. It is efficient for long-distance travel and heavy cargo.</p>
-                </div>
-               
-                <!-- Card 2: History -->
-                <div class="info-card">
-                    <i class="fas fa-history"></i>
-                    <h3>Historical Evolution</h3>
-                    <p>Early forms traced back to ancient Greece and was developed greatly during the Industrial Revolution with steam-powered locomotives in the 18th-19th centuries.</p>
-                </div>
-               
-                <!-- Card 3: Modern Impact -->
-                <div class="info-card">
-                    <i class="fas fa-microchip"></i>
-                    <h3>Modern Railways</h3>
-                    <p>Today's systems feature high-speed trains and digital tracking, making passenger travel and freight movement more effective across the globe.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Philippines rail context -->
-        <section id="philippine-rail">
-            <h2 class="section-title">Railways in the Philippines</h2>
-            <div class="railway-flex" style="
-                display: flex;
-                flex-wrap: nowrap;          
-                align-items: flex-start;
-                gap: 2rem;
-                margin-top: 1rem;
-                justify-content: space-between;
-            ">
-               
-                <!-- Text side (now left) -->
-                <div class="definition-side" style="
-                    flex: 0 0 48%;            
-                    max-width: 600px;
-                    font-size: 1.50rem;
-                    line-height: 1.6;
-                ">
-                    <p>
-                        Currently, the Philippines has three major railway systems: the Manila Metro Rail Transit (MRT), the Light Rail Transit (LRT), and the Philippine National Railways (PNR). At present, active railway services are mainly located in Luzon, which means rail transport is not yet widely available across the entire country. These systems are concentrated in limited areas, particularly in and around Metro Manila and parts of Luzon, but they remain heavily used by many Filipino commuters.
-                    </p>
-                </div>
-               
-                <!-- Map side (now right) -->
-                <div class="map-side" style="
-                    flex: 0 0 48%;            
-                    background: #eef3fa;
-                    padding: 1rem;
-                    border-radius: 24px;
-                    text-align: center;
-                ">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Manila_LRT-MRT_map.png/1280px-Manila_LRT-MRT_map.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail&_=20101102101703"
-                        alt="Manila LRT-MRT network map"
-                        style="width:100%; height:auto; border-radius:12px;">
-                    <div class="map-caption" style="margin-top: 0.75rem; font-size: 0.85rem;">
-                        <i class="fas fa-map-marked-alt"></i> Metro Manila Rail Network: LRT-1 (Yellow), LRT-2 (Purple), MRT-3 (Blue).
-                    </div>
-                </div>
-               
-            </div>
-        </section>
-           
-            <div class="rail-lineup">
-                <!-- LRT1 Card -->
-                <div class="rail-card">
-                    <img src="https://ik.imagekit.io/tvlk/blog/2025/01/p2EtANCG-image.jpeg" alt="LRT Line 1 train">
-                    <div class="rail-card-content">
-                        <h4>LRT Line 1 (Yellow)</h4>
-                        <p>Southeast Asia's first LRT system (1984). 15-km elevated railway from Baclaran to Monumento, later extended via Rizal Line and North Extension (Balintawak, Roosevelt).</p>
-                    </div>
-                </div>
-                <!-- LRT2 Card -->
-                <div class="rail-card">
-                    <img src="https://files01.pna.gov.ph/ograph/2025/04/14/lrt2-2025april-bbriones-2.jpg" alt="LRT Line 2 Megatren">
-                    <div class="rail-card-content">
-                        <h4>LRT Line 2 (Purple Line)</h4>
-                        <p>13.8-km line through Pasig, Quezon City, Manila. Modern trains with CCTV, elevators, and accessibility features. Connects Santolan to Recto.</p>
-                    </div>
-                </div>
-                <!-- MRT3 Card -->
-                <div class="rail-card">
-                    <img src="https://media.philstar.com/images/articles/met2-mrt-3_2018-04-02_20-32-49.jpg" alt="MRT-3 along EDSA">
-                    <div class="rail-card-content">
-                        <h4>MRT-3 (Blue Line)</h4>
-                        <p>16.9 km along EDSA from North Avenue to Taft Avenue. Decongests the busiest route, serving Cubao, Ortigas, Ayala, and Taft.</p>
-                    </div>
-                </div>
-                <!-- PNR Card -->
-                <div class="rail-card">
-                    <img src="https://www.rappler.com/tachyon/2023/06/pnr-commuters-philippine-national-railways-train-dotr-june-2-2023-003-scaled.jpg" alt="PNR train commuters">
-                    <div class="rail-card-content">
-                        <h4>Philippine National Railways</h4>
-                        <p>Historic line since 1892, currently serving commuter routes. Vision to expand Manila-Legazpi and cargo movements, vital for inter-regional connectivity.</p>
-                    </div>
-                </div>
-            </div>
-            <p class="caption-img" style="margin-top: 1rem;"><i class="fas fa-camera"></i> Above: Key rail systems serving the Philippine capital region. Investments in modernisation are reshaping daily commutes.</p>
-        </section>
-
-         <!-- Accessibility & Mobility + Economic Relations double section -->
-        <section id="mobility-economy">
-            <h2 class="section-title">Accessibility, Mobility & The Economy</h2>
-            <div class="split-columns" style="display: flex; flex-wrap: wrap; gap: 2rem;">
-               
-                <!-- 1st Card -->
-                <div class="split-item" style="
-                    flex: 1 1 45%;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
-                ">
-                    <div>
-                        <i class="fas fa-wheelchair" style="font-size: 2rem; color:#1c6e8f;"></i>
-                        <h3 style="margin-top: 10px;">Accessibility & Urban Mobility</h3>
-                        <p>As cities grow, reliable public transport becomes vital. Rail systems move masses efficiently, reducing traffic congestion and improving access to workplaces, schools, and healthcare. In Metro Manila, congestion costs billions annually, but better rail networks ease this burden and make cities more inclusive.</p>
-                    </div>
-                    <div>
-                        <img src="https://www.moneymax.ph/hs-fs/hubfs/commuter%20problems%20-%20Poor%20Public%20Transportation%20System.jpg?width=1440&name=commuter%20problems%20-%20Poor%20Public%20Transportation%20"
-                            alt="Manila commuter congestion"
-                            style="width:100%; border-radius: 18px; margin-top: 15px; object-fit: cover; height: 180px;">
-                        <div class="caption-img" style="font-size: 0.85rem; margin-top: 5px;">Heavy road congestion highlights the need for mass rail transit.</div>
-                    </div>
-                </div>
-               
-                <!-- 2nd Card -->
-                <div class="split-item" style="
-                    flex: 1 1 45%;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
-                ">
-                    <div>
-                        <i class="fas fa-chart-simple" style="font-size: 2rem; color:#1c6e8f;"></i>
-                        <h3 style="margin-top: 10px;">Economic Relations</h3>
-                        <p>Government spending on rail infrastructure acts as an economic injection that creates jobs, supports firms, and improves productivity. Efficient railways lower travel costs, boost business access, and strengthen the circular flow of income. The Philippines' "Build Better More" program prioritises rail to unlock regional growth.</p>
-                    </div>
-                    <div>
-                        <img src="https://media.philstar.com/photos/2019/12/11/nat_2019-12-11_21-33-23.jpg"
-                            alt="Philippines railway construction economic impact"
-                            style="width:100%; border-radius: 18px; margin-top: 15px; object-fit: cover; height: 180px;">
-                        <div class="caption-img" style="font-size: 0.85rem; margin-top: 5px;">Infrastructure investments fuel employment and urban competitiveness.</div>
-                    </div>
-                </div>
-        </section>
-
-        <!-- Photo gallery teaser (10 photos) -->
-        <section id="rail-gallery">
-            <h2 class="section-title">Gallery Snapshot: Rail in Action</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(230px,1fr)); gap: 1.2rem;">
-                
-                <div>
-                    <img src="https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg" 
-                        style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" 
-                        alt="Modern light rail">
-                    <div class="caption-img">Modern light rail, Changchun, China</div>
-                </div>
-
-                <div>
-                    <img src="https://ik.imagekit.io/tvlk/blog/2025/01/p2EtANCG-image.jpeg" 
-                        style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" 
-                        alt="LRT-1 train">
-                    <div class="caption-img">LRT-1 Baclaran Station, Manila</div>
-                </div>
-
-                <div>
-                    <img src="https://files01.pna.gov.ph/ograph/2025/04/14/lrt2-2025april-bbriones-2.jpg" 
-                        style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" 
-                        alt="LRT-2 Purple Line">
-                    <div class="caption-img">LRT-2 Megatren, modern rolling stock</div>
-                </div>
-
-                <div>
-                    <img src="https://media.philstar.com/images/articles/met2-mrt-3_2018-04-02_20-32-49.jpg" 
-                        style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" 
-                        alt="MRT-3 EDSA">
-                    <div class="caption-img">MRT-3 navigating EDSA corridor</div>
-                </div>
-
-                <div>
-                    <img src="https://www.rappler.com/tachyon/2023/06/pnr-commuters-philippine-national-railways-train-dotr-june-2-2023-003-scaled.jpg" 
-                        style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" 
-                        alt="PNR Commuters">
-                    <div class="caption-img">PNR commuters, busy day in Manila</div>
-                </div>
-
-                <div>
-                    <img src="https://www.moneymax.ph/hs-fs/hubfs/commuter%20problems%20-%20Poor%20Public%20Transportation%20System.jpg?width=1440&name=commuter%20problems%20-%20Poor%20Public%20Transportation%20" 
-                        style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" 
-                        alt="traffic congestion">
-                    <div class="caption-img">Urban road congestion vs. rail efficiency</div>
-                </div>
-
-                <div>
-                    <img src="https://media.philstar.com/photos/2019/12/11/nat_2019-12-11_21-33-23.jpg" 
-                        style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" 
-                        alt="Rail construction">
-                    <div class="caption-img">DOTr railway projects under construction</div>
-                </div>
-
-                <div>
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Manila_LRT-MRT_map.png/1280px-Manila_LRT-MRT_map.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail&_=20101102101703" 
-                        style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" 
-                        alt="Metro Manila LRT and MRT system map">
-                    <div class="caption-img">Schematic map of Metro Manila rail lines</div>
-                </div>
-
-                <div>
-                    <img src="https://www.railway-technology.com/wp-content/uploads/sites/13/2019/03/Image2-Metro-Manila-Subway-Philippines.jpg" 
-                        style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" 
-                        alt="future subway" 
-                        onerror="this.onerror=null; this.src='https://www.dof.gov.ph/wp-content/uploads/2023/02/MMSP-TBM-Launching-scaled.jpg'">
-                    <div class="caption-img">Metro Manila Subway (under construction)</div>
-                </div>
-
-                <div>
-                    <img src="https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg" 
-                        style="width:100%; border-radius: 20px; height:150px; object-fit:cover;" 
-                        alt="High speed train concept">
-                    <div class="caption-img">Efficient rail reduces travel time globally</div>
-                </div>
-
-            </div>
-            <p class="caption-img" style="margin-top: 1rem;">
-                <i class="fas fa-images"></i> Ten curated images showing Philippine rail systems and international references. Each emphasizes rail's role in accessibility and mobility.
-            </p>
-        </section>
-        
-        <!-- Relevant links (sources) -->
-        <section>
-            <h2 class="section-title">Key Resources & References</h2>
-            <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between;">
-                <div style="flex:1; min-width:200px;">
-                    <ul style="list-style: none;">
-                        <li><i class="fas fa-external-link-alt"></i> <a href="https://www.ebsco.com/research-starters/history/rail-transport" target="_blank">Rail Transport History</a></li>
-                        <li><i class="fas fa-train"></i> <a href="https://www.dotrmrt3.gov.ph/about-us" target="_blank">MRT-3 About</a></li>
-                        <li><i class="fas fa-subway"></i> <a href="https://www.lrta.gov.ph/railway-operations/" target="_blank">LRTA Operations</a></li>
-                    </ul>
-                </div>
-                <div style="flex:1; min-width:200px;">
-                    <ul style="list-style: none;">
-                        <li><i class="fas fa-building"></i> <a href="https://icrs.gcg.gov.ph/profiles/pnr/" target="_blank">PNR Profile</a></li>
-                        <li><i class="fas fa-chart-line"></i> <a href="https://www.worldbank.org/en/results/2024/03/13/promoting-livable-cities-by-investing-in-urban-mobility" target="_blank">World Bank: Livable Cities</a></li>
-                        <li><i class="fas fa-dollar-sign"></i> <a href="https://www.dof.gov.ph/opening-remarksmetro-manila-subway-project-mmspworksite-visit-and-press-briefing/" target="_blank">DOF: Metro Manila Subway</a></li>
-                    </ul>
-                </div>
-                <div style="flex:1; min-width:200px;">
-                    <p><i class="fas fa-book-open"></i> <strong>Academic journals:</strong> ScienceDirect, MDPI, Taylor & Francis – full articles available via project resources (see Journals page).</p>
-                </div>
-            </div>
-        </section>
-    </div>
-    </section>
     {% endif %}
 </main>
 {% endblock %}
