@@ -1542,7 +1542,8 @@ hr {
 
 .blog-card *,
 .journal-card-link *,
-.vlog-page .video-card-link * {
+.vlog-page .video-card-link *,
+.gallery-page .gallery-card-link * {
     text-decoration: none !important;
 }
 
@@ -1648,7 +1649,9 @@ hr {
 .journal-card-link:hover .blog-card-title,
 .journal-card-link:focus-visible .blog-card-title,
 .vlog-page .video-card-link:hover .blog-card-title,
-.vlog-page .video-card-link:focus-visible .blog-card-title {
+.vlog-page .video-card-link:focus-visible .blog-card-title,
+.gallery-page .gallery-card-link:hover .blog-card-title,
+.gallery-page .gallery-card-link:focus-visible .blog-card-title {
     text-decoration: underline !important;
     text-decoration-thickness: 2px;
     text-underline-offset: 0.22em;

@@ -684,7 +684,7 @@ def gallery(request):
         'econ/gallery.html',
         {
             'date': datetime.now(),
-            'gallery_entries': MediaGalleryEntry.objects.prefetch_related("topics").order_by("order", "id"),
+            'gallery_count': 10,
         }
     )
 
