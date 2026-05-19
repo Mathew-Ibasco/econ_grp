@@ -73,27 +73,34 @@ WSGI_APPLICATION = 'econ_web.wsgi.application'
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
-{
+DB_ENGINE = os.environ.get("ECON_DB_ENGINE", "sqlite").strip().lower()
+
+if DB_ENGINE == "mysql":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": "econdb",
+            "USER": "root",
+            "PASSWORD": "322533", #server
+            "HOST": "localhost",
+            "PORT": "3306",
+            "OPTIONS": {
+                "charset": "utf8",
+            }
+        }
+    }
+else:
+    # Default to SQLite so local migration commands work without a running MySQL server.
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db_local.sqlite3",
+        }
+    }
+
+CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-    }
-}
-
-
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'econdb',
-        'USER': 'root',
-        'PASSWORD': 'SQL123', #server
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'OPTIONS': {
-            'charset': 'utf8',
-        }
     }
 }
 
@@ -145,3 +152,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/static/'
 
 AUTH_USER_MODEL = "econ.User"
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

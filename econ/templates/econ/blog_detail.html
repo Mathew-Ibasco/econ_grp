@@ -1,0 +1,84 @@
+{% extends 'econ/layout.html' %}
+{% load static %}
+{% block title %}
+    {{ blog_post.title }} | Blogs
+{% endblock %}
+{% block content %}
+<main class="blogs-page">
+    <section class="blog-detail-hero">
+        <div class="container blog-detail-hero-inner">
+            <div>
+                <p class="blog-eyebrow">Rail transport blog</p>
+                <h1>{{ blog_post.title }}</h1>
+                <p>{{ blog_post.excerpt }}</p>
+            </div>
+            <div class="blog-hero-image">
+                <img src="{{ blog_post.featured_image_url }}" alt="{{ blog_post.featured_image_filename }}">
+            </div>
+        </div>
+    </section>
+
+    <section class="container blog-detail-shell">
+        <a class="back-link" href="{% url 'blog' %}">
+            <i class="fas fa-arrow-left"></i>
+            Back to all blogs
+        </a>
+
+        <div class="blog-detail-layout">
+            <article class="blog-detail-main">
+                <div class="blog-detail-content">
+                    {% for paragraph in blog_post.body_paragraphs %}
+                        <p>{{ paragraph }}</p>
+                    {% endfor %}
+                </div>
+
+                {% if blog_post.highlights %}
+                    <div class="blog-detail-section">
+                        <h2>Key takeaways</h2>
+                        <ul class="blog-highlight-list">
+                            {% for highlight in blog_post.highlights %}
+                                <li>{{ highlight }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if blog_post.gallery %}
+                    <div class="blog-detail-section">
+                        <h2>Project gallery</h2>
+                        <div class="blog-gallery-grid">
+                            {% for image in blog_post.gallery %}
+                                <figure class="blog-gallery-card">
+                                    <img src="{{ image.src }}" alt="{{ image.alt }}">
+                                    <figcaption>{{ image.caption }}</figcaption>
+                                </figure>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </article>
+
+            <aside class="blog-detail-sidebar">
+                <div class="detail-card">
+                    <h2>Keywords</h2>
+                    <ul class="blog-keywords">
+                        {% for keyword in blog_post.keywords %}
+                            <li>{{ keyword }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="detail-card">
+                    <h2>Sources</h2>
+                    <ul class="detail-source-list">
+                        {% for source in blog_post.sources %}
+                            <li>
+                                <a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.label }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </aside>
+        </div>
+    </section>
+</main>
+{% endblock %}

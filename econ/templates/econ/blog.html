@@ -5,5 +5,43 @@
     Blogs
 {% endblock %}
 {% block content %}
-    BLOG HERE
+<main class="blogs-page">
+    <section class="blogs-hero">
+        <div class="container blogs-hero-inner">
+            <div>
+                <p class="blog-eyebrow">Blog collection</p>
+                <h1 class="blogs-title">Rail transport stories worth reading</h1>
+                <p class="blogs-intro">Browse the blog posts about how rail shapes economic growth, mobility, land use, tourism, and regional connectivity.</p>
+            </div>
+            <div class="blogs-hero-card">
+                <strong>{{ blog_posts|length }}</strong>
+                <span>published posts</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="container blogs-list-section">
+        <div class="blog-list-grid">
+            {% for blog in blog_posts %}
+                <a class="blog-card" href="{% url 'blog_detail' blog.slug %}">
+                    <div class="blog-card-media">
+                        <img src="{{ blog.featured_image_url }}" alt="{{ blog.title }}">
+                    </div>
+                    <div class="blog-card-body">
+                        <div class="blog-card-meta">
+                            <span class="saved-type">Blog {{ forloop.counter }}</span>
+                        </div>
+                        <h3><span class="blog-card-title">{{ blog.title }}</span></h3>
+                        <p class="blog-card-excerpt">{{ blog.excerpt }}</p>
+                        <ul class="blog-keywords">
+                            {% for keyword in blog.keywords %}
+                                <li>{{ keyword }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    </section>
+</main>
 {% endblock %}

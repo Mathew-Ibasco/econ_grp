@@ -60,6 +60,51 @@ class post_section(models.Model):
         db_table = "post_section"
         ordering = ["order"]
 
+class BlogPost(models.Model):
+    title = models.CharField(max_length=300)
+    slug = models.SlugField(max_length=320, unique=True)
+    excerpt = models.TextField()
+    featured_image_filename = models.CharField(max_length=300)
+    featured_image_url = models.URLField(max_length=500)
+    raw_text = models.TextField(blank=True)
+    body_paragraphs = models.JSONField(default=list, blank=True)
+    keywords = models.JSONField(default=list, blank=True)
+    highlights = models.JSONField(default=list, blank=True)
+    gallery = models.JSONField(default=list, blank=True)
+    sources = models.JSONField(default=list, blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "blog_post"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.title
+
+class MediaGalleryEntry(models.Model):
+    MEDIA_TYPES = [
+        ("image", "Image"),
+        ("video", "Video"),
+    ]
+
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    media_type = models.CharField(max_length=10, choices=MEDIA_TYPES)
+    date = models.DateField(null=True, blank=True)
+    image_url = models.URLField(max_length=500, blank=True)
+    video_url = models.URLField(max_length=500, blank=True)
+    thumbnail_url = models.URLField(max_length=500, blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "media_gallery_entry"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.title
+
 class Bookmark(models.Model):
     BOOKMARK_TYPES = [
         ("topic", "Topic"),

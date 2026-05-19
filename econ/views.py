@@ -1,21 +1,12 @@
-import re
 from datetime import datetime, date
-from django.shortcuts import render, redirect
-from pathlib import Path
-from django.conf import settings
-from django.http import JsonResponse, FileResponse, HttpResponse
-from django.db.models import Count, F, Q, Value, Case, When, IntegerField, BooleanField, TextField, Prefetch
-from django.db import models
-import calendar
-from decimal import Decimal
-from django.http import HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login as auth_login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
-from .models import Bookmark, User
+from .models import BlogPost, Bookmark, MediaGalleryEntry, User
 
 DASHBOARD_ITEMS = [
     {
@@ -274,7 +265,20 @@ def blog(request):
         request,
         'econ/blog.html',
         {
-            'date': datetime.now()
+            'date': datetime.now(),
+            'blog_posts': BlogPost.objects.order_by("order", "id"),
+        }
+    )
+
+def blog_detail(request, slug):
+    blog_post = get_object_or_404(BlogPost, slug=slug)
+
+    return render(
+        request,
+        "econ/blog_detail.html",
+        {
+            "date": datetime.now(),
+            "blog_post": blog_post,
         }
     )
 
@@ -301,6 +305,7 @@ def gallery(request):
         request,
         'econ/gallery.html',
         {
-            'date': datetime.now()
+            'date': datetime.now(),
+            'gallery_entries': MediaGalleryEntry.objects.order_by("order", "id"),
         }
     )

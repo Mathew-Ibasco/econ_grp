@@ -35,12 +35,13 @@
         <h1>Rail Transport & Urban Mobility</h1>
         <p>Understanding rail systems | Sustainable City Development</p>
       </div>
+      {% with current_name=request.resolver_match.url_name|default:'' %}
       <ul class="nav-links">
-        <li><a href="{% url 'index' %}" class="active">Home</a></li>
-        <li><a href="{% url 'blog' %}">Blogs</a></li>
-        <li><a href="{% url 'journal' %}">Journals</a></li>
-        <li><a href="{% url 'vlog' %}">Media</a></li>
-        <li><a href="{% url 'gallery' %}">Gallery</a></li>
+        <li><a href="{% url 'index' %}" class="{% if current_name == 'index' %}active{% endif %}">Home</a></li>
+        <li><a href="{% url 'blog' %}" class="{% if current_name == 'blog' or current_name == 'blog_detail' %}active{% endif %}">Blogs</a></li>
+        <li><a href="{% url 'journal' %}" class="{% if current_name == 'journal' %}active{% endif %}">Journals</a></li>
+        <li><a href="{% url 'vlog' %}" class="{% if current_name == 'vlog' %}active{% endif %}">Media</a></li>
+        <li><a href="{% url 'gallery' %}" class="{% if current_name == 'gallery' %}active{% endif %}">Gallery</a></li>
         {% if request.user.is_authenticated %}
           <li class="profile-nav">
             <details class="profile-menu">
@@ -62,10 +63,11 @@
             </details>
           </li>
         {% else %}
-          <li><a href="{% url 'login' %}">Login</a></li>
-          <li><a href="{% url 'registration' %}">Register</a></li>
+          <li><a href="{% url 'login' %}" class="{% if current_name == 'login' %}active{% endif %}">Login</a></li>
+          <li><a href="{% url 'registration' %}" class="{% if current_name == 'registration' %}active{% endif %}">Register</a></li>
         {% endif %}
       </ul>
+      {% endwith %}
     </div>
   </header>
 

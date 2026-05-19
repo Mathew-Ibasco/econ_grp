@@ -1,9 +1,62 @@
 {% extends 'econ/layout.html' %}
 {% load static %}
-{% load i18n %}
 {% block title %}
-    Captions
+    Gallery
 {% endblock %}
 {% block content %}
-    CAPTION HERE
+<main class="gallery-page">
+    <section class="blogs-hero">
+        <div class="container blogs-hero-inner">
+            <div>
+                <p class="blog-eyebrow">Media gallery</p>
+                <h1 class="blogs-title">Rail images and videos</h1>
+                <p class="blogs-intro">Browse the gallery entries stored in the database. Images open directly, and videos include dates plus playable previews.</p>
+            </div>
+            <div class="blogs-hero-card">
+                <strong>{{ gallery_entries|length }}</strong>
+                <span>media items</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="container gallery-section">
+        <div class="media-gallery-grid">
+            {% for entry in gallery_entries %}
+                <article class="media-gallery-card">
+                    <div class="media-gallery-media">
+                        {% if entry.media_type == "image" %}
+                            <a href="{{ entry.image_url }}" target="_blank" rel="noopener noreferrer">
+                                <img src="{{ entry.image_url }}" alt="{{ entry.title }}">
+                            </a>
+                        {% else %}
+                            <video controls preload="metadata" {% if entry.thumbnail_url %}poster="{{ entry.thumbnail_url }}"{% endif %}>
+                                <source src="{{ entry.video_url }}" type="video/webm">
+                                Your browser does not support the video tag.
+                            </video>
+                        {% endif %}
+                    </div>
+                    <div class="media-gallery-body">
+                        <div class="media-gallery-meta">
+                            <span class="gallery-type-pill">{{ entry.get_media_type_display }}</span>
+                            {% if entry.date %}
+                                <span class="gallery-entry-date">{{ entry.date|date:"F j, Y" }}</span>
+                            {% endif %}
+                        </div>
+                        <h2>{{ entry.title }}</h2>
+                        <p>{{ entry.description }}</p>
+                        <div class="media-gallery-actions">
+                            {% if entry.media_type == "image" %}
+                                <a href="{{ entry.image_url }}" target="_blank" rel="noopener noreferrer">Open image</a>
+                            {% else %}
+                                <a href="{{ entry.video_url }}" target="_blank" rel="noopener noreferrer">Open video</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+            {% empty %}
+                <p class="gallery-empty">No media entries have been added yet.</p>
+            {% endfor %}
+        </div>
+    </section>
+</main>
 {% endblock %}
