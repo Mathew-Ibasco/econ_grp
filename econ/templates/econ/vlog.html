@@ -1,9 +1,142 @@
 {% extends 'econ/layout.html' %}
 {% load static %}
 {% load i18n %}
+
 {% block title %}
     Vlogs
 {% endblock %}
+
 {% block content %}
-    VLOG HERE
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f5f7fa;
+      color: #333;
+    }
+
+    header {
+      text-align: center;
+      padding: 2rem 1rem;
+      background-color: #004d73;
+      color: white;
+    }
+
+    header h1 {
+      margin-bottom: 0.5rem;
+    }
+
+    .video-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 2rem;
+      padding: 2rem;
+      justify-items: center;
+    }
+
+    .video-card {
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+      max-width: 500px;
+    }
+
+    .video-card:hover {
+      transform: scale(1.02);
+    }
+
+    .video-card img {
+      width: 100%;
+      height: 280px;
+      object-fit: cover;
+      cursor: pointer;
+    }
+
+    .video-info {
+      padding: 1rem;
+    }
+
+    .video-info h3 {
+      color: #004d73;
+      margin-bottom: 0.5rem;
+    }
+
+    .video-info small {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #777;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      background-color: #004d73;
+      color: white;
+      font-size: 0.9rem;
+    }
+  </style>
+
+  <header>
+    <h1>Railway Media Gallery</h1>
+    <p>Explore insights and innovations in rail transport through video stories.</p>
+  </header>
+
+  <section class="video-gallery">
+    <div class="video-card">
+      <a href="https://www.youtube.com/watch?v=1idZRXTlo48" target="_blank">
+        <img src="https://img.youtube.com/vi/1idZRXTlo48/hqdefault.jpg" alt="Railways Reimagined">
+      </a>
+      <div class="video-info">
+        <h3>Railways Reimagined: Reliability, Automation, and Equitable Connectivity</h3>
+        <small>Date: Jan 6, 2026</small>
+        <p>Rail systems can improve urban-suburban connectivity by making transport more frequent, reliable, and efficient. It emphasizes technology, governance, and equitable access.</p>
+      </div>
+    </div>
+
+    <div class="video-card">
+      <a href="https://www.youtube.com/watch?v=NF6xMiH_Lt4" target="_blank">
+        <img src="https://img.youtube.com/vi/NF6xMiH_Lt4/hqdefault.jpg" alt="Driving Inclusivity">
+      </a>
+      <div class="video-info">
+        <h3>Driving Inclusivity and Accessibility in Rail Transportation</h3>
+        <small>Date: Jul 12, 2023</small>
+        <p>Nancy Chan’s project audits 2,572 stations to improve accessibility data, helping decision-makers invest where needed. It highlights diversity and inclusivity in engineering.</p>
+      </div>
+    </div>
+
+    <div class="video-card">
+      <a href="https://www.youtube.com/watch?v=yGTiJ8gXc60" target="_blank">
+        <img src="https://img.youtube.com/vi/yGTiJ8gXc60/hqdefault.jpg" alt="Philippine Transportation Projects">
+      </a>
+      <div class="video-info">
+        <h3>Philippine’s Transportation Projects</h3>
+        <small>Date: Jan 23, 2024</small>
+        <p>Major investments in railways, roads, and sustainable technologies aim to improve mobility, reduce congestion, and support economic growth across the Philippines.</p>
+      </div>
+    </div>
+
+    <div class="video-card">
+      <a href="https://www.youtube.com/watch?v=U3x86Hcr1R8" target="_blank">
+        <img src="https://img.youtube.com/vi/U3x86Hcr1R8/hqdefault.jpg" alt="Railway Bridges">
+      </a>
+      <div class="video-info">
+        <h3>Railway Bridges over Philippines</h3>
+        <small>Date: Apr 21, 2024</small>
+        <p>Highlights government investments in MRT-7, North-South Commuter Railway, and Metro Manila Subway to reduce traffic and strengthen economic activity.</p>
+      </div>
+    </div>
+
+    <div class="video-card">
+      <a href="https://www.youtube.com/watch?v=S0bAAqitw8A" target="_blank">
+        <img src="https://img.youtube.com/vi/S0bAAqitw8A/hqdefault.jpg" alt="Social Innovation">
+      </a>
+      <div class="video-info">
+        <h3>Social Innovation in Transport and Mobility</h3>
+        <small>Date: Jul 3, 2015</small>
+        <p>Hitachi’s vision for integrated door-to-door mobility using smart ticketing and data-sharing. Applied to Philippine railways, it could reduce congestion and improve commuter life.</p>
+      </div>
+    </div>
+  </section>
+
 {% endblock %}
