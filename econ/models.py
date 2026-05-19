@@ -59,3 +59,26 @@ class post_section(models.Model):
     class Meta:
         db_table = "post_section"
         ordering = ["order"]
+
+class Bookmark(models.Model):
+    BOOKMARK_TYPES = [
+        ("topic", "Topic"),
+        ("resource", "Resource"),
+        ("media", "Media"),
+    ]
+
+    bookmarkID = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bookmarks")
+    item_key = models.CharField(max_length=80)
+    title = models.CharField(max_length=160)
+    summary = models.TextField(blank=True)
+    item_type = models.CharField(max_length=20, choices=BOOKMARK_TYPES)
+    url = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "bookmark"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "item_key"], name="unique_user_bookmark")
+        ]

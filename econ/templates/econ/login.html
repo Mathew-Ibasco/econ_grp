@@ -5,17 +5,22 @@
 Login page
 {% endblock %}
 {% block content %}
-    <form method="POST">
-        {% csrf_token %}
-        <label for="username">Username</label>
-        <br>
-        <input type="text" id="username" name="username" placeholder="Username">
-        <br>
-        <label for="password">Password</label>
-        <br>
-        <input type="password" id="password" name="password" placeholder="Password">
-        <br>
-        <button class="submitBtn" formaction="{% url 'login_process' %}" type="submit" style="border: none; font-weight: bold;">Login</button>
-        {% if error %}<p>{{ error }}</p>{% endif %}
-    </form>
+    <main class="auth-page">
+        <form class="auth-panel" method="POST">
+            {% csrf_token %}
+            <h2>Login</h2>
+            <p class="auth-subtitle">Access your rail transport and urban mobility dashboard.</p>
+
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Username" value="{{ values.username|default:'' }}" {% if errors.username %}class="field-invalid" aria-invalid="true"{% endif %}>
+            {% if errors.username %}<p class="field-error">{{ errors.username }}</p>{% endif %}
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="Password" {% if errors.password %}class="field-invalid" aria-invalid="true"{% endif %}>
+            {% if errors.password %}<p class="field-error">{{ errors.password }}</p>{% endif %}
+
+            <button class="submitBtn" formaction="{% url 'login_process' %}" type="submit">Login</button>
+            {% if error %}<p class="auth-error">{{ error }}</p>{% endif %}
+        </form>
+    </main>
 {% endblock %}

@@ -5,36 +5,33 @@
 Registration page
 {% endblock %}
 {% block content %}
-    <form method="POST">
-        {% csrf_token %}
-        <label for="username">Username</label>
-        <br>
-        <input type="text" id="username" name="username" placeholder="Username" required>
-        <br>
+    <main class="auth-page">
+        <form class="auth-panel" method="POST">
+            {% csrf_token %}
+            <h2>Create Account</h2>
+            <p class="auth-subtitle">Register first, then log in with your new account.</p>
 
-        <label for="email">Username</label>
-        <br>
-        <input type="text" id="email" name="email" placeholder="emailname@gmail.com">
-        <br>
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Username" value="{{ values.username|default:'' }}" {% if errors.username %}class="field-invalid" aria-invalid="true"{% endif %}>
+            {% if errors.username %}<p class="field-error">{{ errors.username }}</p>{% endif %}
 
-        <label for="bio">Bio</label>
-        <br>
-        <textarea id="bio" name="bio" placeholder="Tell us about yourself"></textarea>
-        <br>
+            <label for="email">Email</label>
+            <input type="text" id="email" name="email" placeholder="emailname@gmail.com" value="{{ values.email|default:'' }}" {% if errors.email %}class="field-invalid" aria-invalid="true"{% endif %}>
+            {% if errors.email %}<p class="field-error">{{ errors.email }}</p>{% endif %}
 
-        <label for="password">Password</label>
-        <br>
-        <input type="password" id="password" name="password" placeholder="Password" required>
-        <br>
+            <label for="bio">Bio <span class="field-optional">Optional</span></label>
+            <textarea id="bio" name="bio" placeholder="Tell us about yourself">{{ values.bio|default:'' }}</textarea>
 
-        <label for="confirm">Confirm Password</label>
-        <br>
-        <input type="password" id="confirm" name="confirm" placeholder="Confirm Password" required>
-        <br>
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="Password" {% if errors.password %}class="field-invalid" aria-invalid="true"{% endif %}>
+            {% if errors.password %}<p class="field-error">{{ errors.password }}</p>{% endif %}
 
-        <button class="submitBtn" formaction="{% url 'registration_process' %}" type="submit" style="border: none; font-weight: bold;">Register</button>
-        {% if error %}<p>{{ error }}</p>{% endif %}
-    </form>
+            <label for="confirm">Confirm Password</label>
+            <input type="password" id="confirm" name="confirm" placeholder="Confirm Password" {% if errors.confirm %}class="field-invalid" aria-invalid="true"{% endif %}>
+            {% if errors.confirm %}<p class="field-error">{{ errors.confirm }}</p>{% endif %}
 
-
+            <button class="submitBtn" formaction="{% url 'registration_process' %}" type="submit">Register</button>
+            {% if error %}<p class="auth-error">{{ error }}</p>{% endif %}
+        </form>
+    </main>
 {% endblock %}

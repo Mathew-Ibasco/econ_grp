@@ -88,7 +88,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'econdb',
         'USER': 'root',
-        'PASSWORD': '322533', #server
+        'PASSWORD': 'SQL123', #server
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {

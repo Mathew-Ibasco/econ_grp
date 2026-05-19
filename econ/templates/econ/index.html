@@ -6,6 +6,132 @@
 {% endblock %}
 {% block content %}
 <main>
+    {% if request.user.is_authenticated %}
+        <section class="dashboard-hero">
+            <div class="container">
+                <div class="dashboard-hero-grid">
+                    <div>
+                        <p class="dashboard-kicker">Welcome back, {{ request.user.username|title }}</p>
+                        <h2>Your Rail Mobility Dashboard</h2>
+                        <p>Keep track of the rail transport topics, references, and media that matter most to your economics project.</p>
+                    </div>
+                    <div class="dashboard-stats">
+                        <div>
+                            <strong>{{ saved_bookmarks|length }}</strong>
+                            <span>Saved items</span>
+                        </div>
+                        <div>
+                            <strong>{{ dashboard_items|length }}</strong>
+                            <span>Available topics</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="container dashboard-shell">
+            <section class="dashboard-section">
+                <div class="dashboard-section-heading">
+                    <div>
+                        <h2 class="section-title">Saved for Later</h2>
+                        <p>Resources you have bookmarked will stay here whenever you log in.</p>
+                    </div>
+                </div>
+
+                {% if saved_bookmarks %}
+                    <div class="saved-grid">
+                        {% for bookmark in saved_bookmarks %}
+                            <article class="saved-card">
+                                <div class="saved-card-top">
+                                    <span class="saved-type">{{ bookmark.get_item_type_display }}</span>
+                                    <form method="POST" action="{% url 'toggle_bookmark' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="item_key" value="{{ bookmark.item_key }}">
+                                        <button type="submit" class="icon-action" title="Remove bookmark" aria-label="Remove {{ bookmark.title }}">
+                                            <i class="fas fa-bookmark"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                <h3>{{ bookmark.title }}</h3>
+                                <p>{{ bookmark.summary }}</p>
+                                {% if 'http' in bookmark.url %}
+                                    <a href="{{ bookmark.url }}" class="text-link" target="_blank">Open source <i class="fas fa-arrow-right"></i></a>
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-bookmark"></i>
+                        <h3>No saved items yet</h3>
+                        <p>Use the bookmark buttons below to build your own rail transport reading list.</p>
+                    </div>
+                {% endif %}
+            </section>
+
+            <section class="dashboard-section">
+                <div class="dashboard-section-heading">
+                    <div>
+                        <h2 class="section-title">Explore & Bookmark</h2>
+                        <p>Save topics, media, and references that you want to revisit while studying rail transport and urban mobility.</p>
+                    </div>
+                </div>
+                <div class="dashboard-card-grid">
+                    {% for item in dashboard_items %}
+                        <article class="dashboard-card">
+                            <div class="dashboard-card-icon">
+                                <i class="fas {{ item.icon }}"></i>
+                            </div>
+                            <div>
+                                <span class="saved-type">{{ item.type|title }}</span>
+                                <h3>{{ item.title }}</h3>
+                                <p>{{ item.summary }}</p>
+                            </div>
+                            <div class="dashboard-card-actions">
+                                {% if 'http' in item.url %}
+                                    <a href="{{ item.url }}" class="text-link" target="_blank">View source</a>
+                                {% else %}
+                                    <span class="dashboard-muted">Dashboard topic</span>
+                                {% endif %}
+                                <form method="POST" action="{% url 'toggle_bookmark' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="item_key" value="{{ item.key }}">
+                                    <button type="submit" class="bookmark-btn {% if item.key in saved_item_keys %}is-saved{% endif %}">
+                                        <i class="{% if item.key in saved_item_keys %}fas{% else %}far{% endif %} fa-bookmark"></i>
+                                        {% if item.key in saved_item_keys %}Saved{% else %}Save{% endif %}
+                                    </button>
+                                </form>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="dashboard-section">
+                <h2 class="section-title">Recommended Next</h2>
+                <div class="quick-links">
+                    {% if recommended_items %}
+                        {% for item in recommended_items %}
+                            {% if 'http' in item.url %}
+                                <a href="{{ item.url }}" target="_blank">
+                                    <i class="fas {{ item.icon }}"></i>
+                                    <span>{{ item.title }}</span>
+                                </a>
+                            {% else %}
+                                <div class="quick-link-static">
+                                    <i class="fas {{ item.icon }}"></i>
+                                    <span>{{ item.title }}</span>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p class="dashboard-muted">You saved every available item. Nice, your dashboard is fully stocked.</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+    {% else %}
+
     <!-- Hero section intro -->
     <div class="hero">
         <div class="container hero-grid">
@@ -22,7 +148,7 @@
 
     <div class="container">
         <!-- What is rail transport? -->
-        <section>
+        <section id="rail-transport">
             <h2 class="section-title">What is Rail Transport?</h2>
             <div class="card-grid">
                 <!-- Card 1: What is it? -->
@@ -49,7 +175,7 @@
         </section>
 
         <!-- Philippines rail context -->
-        <section>
+        <section id="philippine-rail">
             <h2 class="section-title">Railways in the Philippines</h2>
             <div class="railway-flex" style="
                 display: flex;
@@ -129,7 +255,7 @@
         </section>
 
          <!-- Accessibility & Mobility + Economic Relations double section -->
-        <section>
+        <section id="mobility-economy">
             <h2 class="section-title">Accessibility, Mobility & The Economy</h2>
             <div class="split-columns" style="display: flex; flex-wrap: wrap; gap: 2rem;">
                
@@ -175,7 +301,7 @@
         </section>
 
         <!-- Photo gallery teaser (10 photos) -->
-        <section>
+        <section id="rail-gallery">
             <h2 class="section-title">Gallery Snapshot: Rail in Action</h2>
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(230px,1fr)); gap: 1.2rem;">
                 
@@ -280,6 +406,7 @@
             </div>
         </section>
     </div>
+    {% endif %}
 </main>
 
 <footer class="footer">

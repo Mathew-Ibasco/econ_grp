@@ -41,16 +41,54 @@
         <li><a href="{% url 'journal' %}">Journals</a></li>
         <li><a href="{% url 'vlog' %}">Media</a></li>
         <li><a href="{% url 'gallery' %}">Gallery</a></li>
-        <li><a href="{% url 'login' %}">Login</a></li>
-        <li><a href="{% url 'registration' %}">Register</a></li>
+        {% if request.user.is_authenticated %}
+          <li class="profile-nav">
+            <details class="profile-menu">
+              <summary class="profile-pill" title="{{ request.user.username }}">
+                <i class="fas fa-circle-user"></i>
+                <span>{{ request.user.username }}</span>
+                <i class="fas fa-chevron-down profile-chevron"></i>
+              </summary>
+              <div class="profile-dropdown">
+                <div class="profile-dropdown-user">
+                  <i class="fas fa-circle-user"></i>
+                  <span>{{ request.user.username }}</span>
+                </div>
+                <a class="profile-logout" href="{% url 'logout_process' %}">
+                  <i class="fas fa-right-from-bracket"></i>
+                  <span>Logout</span>
+                </a>
+              </div>
+            </details>
+          </li>
+        {% else %}
+          <li><a href="{% url 'login' %}">Login</a></li>
+          <li><a href="{% url 'registration' %}">Register</a></li>
+        {% endif %}
       </ul>
     </div>
   </header>
 
   {% if messages %}
-    {% for msg in messages %}
-      <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
-    {% endfor %}
+    <div class="toast-stack" aria-live="polite" aria-atomic="true">
+      {% for msg in messages %}
+        <div class="site-toast site-toast-{{ msg.tags }}">
+          <div class="site-toast-icon">
+            {% if msg.tags == "success" %}
+              <i class="fas fa-check"></i>
+            {% elif msg.tags == "error" %}
+              <i class="fas fa-triangle-exclamation"></i>
+            {% else %}
+              <i class="fas fa-circle-info"></i>
+            {% endif %}
+          </div>
+          <p>{{ msg }}</p>
+          <button type="button" class="site-toast-close" aria-label="Dismiss message">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+      {% endfor %}
+    </div>
   {% endif %}
 
   {% block content %}{% endblock %}
@@ -59,6 +97,23 @@
   <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+  <script>
+    document.querySelectorAll('.site-toast').forEach(function (toast) {
+      var closeButton = toast.querySelector('.site-toast-close');
+      var dismiss = function () {
+        toast.classList.add('is-hiding');
+        window.setTimeout(function () {
+          toast.remove();
+        }, 250);
+      };
+
+      if (closeButton) {
+        closeButton.addEventListener('click', dismiss);
+      }
+
+      window.setTimeout(dismiss, 4200);
+    });
+  </script>
 
 </body>
 </html>
