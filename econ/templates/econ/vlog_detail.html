@@ -22,9 +22,9 @@
 
   .vlog-detail-page .vlog-detail-hero-inner {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.55fr);
     gap: 1.5rem;
-    align-items: end;
+    align-items: start;
   }
 
   .vlog-detail-page .vlog-eyebrow {
@@ -51,49 +51,67 @@
     font-size: 1.02rem;
   }
 
-  .vlog-detail-page .vlog-detail-card {
+  .vlog-detail-page .vlog-detail-hero-card {
     display: grid;
+    gap: 0.85rem;
+    align-content: start;
     min-width: 180px;
-    padding: 1rem 1.1rem;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 18px;
+    padding: 1.35rem;
+    border-radius: 22px;
     background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(8px);
-    text-align: center;
-  }
-
-  .vlog-detail-page .vlog-detail-card strong {
-    color: #ffb347;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 2rem;
-    line-height: 1;
-  }
-
-  .vlog-detail-page .vlog-detail-card span {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 18px 30px rgba(0, 0, 0, 0.16);
     color: #edf7fb;
-    font-size: 0.9rem;
-    font-weight: 700;
-    text-transform: uppercase;
+  }
+
+  .vlog-detail-page .vlog-detail-hero-label {
+    display: inline-flex;
+    width: fit-content;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffcf7a;
+    font-size: 0.72rem;
+    font-weight: 800;
     letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
-  .vlog-detail-page .vlog-detail-shell {
-    padding-top: 2rem;
+  .vlog-detail-page .vlog-detail-hero-card strong {
+    display: block;
+    color: #ffffff;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.2rem;
+    line-height: 1.35;
   }
 
-  .vlog-detail-page .back-link {
+  .vlog-detail-page .vlog-detail-hero-card p {
+    margin-bottom: 0;
+    color: #d7e8ef;
+  }
+
+  .vlog-detail-page .vlog-detail-source-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-    color: #1c6e8f;
+    justify-content: center;
+    gap: 0.45rem;
+    width: fit-content;
+    padding: 0.72rem 1rem;
+    border-radius: 999px;
+    background: #ffcf7a;
+    color: #0b2b3b;
     font-weight: 800;
     text-decoration: none;
   }
 
-  .vlog-detail-page .back-link:hover {
+  .vlog-detail-page .vlog-detail-source-link:hover {
+    background: #ffd98f;
     color: #0b2b3b;
-    text-decoration: underline;
+    text-decoration: none;
+  }
+
+  .vlog-detail-page .vlog-detail-shell {
+    padding-top: 2rem;
   }
 
   .vlog-detail-page .vlog-detail-layout {
@@ -245,6 +263,35 @@
     text-decoration: underline;
   }
 
+  .vlog-detail-page .learning-action-row {
+    margin-bottom: 1rem;
+  }
+
+  .vlog-detail-page .vlog-study-details {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .vlog-detail-page .vlog-study-details > summary {
+    list-style: none;
+  }
+
+  .vlog-detail-page .vlog-study-details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .vlog-detail-page .vlog-study-details > summary.bookmark-btn {
+    width: fit-content;
+  }
+
+  .vlog-detail-page .vlog-study-details[open] > summary {
+    margin-bottom: 0.35rem;
+  }
+
+  .vlog-detail-page .vlog-study-inline-form {
+    margin-top: 0.25rem;
+  }
+
   @media (max-width: 900px) {
     .vlog-detail-page .vlog-detail-hero-inner,
     .vlog-detail-page .vlog-detail-layout {
@@ -265,24 +312,30 @@
 <main class="vlog-detail-page">
   <section class="vlog-detail-hero">
     <div class="container vlog-detail-hero-inner">
+      <a class="back-link blog-detail-back-link" href="{% url 'vlog' %}">
+        <i class="fas fa-arrow-left"></i>
+        Back to media
+      </a>
       <div>
         <p class="vlog-eyebrow">Media detail</p>
         <h1>{{ video.title }}</h1>
-        <p class="vlog-detail-intro">The full video is embedded here, with details, topics, and source links shown alongside it for easy reference.</p>
+        {% if video.date %}
+          <p class="vlog-detail-intro">Published on {{ video.date|date:"M j, Y" }}</p>
+        {% endif %}
       </div>
-      <div class="vlog-detail-card">
-        <strong>{{ video.topics.all|length }}</strong>
-        <span>linked topics</span>
+      <div class="vlog-detail-hero-card">
+        <span class="vlog-detail-hero-label">Quick access</span>
+        <strong>{{ video.channel_name|default:"YouTube" }}</strong>
+        {% if video.video_url %}
+          <a class="vlog-detail-source-link" href="{{ video.video_url }}" target="_blank" rel="noopener noreferrer">
+            Open on YouTube
+          </a>
+        {% endif %}
       </div>
     </div>
   </section>
 
   <section class="container vlog-detail-shell">
-    <a class="back-link" href="{% url 'vlog' %}">
-      <i class="fas fa-arrow-left"></i>
-      Back to media
-    </a>
-
     <div class="vlog-detail-layout">
       <article class="vlog-player-card">
         <div class="vlog-player-frame">
@@ -310,6 +363,89 @@
       </article>
 
       <aside class="vlog-info-card">
+        {% if request.user.is_authenticated and learning %}
+          <div class="detail-card">
+            <h3>Study Tools</h3>
+            <form method="POST" action="{% url 'toggle_study_progress' %}" class="learning-action-row">
+              {% csrf_token %}
+              <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+              <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+              <input type="hidden" name="next" value="{{ request.path }}">
+              <button type="submit" class="bookmark-btn {% if learning.completed %}is-saved{% endif %}">
+                <i class="fas {% if learning.completed %}fa-check{% else %}fa-plus{% endif %}"></i>
+                {% if learning.completed %}Viewed{% else %}Mark Viewed{% endif %}
+              </button>
+            </form>
+            <form method="POST" action="{% url 'save_item_note' %}" class="topic-note-form">
+              {% csrf_token %}
+              <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+              <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+              <input type="hidden" name="next" value="{{ request.path }}">
+              <textarea name="note" placeholder="Add a private note for this video.">{% if learning.note %}{{ learning.note.note }}{% endif %}</textarea>
+              <button type="submit" class="bookmark-btn">Save note</button>
+            </form>
+          </div>
+
+          <div class="detail-card">
+            <h3>Mini Checkpoint</h3>
+            <p class="quiz-score">Perfect rounds: {{ learning.perfect_rounds }} / 3</p>
+            {% if learning.latest_attempt %}
+              <p class="quiz-score">Latest score: {{ learning.latest_attempt.score }} / {{ learning.latest_attempt.total }}</p>
+            {% endif %}
+            {% if learning.mastered %}
+              <div class="mastery-badge">
+                <i class="fas fa-trophy"></i>
+                <span>Mastered</span>
+                <p>You perfected all checkpoint rounds for this content.</p>
+              </div>
+            {% else %}
+              {% if learning.result_attempt %}
+                <div class="quiz-result-list">
+                  {% for result in learning.result_questions %}
+                    <div class="quiz-result-item {% if result.is_correct %}is-correct{% else %}is-wrong{% endif %}">
+                      <h3>{{ result.question }}</h3>
+                      <p>Your answer: <strong>{{ result.selected_text|default:"No answer" }}</strong></p>
+                      {% if learning.result_is_perfect %}
+                        <p>Correct answer: <strong>{{ result.correct_text }}</strong></p>
+                      {% endif %}
+                      <span>{% if result.is_correct %}Correct{% else %}Needs review{% endif %}</span>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              {% if learning.questions %}
+                <details class="vlog-study-details">
+                  <summary class="bookmark-btn">
+                    {% if learning.result_attempt %}
+                      {% if learning.result_is_perfect %}Answer New Quiz{% else %}Retake Quiz{% endif %}
+                    {% else %}
+                      Answer Quiz
+                    {% endif %}
+                  </summary>
+                  <form method="POST" action="{% url 'submit_item_quiz' %}" class="topic-quiz-form vlog-study-inline-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+                    <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    {% for question in learning.questions %}
+                      <fieldset class="quiz-question">
+                        <legend>{{ question.question }}</legend>
+                        <label><input type="radio" name="question_{{ question.id }}" value="A" required> {{ question.option_a }}</label>
+                        <label><input type="radio" name="question_{{ question.id }}" value="B"> {{ question.option_b }}</label>
+                        <label><input type="radio" name="question_{{ question.id }}" value="C"> {{ question.option_c }}</label>
+                      </fieldset>
+                    {% endfor %}
+                    <button type="submit" class="bookmark-btn">Submit Quiz</button>
+                  </form>
+                </details>
+              {% else %}
+                <p class="dashboard-muted">No quiz is available for this video yet.</p>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endif %}
+
         <div class="detail-card">
           <h3>Uploaded by</h3>
           <p class="uploaded-by-value">{{ video.channel_name|default:"Unknown channel" }}</p>

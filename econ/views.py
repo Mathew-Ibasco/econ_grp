@@ -630,16 +630,19 @@ def vlog(request):
     for entry in vlog_entries:
         entry.embed_url = _youtube_embed_url(entry.video_url)
         entry.preview_url = entry.thumbnail_url or _youtube_thumbnail_url(entry.video_url)
-    if request.user.is_authenticated:
+    if request.user.is_authenticated and vlog_entries:
+        viewed_video_ids = set(
+            StudyItemProgress.objects.filter(
+                user=request.user,
+                item_type="video",
+                item_id__in=[entry.vlogID for entry in vlog_entries],
+            ).values_list("item_id", flat=True)
+        )
         for entry in vlog_entries:
-            entry.learning = _item_learning_context(request.user, "video", entry.vlogID)
-            entry.learning = _attach_quiz_result(
-                entry.learning,
-                request.user,
-                "video",
-                entry.vlogID,
-                request.GET.get("quiz_attempt"),
-            )
+            entry.learning = SimpleNamespace(completed=entry.vlogID in viewed_video_ids)
+    else:
+        for entry in vlog_entries:
+            entry.learning = SimpleNamespace(completed=False)
 
     return render(
         request,
@@ -654,6 +657,14 @@ def vlog_detail(request, vlog_id):
     video = get_object_or_404(VlogEntry.objects.prefetch_related("topics"), pk=vlog_id)
     video.embed_url = _youtube_embed_url(video.video_url)
     video.preview_url = video.thumbnail_url or _youtube_thumbnail_url(video.video_url)
+    learning = _item_learning_context(request.user, "video", video.vlogID)
+    learning = _attach_quiz_result(
+        learning,
+        request.user,
+        "video",
+        video.vlogID,
+        request.GET.get("quiz_attempt"),
+    )
 
     return render(
         request,
@@ -661,6 +672,9 @@ def vlog_detail(request, vlog_id):
         {
             "date": datetime.now(),
             "video": video,
+            "learning": learning,
+            "learning_item_type": "video",
+            "learning_item_id": video.vlogID,
         }
     )
 
@@ -670,7 +684,7 @@ def gallery(request):
         'econ/gallery.html',
         {
             'date': datetime.now(),
-            'gallery_entries': MediaGalleryEntry.objects.prefetch_related("topics").order_by("order", "id"),
+            'gallery_count': 10,
         }
     )
 
