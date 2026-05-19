@@ -10,6 +10,443 @@
     {% endif %}
 {% endblock %}
 
+{% block style %}
+  .recommended-carousel-shell {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .recommended-carousel-head {
+    align-items: end;
+  }
+
+  .recommended-carousel-head p {
+    margin-bottom: 0;
+    max-width: 760px;
+  }
+
+  .recommended-carousel-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .carousel-nav-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid #dce9f1;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #0b2b3b;
+    box-shadow: 0 10px 24px rgba(11, 43, 59, 0.08);
+    transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .carousel-nav-btn:hover {
+    transform: translateY(-1px);
+    border-color: #ffb347;
+    background: #fff9ef;
+    color: #1c6e8f;
+  }
+
+  .carousel-nav-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 179, 71, 0.24), 0 10px 24px rgba(11, 43, 59, 0.08);
+  }
+
+  .carousel-nav-btn:disabled {
+    opacity: 0.45;
+    transform: none;
+    background: #ffffff;
+    cursor: not-allowed;
+  }
+
+  .content-carousel {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .content-carousel-track {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    gap: 1rem;
+    overflow-x: auto;
+    padding: 0.25rem 0 0.65rem;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .content-carousel-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .content-carousel-card {
+    flex: 0 0 clamp(280px, 31vw, 360px);
+    display: grid;
+    min-height: 100%;
+    overflow: hidden;
+    border: 1px solid #dce9f1;
+    border-radius: 22px;
+    background: #ffffff;
+    color: inherit;
+    text-decoration: none;
+    box-shadow: 0 12px 30px rgba(11, 43, 59, 0.07);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    scroll-snap-align: start;
+  }
+
+  .content-carousel-card:hover {
+    transform: translateY(-4px);
+    border-color: #ffb347;
+    box-shadow: 0 18px 38px rgba(11, 43, 59, 0.12);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .content-carousel-media {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: linear-gradient(135deg, #123d52 0%, #1c6e8f 54%, #ffcf7a 100%);
+  }
+
+  .content-carousel-media img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    transition: transform 0.35s ease;
+  }
+
+  .content-carousel-card:hover .content-carousel-media img {
+    transform: scale(1.04);
+  }
+
+  .content-carousel-media:after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(11, 43, 59, 0.05) 20%, rgba(11, 43, 59, 0.72) 100%);
+  }
+
+  .content-carousel-chip {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.38rem 0.72rem;
+    border-radius: 999px;
+    background: rgba(11, 43, 59, 0.9);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .content-carousel-chip i {
+    color: #ffcf7a;
+  }
+
+  .content-carousel-overlay {
+    position: absolute;
+    inset: auto 0 0 0;
+    z-index: 1;
+    padding: 1rem;
+    color: #ffffff;
+  }
+
+  .content-carousel-overlay h3 {
+    margin: 0.45rem 0 0.35rem;
+    color: inherit;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.16rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .content-carousel-overlay p {
+    margin-bottom: 0;
+    color: #e8f5fb;
+    font-size: 0.83rem;
+    font-weight: 700;
+  }
+
+  .content-carousel-body {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1rem 1rem 1.15rem;
+  }
+
+  .content-carousel-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.8rem;
+    color: #738699;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .content-carousel-summary {
+    margin-bottom: 0;
+    color: #42576d;
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+
+  .content-carousel-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 0.2rem;
+    border-top: 1px solid #edf2f7;
+  }
+
+  .content-carousel-foot span {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .content-carousel-foot strong {
+    color: #0b2b3b;
+    font-size: 0.88rem;
+    font-weight: 900;
+  }
+
+  .content-carousel-card.is-blog .content-carousel-chip {
+    background: rgba(255, 179, 71, 0.95);
+    color: #0b2b3b;
+  }
+
+  .content-carousel-card.is-blog .content-carousel-chip i {
+    color: #0b2b3b;
+  }
+
+  .content-carousel-card.is-journal .content-carousel-chip {
+    background: rgba(14, 116, 144, 0.95);
+  }
+
+  .content-carousel-card.is-video .content-carousel-chip {
+    background: rgba(142, 68, 21, 0.95);
+  }
+
+  @media (max-width: 992px) {
+    .content-carousel-card {
+      flex-basis: min(78vw, 340px);
+    }
+
+    .recommended-carousel-controls {
+      justify-self: start;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .content-carousel-card {
+      flex-basis: min(86vw, 320px);
+    }
+
+    .content-carousel-overlay h3 {
+      font-size: 1.05rem;
+    }
+  }
+{% endblock %}
+
+{% block script %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var seenCarousels = {};
+
+      document.querySelectorAll('[data-carousel-target]').forEach(function (button) {
+        var carouselId = button.getAttribute('data-carousel-target');
+        if (!carouselId || seenCarousels[carouselId]) {
+          return;
+        }
+
+        seenCarousels[carouselId] = true;
+        var carousel = document.getElementById(carouselId);
+        if (!carousel) {
+          return;
+        }
+
+        var buttons = document.querySelectorAll('[data-carousel-target="' + carouselId + '"]');
+        var carouselWrapper = carousel.closest('.content-carousel');
+        var prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var autoplayEnabled = carouselWrapper && carouselWrapper.getAttribute('data-carousel-autoplay') === 'true';
+        var autoplayDelay = 5000;
+        var autoplayTimer = null;
+        var isPaused = false;
+
+        var getGap = function () {
+          var computedStyle = window.getComputedStyle(carousel);
+          var gapValue = computedStyle.gap || computedStyle.columnGap || '0';
+          var parsedGap = parseFloat(gapValue);
+          return Number.isNaN(parsedGap) ? 0 : parsedGap;
+        };
+
+        var getStep = function () {
+          var firstCard = carousel.querySelector('.content-carousel-card');
+          return firstCard ? firstCard.getBoundingClientRect().width + getGap() : carousel.clientWidth * 0.8;
+        };
+
+        var getMaxScrollLeft = function () {
+          return Math.max(0, carousel.scrollWidth - carousel.clientWidth);
+        };
+
+        var hasOverflow = function () {
+          return getMaxScrollLeft() > 1;
+        };
+
+        var updateButtons = function () {
+          var maxScrollLeft = Math.max(0, carousel.scrollWidth - carousel.clientWidth);
+          var atStart = carousel.scrollLeft <= 1;
+          var atEnd = carousel.scrollLeft >= maxScrollLeft - 1;
+
+          if (autoplayEnabled && hasOverflow()) {
+            buttons.forEach(function (navButton) {
+              navButton.disabled = false;
+            });
+            return;
+          }
+
+          buttons.forEach(function (navButton) {
+            if (navButton.getAttribute('data-carousel-direction') === 'prev') {
+              navButton.disabled = atStart;
+            } else {
+              navButton.disabled = atEnd;
+            }
+          });
+        };
+
+        var scrollByDirection = function (direction, behavior) {
+          var maxScrollLeft = getMaxScrollLeft();
+          if (maxScrollLeft <= 1) {
+            return;
+          }
+
+          var step = getStep();
+          var currentLeft = carousel.scrollLeft;
+          var nextLeft = currentLeft + (direction * step);
+
+          if (direction > 0 && nextLeft >= maxScrollLeft - 1) {
+            carousel.scrollTo({
+              left: 0,
+              behavior: behavior,
+            });
+            return;
+          }
+
+          if (direction < 0 && currentLeft <= 1) {
+            carousel.scrollTo({
+              left: maxScrollLeft,
+              behavior: behavior,
+            });
+            return;
+          }
+
+          carousel.scrollBy({
+            left: direction * step,
+            behavior: behavior,
+          });
+        };
+
+        var stopAutoplay = function () {
+          if (autoplayTimer !== null) {
+            window.clearInterval(autoplayTimer);
+            autoplayTimer = null;
+          }
+        };
+
+        var startAutoplay = function () {
+          if (!autoplayEnabled || !hasOverflow() || autoplayTimer !== null) {
+            return;
+          }
+
+          autoplayTimer = window.setInterval(function () {
+            if (document.hidden || isPaused || !hasOverflow()) {
+              return;
+            }
+
+            scrollByDirection(1, prefersReducedMotion ? 'auto' : 'smooth');
+          }, autoplayDelay);
+        };
+
+        var refreshAutoplay = function () {
+          stopAutoplay();
+          startAutoplay();
+        };
+
+        buttons.forEach(function (navButton) {
+          navButton.addEventListener('click', function () {
+            var direction = navButton.getAttribute('data-carousel-direction') === 'next' ? 1 : -1;
+            scrollByDirection(direction, prefersReducedMotion ? 'auto' : 'smooth');
+            if (autoplayEnabled) {
+              refreshAutoplay();
+            }
+          });
+        });
+
+        carousel.addEventListener('mouseenter', function () {
+          isPaused = true;
+        });
+
+        carousel.addEventListener('mouseleave', function () {
+          isPaused = false;
+        });
+
+        carousel.addEventListener('focusin', function () {
+          isPaused = true;
+        });
+
+        carousel.addEventListener('focusout', function (event) {
+          if (event.relatedTarget && carousel.contains(event.relatedTarget)) {
+            return;
+          }
+          isPaused = false;
+        });
+
+        carousel.addEventListener('scroll', updateButtons, { passive: true });
+        window.addEventListener('resize', function () {
+          updateButtons();
+          if (autoplayEnabled) {
+            refreshAutoplay();
+          }
+        });
+
+        document.addEventListener('visibilitychange', function () {
+          if (document.hidden) {
+            stopAutoplay();
+            return;
+          }
+
+          if (autoplayEnabled) {
+            refreshAutoplay();
+          }
+        });
+
+        updateButtons();
+        startAutoplay();
+      });
+    });
+  </script>
+{% endblock %}
+
 {% block content %}
 <main class="home-page">
     {% if show_dashboard %}
@@ -231,20 +668,78 @@
 
             {# Recommended Section #}
             <section class="dashboard-section">
-                <h2 class="section-title">Recommended Next</h2>
-                <div class="quick-links">
+                <div class="recommended-carousel-shell">
+                    <div class="dashboard-section-heading recommended-carousel-head">
+                        <div>
+                            <h2 class="section-title">Recommended Next</h2>
+                            <p>Scroll through blog posts, journals, and videos matched to your rail mobility topics.</p>
+                        </div>
+
+                        {% if recommended_items|length > 1 %}
+                            <div class="recommended-carousel-controls">
+                                <button
+                                    type="button"
+                                    class="carousel-nav-btn"
+                                    data-carousel-target="dashboard-recommendation-carousel"
+                                    data-carousel-direction="prev"
+                                    aria-label="Scroll recommendations left"
+                                >
+                                    <i class="fas fa-arrow-left"></i>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="carousel-nav-btn"
+                                    data-carousel-target="dashboard-recommendation-carousel"
+                                    data-carousel-direction="next"
+                                    aria-label="Scroll recommendations right"
+                                >
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+
                     {% if recommended_items %}
-                        {% for item in recommended_items %}
-                            <a href="{{ item.url }}">
-                                <i class="fas {{ item.icon }}"></i>
-                                <span>
-                                    <strong>{{ item.topic.title }}</strong>
-                                    <small>{{ item.kind }}: {{ item.title }}</small>
-                                </span>
-                            </a>
-                        {% endfor %}
+                        <div class="content-carousel" aria-label="Recommended content carousel" data-carousel-autoplay="true">
+                            <div class="content-carousel-track" id="dashboard-recommendation-carousel">
+                                {% for item in recommended_items %}
+                                    <a
+                                        href="{{ item.url }}"
+                                        class="content-carousel-card is-{{ item.kind_key }}"
+                                        aria-label="Open {{ item.kind }} recommendation: {{ item.title }}"
+                                    >
+                                        <div class="content-carousel-media">
+                                            <img src="{{ item.preview_image }}" alt="{{ item.title }}">
+                                            <span class="content-carousel-chip">
+                                                <i class="fas {{ item.icon }}"></i>
+                                                {{ item.kind }}
+                                            </span>
+                                            <div class="content-carousel-overlay">
+                                                <h3>{{ item.title }}</h3>
+                                                <p>{{ item.topic.title }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="content-carousel-body">
+                                            <div class="content-carousel-meta">
+                                                <span>{{ item.topic.title }}</span>
+                                                <span>{{ item.kind }}</span>
+                                            </div>
+                                            <p class="content-carousel-summary">{{ item.summary|truncatechars:170 }}</p>
+                                            <div class="content-carousel-foot">
+                                                <span>Suggested for you</span>
+                                                <strong>{{ item.cta_label }}</strong>
+                                            </div>
+                                        </div>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
                     {% else %}
-                        <p class="dashboard-muted">You saved every available topic. Nice, your dashboard is fully stocked.</p>
+                        <div class="empty-state">
+                            <i class="fas fa-book-open"></i>
+                            <h3>No recommendations yet</h3>
+                            <p>Save a topic to unlock blog, journal, and video suggestions in this carousel.</p>
+                        </div>
                     {% endif %}
                 </div>
             </section>

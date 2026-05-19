@@ -1,0 +1,308 @@
+{% extends 'econ/layout.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}
+    Forum
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var forumLayout = document.querySelector('.forum-layout');
+    var forumThreadPanel = document.querySelector('[data-forum-thread-panel]');
+    var forumFeedTitle = document.querySelector('[data-forum-feed-title]');
+    var forumFeedDescription = document.querySelector('[data-forum-feed-description]');
+    var forumFeedSummary = document.querySelector('[data-forum-feed-summary]');
+    var forumTopicChips = document.querySelectorAll('[data-forum-topic-chip]');
+    var activeTopicChip = document.querySelector('[data-forum-topic-chip].is-active');
+    var activeTopicKey = activeTopicChip ? (activeTopicChip.getAttribute('data-topic-key') || '') : '';
+    var forumTopicRequestId = 0;
+
+    var updateActiveTopicChip = function (topicKey) {
+        forumTopicChips.forEach(function (chip) {
+            var chipTopicKey = chip.getAttribute('data-topic-key') || '';
+            var isActive = chipTopicKey === topicKey;
+            chip.classList.toggle('is-active', isActive);
+            if (isActive) {
+                chip.setAttribute('aria-current', 'page');
+            } else {
+                chip.removeAttribute('aria-current');
+            }
+        });
+        activeTopicKey = topicKey;
+    };
+
+    var applyForumFragment = function (payload) {
+        if (forumFeedTitle && payload.forum_feed_title) {
+            forumFeedTitle.textContent = payload.forum_feed_title;
+        }
+        if (forumFeedDescription && payload.forum_feed_description) {
+            forumFeedDescription.textContent = payload.forum_feed_description;
+        }
+        if (forumFeedSummary && payload.forum_feed_summary) {
+            forumFeedSummary.textContent = payload.forum_feed_summary;
+        }
+
+        if (forumThreadPanel && payload.forum_thread_panel_html) {
+            forumThreadPanel.outerHTML = payload.forum_thread_panel_html;
+            forumThreadPanel = document.querySelector('[data-forum-thread-panel]');
+            if (forumThreadPanel) {
+                var forumThreadList = forumThreadPanel.querySelector('.forum-thread-list');
+                if (forumThreadList) {
+                    forumThreadList.scrollTop = 0;
+                }
+            }
+        }
+
+        if (typeof payload.active_topic_key !== 'undefined') {
+            updateActiveTopicChip(payload.active_topic_key || '');
+        }
+    };
+
+    var loadForumTopic = function (targetUrl, options) {
+        options = options || {};
+        if (!forumLayout) {
+            return;
+        }
+
+        var requestId = ++forumTopicRequestId;
+        var fragmentUrl = new URL(targetUrl, window.location.origin);
+        fragmentUrl.searchParams.set('fragment', '1');
+        forumLayout.setAttribute('aria-busy', 'true');
+
+        fetch(fragmentUrl.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            credentials: 'same-origin',
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Failed to load forum topic.');
+                }
+                return response.json();
+            })
+            .then(function (payload) {
+                if (requestId !== forumTopicRequestId) {
+                    return;
+                }
+                applyForumFragment(payload);
+                forumLayout.removeAttribute('aria-busy');
+                if (options.updateHistory !== false) {
+                    var nextUrl = new URL(targetUrl, window.location.origin);
+                    nextUrl.searchParams.delete('fragment');
+                    history.pushState({ forumTopicKey: payload.active_topic_key || '' }, '', nextUrl.toString());
+                }
+            })
+            .catch(function () {
+                forumLayout.removeAttribute('aria-busy');
+                window.location.href = targetUrl;
+            });
+    };
+
+    forumTopicChips.forEach(function (chip) {
+        chip.addEventListener('click', function (event) {
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button === 1) {
+                return;
+            }
+
+            var targetUrl = chip.getAttribute('href');
+            if (!targetUrl || (chip.getAttribute('data-topic-key') || '') === activeTopicKey) {
+                event.preventDefault();
+                return;
+            }
+
+            event.preventDefault();
+            loadForumTopic(targetUrl);
+        });
+    });
+
+    window.addEventListener('popstate', function () {
+        loadForumTopic(window.location.href, { updateHistory: false });
+    });
+
+    var modal = document.getElementById('forumThreadModal');
+    if (modal) {
+        var openButtons = document.querySelectorAll('[data-forum-modal-open]');
+        var closeTargets = modal.querySelectorAll('[data-forum-modal-close]');
+        var firstFieldSelector = 'select, input, textarea, button';
+
+        var openModal = function () {
+            modal.classList.add('is-open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('forum-modal-open');
+
+            var firstField = modal.querySelector(firstFieldSelector);
+            if (firstField) {
+                window.setTimeout(function () {
+                    firstField.focus();
+                }, 0);
+            }
+        };
+
+        var closeModal = function () {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('forum-modal-open');
+        };
+
+        openButtons.forEach(function (button) {
+            button.addEventListener('click', openModal);
+        });
+
+        closeTargets.forEach(function (button) {
+            button.addEventListener('click', closeModal);
+        });
+
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal || event.target.hasAttribute('data-forum-modal-close')) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+                closeModal();
+            }
+        });
+
+        {% if thread_modal_open %}
+        openModal();
+        {% endif %}
+    }
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<main class="forum-page blogs-page {% if not request.user.is_authenticated %}guest-detail-shell{% endif %}">
+    <section class="blogs-hero" {% if not request.user.is_authenticated %}aria-hidden="true" inert{% endif %}>
+        <div class="container blogs-hero-inner">
+            <div>
+                <p class="blog-eyebrow">Community forum</p>
+                <h1 class="blogs-title">Talk rail topics with other learners</h1>
+                <p class="blogs-intro">Browse conversations, ask questions, and share articles, routes, and project updates across the topics on the site. Anyone can read, and signed-in users can start new discussions or reply.</p>
+            </div>
+            <div class="blogs-hero-card">
+                <strong>{{ forum_stats.thread_count }}</strong>
+                <span>discussions</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="container forum-layout" {% if not request.user.is_authenticated %}aria-hidden="true" inert{% endif %}>
+        <aside class="forum-sidebar">
+            <div class="forum-sidebar-block">
+                <h2 class="forum-section-label">Topics</h2>
+                <div class="forum-topic-chips">
+                    <a href="{% url 'forum' %}" class="forum-topic-chip {% if not active_topic %}is-active{% endif %}" data-forum-topic-chip data-topic-key="" {% if not active_topic %}aria-current="page"{% endif %}>
+                        <i class="fas fa-layer-group"></i>
+                        <span>All topics</span>
+                        <strong>{{ forum_stats.thread_count }}</strong>
+                    </a>
+                    {% for topic in forum_topics %}
+                        <a href="{% url 'forum' %}?topic={{ topic.key }}" class="forum-topic-chip {% if active_topic and active_topic.key == topic.key %}is-active{% endif %}" data-forum-topic-chip data-topic-key="{{ topic.key }}" {% if active_topic and active_topic.key == topic.key %}aria-current="page"{% endif %}>
+                            <i class="fas {{ topic.icon }}"></i>
+                            <span>{{ topic.title }}</span>
+                            <strong>{{ topic.thread_count }}</strong>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="forum-sidebar-block forum-start-thread-card">
+                <h2 class="forum-section-label">Start a thread</h2>
+                {% if request.user.is_authenticated %}
+                    <p>Open a discussion and attach pictures for maps, screenshots, route ideas, or project notes.</p>
+                    <button type="button" class="btn-soft forum-start-thread-button" data-forum-modal-open>
+                        Start a thread
+                    </button>
+                    <p class="forum-help">You can add one or more pictures when you post.</p>
+                {% else %}
+                    <div class="forum-login-card">
+                        <p>Log in to start a new thread, reply to existing discussions, and add pictures.</p>
+                        <p class="forum-help">Use the access card to create an account or sign in.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </aside>
+
+        <div class="forum-feed">
+            <div class="forum-feed-head">
+                <div>
+                    <h2 class="section-title" data-forum-feed-title>{{ forum_feed_title }}</h2>
+                    <p data-forum-feed-description>{{ forum_feed_description }}</p>
+                </div>
+                <p data-forum-feed-summary>{{ forum_feed_summary }}</p>
+            </div>
+
+            {% include 'econ/forum_thread_panel.html' %}
+        </div>
+    </section>
+
+    {% if not request.user.is_authenticated %}
+        <div class="guest-access-card forum-guest-access-card" role="dialog" aria-labelledby="guest-forum-access-title">
+            <div class="guest-access-icon"><i class="fas fa-lock"></i></div>
+            <h2 id="guest-forum-access-title">Want to join the forum?</h2>
+            <p>Create a free account or log in to read discussions, start new threads, and reply.</p>
+            <div class="guest-access-actions">
+                <a href="{% url 'registration' %}" class="profile-primary-btn">Create Account</a>
+                <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="profile-cancel-btn">Log In</a>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if request.user.is_authenticated %}
+        <div class="forum-modal" id="forumThreadModal" aria-hidden="true">
+            <div class="forum-modal-backdrop" data-forum-modal-close></div>
+            <div class="forum-modal-shell" role="dialog" aria-modal="true" aria-labelledby="forumThreadModalLabel">
+                <div class="forum-modal-content">
+                    <div class="forum-modal-header">
+                        <div>
+                            <p class="forum-modal-eyebrow">Community forum</p>
+                            <h2 class="forum-modal-title" id="forumThreadModalLabel">Start a new thread</h2>
+                        </div>
+                        <button type="button" class="forum-modal-close" data-forum-modal-close aria-label="Close modal">
+                            <i class="fas fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="forum-modal-body">
+                        <form class="forum-composer-form forum-modal-form" method="post" action="{% url 'forum_create_thread' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="forum-field">
+                                <label>Topics</label>
+                                {{ thread_form.topics }}
+                                {{ thread_form.topics.errors }}
+                                <p class="forum-help">{{ thread_form.topics.help_text }}</p>
+                            </div>
+                            <div class="forum-field">
+                                <label for="{{ thread_form.title.id_for_label }}">Title</label>
+                                {{ thread_form.title }}
+                                {{ thread_form.title.errors }}
+                            </div>
+                            <div class="forum-field">
+                                <label for="{{ thread_form.body.id_for_label }}">Discussion</label>
+                                {{ thread_form.body }}
+                                {{ thread_form.body.errors }}
+                            </div>
+                            <div class="forum-field">
+                                <label for="{{ thread_form.images.id_for_label }}">Pictures</label>
+                                {{ thread_form.images }}
+                                {{ thread_form.images.errors }}
+                                <p class="forum-help">Upload one or more pictures to support your discussion. JPG, PNG, and WEBP work best.</p>
+                            </div>
+                            <p class="forum-help">Keep it specific to a rail mobility topic so other learners can jump in easily.</p>
+                            <div class="forum-modal-actions">
+                                <button type="button" class="btn-soft forum-modal-cancel" data-forum-modal-close>Cancel</button>
+                                <button type="submit" class="btn-soft">Post discussion</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</main>
+{% endblock %}

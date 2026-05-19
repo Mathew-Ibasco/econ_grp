@@ -8,6 +8,7 @@ Login page
     <main class="auth-page">
         <form class="auth-panel" method="POST">
             {% csrf_token %}
+            <input type="hidden" name="next" value="{{ values.next|default:'' }}">
             <h2>Login</h2>
             <p class="auth-subtitle">Access your rail transport and urban mobility dashboard.</p>
 

@@ -1,0 +1,298 @@
+{% extends 'econ/layout.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}
+    {{ thread.title }} | Forum
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var modal = document.getElementById('forumDeleteModal');
+    if (!modal) {
+        return;
+    }
+
+    var modalTitle = modal.querySelector('[data-forum-delete-title]');
+    var modalMessage = modal.querySelector('[data-forum-delete-message]');
+    var modalWarning = modal.querySelector('[data-forum-delete-warning]');
+    var modalAction = modal.querySelector('[data-forum-delete-action]');
+    var modalConfirm = modal.querySelector('[data-forum-delete-confirm]');
+    var closeTargets = modal.querySelectorAll('[data-forum-delete-close]');
+    var activeForm = null;
+
+    var openModal = function (trigger) {
+        var form = trigger.closest('form');
+        if (!form) {
+            return;
+        }
+
+        activeForm = form;
+        if (modalTitle) {
+            modalTitle.textContent = trigger.getAttribute('data-delete-title') || 'Delete item?';
+        }
+        if (modalMessage) {
+            modalMessage.textContent = trigger.getAttribute('data-delete-message') || 'Are you sure you want to delete this item?';
+        }
+        if (modalWarning) {
+            modalWarning.textContent = trigger.getAttribute('data-delete-warning') || 'This cannot be undone.';
+        }
+        if (modalAction) {
+            modalAction.textContent = trigger.getAttribute('data-delete-action') || 'Delete';
+        }
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('forum-modal-open');
+
+        window.setTimeout(function () {
+            if (modalConfirm) {
+                modalConfirm.focus();
+            }
+        }, 0);
+    };
+
+    var closeModal = function () {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('forum-modal-open');
+        activeForm = null;
+    };
+
+    document.querySelectorAll('[data-forum-delete-trigger]').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            openModal(button);
+        });
+    });
+
+    closeTargets.forEach(function (button) {
+        button.addEventListener('click', closeModal);
+    });
+
+    if (modalConfirm) {
+        modalConfirm.addEventListener('click', function () {
+            if (!activeForm) {
+                return;
+            }
+            var form = activeForm;
+            closeModal();
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+            } else {
+                form.submit();
+            }
+        });
+    }
+
+    modal.addEventListener('click', function (event) {
+        if (event.target === modal || event.target.hasAttribute('data-forum-delete-close')) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+            closeModal();
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<main class="forum-page blogs-page forum-thread-page {% if not request.user.is_authenticated %}guest-detail-shell{% endif %}">
+    <section class="blogs-hero" {% if not request.user.is_authenticated %}aria-hidden="true" inert{% endif %}>
+        <div class="container blogs-hero-inner">
+            <div>
+                <a class="back-link forum-thread-back-link" href="{% url 'forum' %}">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to forum
+                </a>
+                <p class="blog-eyebrow">Forum thread</p>
+                <h1 class="blogs-title">{{ thread.title }}</h1>
+                <p class="blogs-intro">This discussion lives in {{ thread.topic_titles }}. Read the thread, add a reply, and keep the conversation focused on the topic.</p>
+                <div class="forum-thread-tags forum-thread-tags--hero">
+                    {% for topic in thread.all_topics %}
+                        <a href="{% url 'forum' %}?topic={{ topic.key }}" class="forum-thread-topic">
+                            <i class="fas {{ topic.icon }}"></i>
+                            {{ topic.title }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="blogs-hero-card">
+                <strong>{{ replies|length }}</strong>
+                <span>replies</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="container forum-detail-layout" {% if not request.user.is_authenticated %}aria-hidden="true" inert{% endif %}>
+        <div class="forum-feed">
+            <article class="forum-post-card forum-post-card--reddit">
+                <div class="forum-post-rail">
+                    <div class="forum-post-rail-icon">
+                        <i class="fas {{ thread.topic.icon }}"></i>
+                    </div>
+                    <strong>{{ replies|length }}</strong>
+                    <span>replies</span>
+                    {% with thread_images=thread.images.all %}
+                        {% if thread_images %}
+                            <span>{{ thread_images|length }} photos</span>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+                <div class="forum-post-main">
+                    <div class="forum-post-meta">
+                        <div class="forum-thread-tags">
+                            {% for topic in thread.all_topics %}
+                                <a href="{% url 'forum' %}?topic={{ topic.key }}" class="forum-thread-topic">
+                                    <i class="fas {{ topic.icon }}"></i>
+                                    {{ topic.title }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                        {% if request.user.is_authenticated %}
+                            {% if request.user == thread.author or request.user.is_staff or request.user.is_superuser %}
+                            <form class="forum-admin-action-form" method="post" action="{% url 'forum_delete_thread' thread.id %}">
+                                {% csrf_token %}
+                                <button type="button" class="forum-admin-delete-btn" aria-label="Delete thread" title="Delete thread" data-forum-delete-trigger data-delete-title="Delete thread?" data-delete-message="Delete this thread and all attached pictures?" data-delete-warning="This will permanently remove the discussion, replies, and images." data-delete-action="Delete thread">
+                                    <i class="fas fa-trash" aria-hidden="true"></i>
+                                    <span class="sr-only">Delete thread</span>
+                                </button>
+                            </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <h2>{{ thread.title }}</h2>
+                    <div class="forum-post-author">
+                        <span><i class="fas fa-circle-user"></i> {{ thread.author.username }}</span>
+                        <span>{{ thread.created_at|date:"M j, Y, g:i A" }}</span>
+                    </div>
+                    <p class="forum-post-body">{{ thread.body|linebreaksbr }}</p>
+                    {% with thread_images=thread.images.all %}
+                        {% if thread_images %}
+                            <div class="forum-post-gallery">
+                                {% for attachment in thread_images %}
+                                    <a class="forum-post-gallery-item" href="{{ attachment.image.url }}" target="_blank" rel="noopener">
+                                        <img src="{{ attachment.image.url }}" alt="{{ thread.title }} picture {{ forloop.counter }}">
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </article>
+
+            <div class="forum-replies-card forum-comments-card" id="replies">
+                <div class="forum-comments-head">
+                    <h2>Replies</h2>
+                    <p>{{ replies|length }} reply{{ replies|length|pluralize }}</p>
+                </div>
+                {% if replies %}
+                    <div class="forum-reply-list">
+                        {% for reply in replies %}
+                            <article class="forum-reply-card forum-comment-card">
+                                <div class="forum-reply-avatar">
+                                    {{ reply.author.username|first|upper }}
+                                </div>
+                                <div class="forum-comment-body">
+                                    <div class="forum-comment-head">
+                                        <div class="forum-comment-meta">
+                                            <strong>{{ reply.author.username }}</strong>
+                                            <time datetime="{{ reply.created_at|date:'c' }}">{{ reply.created_at|date:"M j, Y, g:i A" }}</time>
+                                        </div>
+                                        {% if request.user.is_authenticated %}
+                                            {% if request.user == reply.author or request.user.is_staff or request.user.is_superuser %}
+                                            <form class="forum-admin-action-form" method="post" action="{% url 'forum_delete_reply' reply.id %}">
+                                                {% csrf_token %}
+                                                <button type="button" class="forum-admin-delete-btn forum-admin-delete-btn--ghost" aria-label="Delete reply" title="Delete reply" data-forum-delete-trigger data-delete-title="Delete reply?" data-delete-message="Delete this reply?" data-delete-warning="This will permanently remove the reply from the thread." data-delete-action="Delete reply">
+                                                    <i class="fas fa-trash" aria-hidden="true"></i>
+                                                    <span class="sr-only">Delete reply</span>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    <p>{{ reply.body|linebreaksbr }}</p>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state forum-empty-state">
+                        <i class="fas fa-comment-dots"></i>
+                        <h3>No replies yet</h3>
+                        <p>Be the first to reply and keep this topic moving.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="forum-reply-form-card">
+                <h2>Join the conversation</h2>
+                {% if request.user.is_authenticated %}
+                    <form method="post" action="{% url 'forum_reply' thread.id %}" class="forum-composer-form">
+                        {% csrf_token %}
+                        <div class="forum-field">
+                            <label for="{{ reply_form.body.id_for_label }}">Your reply</label>
+                            {{ reply_form.body }}
+                            {{ reply_form.body.errors }}
+                        </div>
+                        <p class="forum-help">Be thoughtful, cite sources when possible, and keep the discussion tied to the topic.</p>
+                        <button type="submit" class="btn-soft">Post reply</button>
+                    </form>
+                {% else %}
+                    <div class="forum-login-card">
+                        <p>Log in to join the discussion and add your perspective.</p>
+                        <p class="forum-help">Use the access card to create an account or sign in.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </section>
+
+    {% if not request.user.is_authenticated %}
+        <div class="guest-access-card forum-guest-access-card" role="dialog" aria-labelledby="guest-forum-thread-access-title">
+            <div class="guest-access-icon"><i class="fas fa-lock"></i></div>
+            <h2 id="guest-forum-thread-access-title">Want to read the full discussion?</h2>
+            <p>Create a free account or log in to read threads, join replies, and share your own perspective.</p>
+            <div class="guest-access-actions">
+                <a href="{% url 'registration' %}" class="profile-primary-btn">Create Account</a>
+                <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="profile-cancel-btn">Log In</a>
+            </div>
+        </div>
+    {% endif %}
+</main>
+
+{% if request.user.is_staff or request.user.is_superuser %}
+    <div class="forum-confirm-modal" id="forumDeleteModal" aria-hidden="true">
+        <div class="forum-confirm-modal-backdrop" data-forum-delete-close></div>
+        <div class="forum-confirm-modal-shell" role="dialog" aria-modal="true" aria-labelledby="forumDeleteModalTitle">
+            <div class="forum-confirm-modal-content">
+                <div class="forum-confirm-modal-header">
+                    <div>
+                        <p class="forum-confirm-modal-eyebrow">Confirm delete</p>
+                        <h2 class="forum-confirm-modal-title" id="forumDeleteModalTitle" data-forum-delete-title>Delete item?</h2>
+                    </div>
+                    <button type="button" class="forum-confirm-modal-close" data-forum-delete-close aria-label="Close delete confirmation">
+                        <i class="fas fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="forum-confirm-modal-body">
+                    <p class="forum-confirm-modal-message" data-forum-delete-message>Are you sure you want to delete this item?</p>
+                    <p class="forum-confirm-modal-warning" data-forum-delete-warning>This cannot be undone.</p>
+                    <div class="forum-confirm-modal-actions">
+                        <button type="button" class="btn-soft forum-confirm-cancel" data-forum-delete-close>Cancel</button>
+                        <button type="button" class="btn-soft forum-confirm-delete" data-forum-delete-confirm>
+                            <span data-forum-delete-action>Delete</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

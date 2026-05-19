@@ -7,15 +7,25 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
-from django.http import StreamingHttpResponse
+from django.db.models import Count, F, Prefetch, Q
+from django.http import JsonResponse, StreamingHttpResponse
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 
 
 import os, re, sys, html, calendar, json, subprocess, sqlite3
 
-from .models import BlogPost, Bookmark, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, StudyItemProgress, Topic, TopicNote, User, vlog as VlogEntry
+from .forms import ForumReplyForm, ForumThreadCreateForm
+from .models import BlogPost, Bookmark, ForumReply, ForumThread, ForumThreadImage, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, StudyItemProgress, Topic, TopicNote, User, vlog as VlogEntry
+
+
+DEFAULT_RECOMMENDATION_IMAGE = "https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg"
+JOURNAL_RECOMMENDATION_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Manila_LRT-MRT_map.png/1280px-Manila_LRT-MRT_map.png"
+VIDEO_RECOMMENDATION_IMAGE = "https://media.philstar.com/images/articles/met2-mrt-3_2018-04-02_20-32-49.jpg"
 
 
 def _topic_study_items(topic):
@@ -56,62 +66,209 @@ def _topic_study_items(topic):
 
 
 def _topic_recommendation_candidates(topic):
-    candidates_by_kind = {
-        "blog": [
+    candidates = []
+
+    for post in topic.blog_posts.order_by("order", "id"):
+        candidates.append(
             SimpleNamespace(
                 topic=topic,
                 title=post.title,
+                summary=post.excerpt,
                 kind="Blog",
+                kind_key="blog",
                 icon="fa-newspaper",
                 url=reverse("blog_detail", args=[post.slug]),
+                preview_image=post.featured_image_url or DEFAULT_RECOMMENDATION_IMAGE,
+                cta_label="Open blog",
             )
-            for post in topic.blog_posts.order_by("order", "id")
-        ],
-        "journal": [
+        )
+
+    for entry in topic.journal_entries.order_by("order", "id"):
+        preview_image = JOURNAL_RECOMMENDATION_IMAGE
+        if "history" in topic.key:
+            preview_image = DEFAULT_RECOMMENDATION_IMAGE
+        elif "mobility" in topic.key or "economy" in topic.key or "world-bank" in topic.key:
+            preview_image = JOURNAL_RECOMMENDATION_IMAGE
+
+        candidates.append(
             SimpleNamespace(
                 topic=topic,
                 title=entry.title,
+                summary=entry.snippet,
                 kind="Journal",
+                kind_key="journal",
                 icon="fa-book-open",
                 url=reverse("journal_detail", args=[entry.id]),
+                preview_image=preview_image,
+                cta_label="Open journal",
             )
-            for entry in topic.journal_entries.order_by("order", "id")
-        ],
-        "video": [
+        )
+
+    for entry in topic.vlog_entries.order_by("order", "vlogID"):
+        preview_image = entry.thumbnail_url or _youtube_thumbnail_url(entry.video_url) or VIDEO_RECOMMENDATION_IMAGE
+        candidates.append(
             SimpleNamespace(
                 topic=topic,
                 title=entry.title,
-                kind="Media",
+                summary=entry.description or "Watch a short rail mobility highlight from this topic.",
+                kind="Video",
+                kind_key="video",
                 icon="fa-circle-play",
                 url=reverse("vlog_detail", args=[entry.vlogID]),
+                preview_image=preview_image,
+                cta_label="Watch video",
             )
-            for entry in topic.vlog_entries.order_by("order", "vlogID")
-        ],
-        "gallery": [
-            SimpleNamespace(
-                topic=topic,
-                title=entry.title,
-                kind="Gallery",
-                icon="fa-images",
-                url=reverse("gallery"),
-            )
-            for entry in topic.media_entries.order_by("order", "id")
-        ],
+        )
+
+    return candidates
+
+
+def _dashboard_recommendations(dashboard_topics, saved_item_keys, limit=6):
+    buckets = {
+        "blog": [],
+        "journal": [],
+        "video": [],
+    }
+    seen_urls = set()
+
+    for topic in dashboard_topics:
+        if topic.key in saved_item_keys:
+            continue
+
+        for recommendation in _topic_recommendation_candidates(topic):
+            if recommendation.kind_key not in buckets:
+                continue
+            if recommendation.url in seen_urls:
+                continue
+            buckets[recommendation.kind_key].append(recommendation)
+            seen_urls.add(recommendation.url)
+
+    recommended_items = []
+    ordered_kinds = ("blog", "journal", "video")
+
+    while len(recommended_items) < limit:
+        added_any = False
+        for kind in ordered_kinds:
+            if buckets[kind]:
+                recommended_items.append(buckets[kind].pop(0))
+                added_any = True
+                if len(recommended_items) == limit:
+                    break
+        if not added_any:
+            break
+
+    return recommended_items
+
+
+def _forum_topic_queryset():
+    return Topic.objects.annotate(
+        primary_thread_count=Count("forum_threads", distinct=True),
+        additional_thread_count=Count("forum_additional_threads", distinct=True),
+        primary_reply_count=Count("forum_threads__replies", distinct=True),
+        additional_reply_count=Count("forum_additional_threads__replies", distinct=True),
+    ).annotate(
+        thread_count=F("primary_thread_count") + F("additional_thread_count"),
+        reply_count=F("primary_reply_count") + F("additional_reply_count"),
+    ).order_by("order", "title")
+
+
+def _forum_thread_queryset(topic=None):
+    queryset = ForumThread.objects.select_related("topic", "author").annotate(
+        reply_count=Count("replies", distinct=True),
+    ).prefetch_related(
+        Prefetch("additional_topics", queryset=Topic.objects.order_by("order", "title")),
+        Prefetch("images", queryset=ForumThreadImage.objects.order_by("order", "id")),
+    )
+    if topic is not None:
+        queryset = queryset.filter(Q(topic=topic) | Q(additional_topics=topic))
+    return queryset.distinct().order_by("-last_activity_at", "-created_at")
+
+
+def _forum_page_context(active_topic=None, thread_form=None, thread_modal_open=False):
+    forum_topics = list(_forum_topic_queryset())
+    forum_threads = list(_forum_thread_queryset(active_topic))
+    forum_stats = {
+        "thread_count": ForumThread.objects.count(),
+        "reply_count": ForumReply.objects.count(),
+        "active_topic_count": Topic.objects.filter(
+            Q(forum_threads__isnull=False) | Q(forum_additional_threads__isnull=False)
+        ).distinct().count(),
+    }
+    visible_reply_count = sum(getattr(thread, "reply_count", 0) for thread in forum_threads)
+    if active_topic is not None:
+        forum_feed_title = f"{active_topic.title} discussions"
+        forum_feed_description = f"Showing conversations tagged with {active_topic.title}."
+        forum_feed_summary = f"{len(forum_threads)} discussions - {visible_reply_count} replies"
+    else:
+        forum_feed_title = "Latest discussions"
+        forum_feed_description = "Open threads across blogs, journals, media, and rail projects."
+        forum_feed_summary = f"{forum_stats['reply_count']} replies across {forum_stats['active_topic_count']} active topics"
+
+    if thread_form is None:
+        thread_form = ForumThreadCreateForm(
+            initial={
+                "topics": [active_topic.pk] if active_topic is not None else [],
+            }
+        )
+
+    thread_form.fields["topics"].queryset = Topic.objects.order_by("order", "title")
+
+    return {
+        "date": datetime.now(),
+        "forum_topics": forum_topics,
+        "forum_threads": forum_threads,
+        "forum_stats": forum_stats,
+        "thread_form": thread_form,
+        "active_topic": active_topic,
+        "forum_feed_title": forum_feed_title,
+        "forum_feed_description": forum_feed_description,
+        "forum_feed_summary": forum_feed_summary,
+        "thread_modal_open": thread_modal_open,
     }
 
-    if "gallery" in topic.key:
-        priority = ["gallery", "video", "blog", "journal"]
-    elif "history" in topic.key:
-        priority = ["journal", "blog", "gallery", "video"]
-    elif "mobility" in topic.key or "world-bank" in topic.key:
-        priority = ["journal", "video", "blog", "gallery"]
-    else:
-        priority = ["blog", "journal", "video", "gallery"]
 
-    candidates = []
-    for kind in priority:
-        candidates.extend(candidates_by_kind[kind])
-    return candidates
+def _forum_thread_panel_context(context):
+    return {
+        "forum_threads": context["forum_threads"],
+    }
+
+
+def _forum_fragment_response(request, active_topic, thread_form=None, thread_modal_open=False):
+    context = _forum_page_context(
+        active_topic=active_topic,
+        thread_form=thread_form,
+        thread_modal_open=thread_modal_open,
+    )
+    return JsonResponse({
+        "active_topic_key": active_topic.key if active_topic is not None else "",
+        "forum_feed_title": context["forum_feed_title"],
+        "forum_feed_description": context["forum_feed_description"],
+        "forum_feed_summary": context["forum_feed_summary"],
+        "forum_thread_panel_html": render_to_string(
+            "econ/forum_thread_panel.html",
+            _forum_thread_panel_context(context),
+            request=request,
+        ),
+    })
+
+
+def _forum_thread_context(thread, reply_form=None):
+    context = _forum_page_context(active_topic=thread.topic)
+    thread_topics = [thread.topic]
+    thread_topics.extend(list(thread.additional_topics.all()))
+    context.update(
+        {
+            "thread": thread,
+            "related_threads": list(
+                _forum_thread_queryset().filter(
+                    Q(topic__in=thread_topics) | Q(additional_topics__in=thread_topics)
+                ).exclude(pk=thread.pk).distinct()[:4]
+            ),
+            "replies": list(thread.replies.all()),
+            "reply_form": reply_form or ForumReplyForm(),
+        }
+    )
+    return context
 
 
 def _item_topic(item_type, item_id):
@@ -257,7 +414,8 @@ def login_process(request):
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
         password = request.POST.get("password", "")
-        values = {"username": username}
+        next_url = request.POST.get("next", "").strip()
+        values = {"username": username, "next": next_url}
         errors = {}
         account = None
 
@@ -280,6 +438,12 @@ def login_process(request):
         user = authenticate(request, username=account.username, password=password)
         if user is not None:
             auth_login(request, user)
+            if next_url and url_has_allowed_host_and_scheme(
+                next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                return redirect(next_url)
             return redirect("index")
         else:
             errors["password"] = "Incorrect password."
@@ -391,13 +555,13 @@ def _dashboard_page_context(request):
     }
 
     if request.user.is_authenticated:
-        dashboard_topics = Topic.objects.prefetch_related(
+        dashboard_topics = list(Topic.objects.prefetch_related(
             "blog_posts",
             "journal_entries",
             "media_entries",
             "vlog_entries",
             "quiz_questions",
-        ).order_by("order", "id")
+        ).order_by("order", "id"))
         saved_bookmarks = list(
             request.user.bookmarks.select_related("topic").prefetch_related(
                 "topic__blog_posts",
@@ -444,19 +608,7 @@ def _dashboard_page_context(request):
                 progress_percent=progress_percent,
             ))
 
-        recommended_items = []
-        recommended_urls = set()
-        for topic in dashboard_topics:
-            if topic.key in saved_item_keys:
-                continue
-            for recommendation in _topic_recommendation_candidates(topic):
-                if recommendation.url in recommended_urls:
-                    continue
-                recommended_items.append(recommendation)
-                recommended_urls.add(recommendation.url)
-                break
-            if len(recommended_items) == 3:
-                break
+        recommended_items = _dashboard_recommendations(dashboard_topics, saved_item_keys)
 
         context.update(
             {
@@ -464,7 +616,7 @@ def _dashboard_page_context(request):
                 "saved_bookmarks": saved_bookmarks,
                 "study_boards": study_boards,
                 "saved_item_keys": saved_item_keys,
-                "available_topics_count": dashboard_topics.exclude(key__in=saved_item_keys).count(),
+                "available_topics_count": sum(1 for topic in dashboard_topics if topic.key not in saved_item_keys),
                 "recommended_items": recommended_items,
             }
         )
@@ -490,7 +642,7 @@ def login(request):
     return render(
         request,
         'econ/login.html',
-        _auth_context()
+        _auth_context({"next": request.GET.get("next", "")})
     )
 
 def registration(request):
@@ -592,6 +744,140 @@ def dashboard(request):
     context = _dashboard_page_context(request)
     context["show_dashboard"] = True
     return render(request, "econ/index.html", context)
+
+def forum(request):
+    selected_topic_key = request.GET.get("topic", "").strip()
+    active_topic = Topic.objects.filter(key=selected_topic_key).first() if selected_topic_key else None
+    if request.GET.get("fragment") == "1" or request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return _forum_fragment_response(request, active_topic)
+    context = _forum_page_context(active_topic=active_topic)
+    return render(request, "econ/forum.html", context)
+
+
+@login_required
+def forum_create_thread(request):
+    if request.method != "POST":
+        return redirect("forum")
+
+    form = ForumThreadCreateForm(request.POST, request.FILES)
+    if form.is_valid():
+        selected_topics = list(form.cleaned_data["topics"])
+        primary_topic = selected_topics[0]
+        secondary_topics = selected_topics[1:]
+        thread = ForumThread.objects.create(
+            topic=primary_topic,
+            author=request.user,
+            title=form.cleaned_data["title"],
+            body=form.cleaned_data["body"],
+        )
+        thread.additional_topics.set(secondary_topics)
+        uploaded_images = form.cleaned_data.get("images") or []
+        for order, image in enumerate(uploaded_images):
+            ForumThreadImage.objects.create(thread=thread, image=image, order=order)
+
+        if uploaded_images:
+            messages.success(request, "Your discussion and pictures were posted.")
+        else:
+            messages.success(request, "Your discussion was posted.")
+        return redirect("forum_thread", thread_id=thread.id)
+
+    selected_topic_ids = [value for value in request.POST.getlist("topics") if str(value).isdigit()]
+    active_topic = Topic.objects.filter(pk=selected_topic_ids[0]).first() if selected_topic_ids else None
+    context = _forum_page_context(active_topic=active_topic, thread_form=form, thread_modal_open=True)
+    messages.error(request, "Please finish the thread details and try again.")
+    return render(request, "econ/forum.html", context, status=400)
+
+
+def _require_forum_staff(user):
+    if not (user.is_staff or user.is_superuser):
+        raise PermissionDenied
+
+
+def _can_manage_forum_thread(user, thread):
+    return user.is_staff or user.is_superuser or thread.author_id == user.id
+
+
+def _can_manage_forum_reply(user, reply):
+    return user.is_staff or user.is_superuser or reply.author_id == user.id
+
+
+def _refresh_forum_thread_activity(thread):
+    latest_reply = thread.replies.order_by("-created_at", "-id").first()
+    latest_activity = latest_reply.created_at if latest_reply is not None else thread.created_at
+    if thread.last_activity_at != latest_activity:
+        thread.last_activity_at = latest_activity
+        thread.save(update_fields=["last_activity_at"])
+
+
+def forum_thread(request, thread_id):
+    thread = get_object_or_404(
+        ForumThread.objects.select_related("topic", "author").prefetch_related(
+            Prefetch("additional_topics", queryset=Topic.objects.order_by("order", "title")),
+            Prefetch("images", queryset=ForumThreadImage.objects.order_by("order", "id")),
+            Prefetch("replies", queryset=ForumReply.objects.select_related("author"))
+        ),
+        pk=thread_id,
+    )
+    context = _forum_thread_context(thread)
+    return render(request, "econ/forum_thread.html", context)
+
+
+@login_required
+def forum_reply(request, thread_id):
+    if request.method != "POST":
+        return redirect("forum_thread", thread_id=thread_id)
+
+    thread = get_object_or_404(
+        ForumThread.objects.select_related("topic", "author").prefetch_related(
+            Prefetch("additional_topics", queryset=Topic.objects.order_by("order", "title")),
+            Prefetch("replies", queryset=ForumReply.objects.select_related("author"))
+        ),
+        pk=thread_id,
+    )
+    form = ForumReplyForm(request.POST)
+    if form.is_valid():
+        ForumReply.objects.create(
+            thread=thread,
+            author=request.user,
+            body=form.cleaned_data["body"],
+        )
+        thread.last_activity_at = timezone.now()
+        thread.save(update_fields=["last_activity_at"])
+        messages.success(request, "Your reply was posted.")
+        return redirect(f"{reverse('forum_thread', args=[thread.id])}#replies")
+
+    context = _forum_thread_context(thread, reply_form=form)
+    messages.error(request, "Please write a reply before posting.")
+    return render(request, "econ/forum_thread.html", context, status=400)
+
+
+@login_required
+def forum_delete_thread(request, thread_id):
+    if request.method != "POST":
+        return redirect("forum_thread", thread_id=thread_id)
+
+    thread = get_object_or_404(ForumThread.objects.select_related("author"), pk=thread_id)
+    if not _can_manage_forum_thread(request.user, thread):
+        raise PermissionDenied
+    title = thread.title
+    thread.delete()
+    messages.success(request, f"Deleted thread: {title}")
+    return redirect("forum")
+
+
+@login_required
+def forum_delete_reply(request, reply_id):
+    if request.method != "POST":
+        return redirect("forum")
+
+    reply = get_object_or_404(ForumReply.objects.select_related("thread"), pk=reply_id)
+    if not _can_manage_forum_reply(request.user, reply):
+        raise PermissionDenied
+    thread = reply.thread
+    reply.delete()
+    _refresh_forum_thread_activity(thread)
+    messages.success(request, "Deleted reply.")
+    return redirect(f"{reverse('forum_thread', args=[thread.id])}#replies")
 
 def blog(request):
     blog_posts = list(BlogPost.objects.order_by("order", "id"))

@@ -1,0 +1,38 @@
+<div class="forum-thread-panel {% if forum_threads %}forum-thread-panel--list{% else %}forum-thread-panel--empty{% endif %}" data-forum-thread-panel>
+    {% if forum_threads %}
+        <div class="forum-thread-list">
+            {% for thread in forum_threads %}
+                <a class="forum-thread-card" href="{% url 'forum_thread' thread.id %}">
+                    <div class="forum-thread-content">
+                        <div class="forum-thread-top">
+                            <div class="forum-thread-tags">
+                                {% for topic in thread.all_topics %}
+                                    <span class="forum-thread-topic">
+                                        <i class="fas {{ topic.icon }}"></i>
+                                        {{ topic.title }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                            <span class="forum-thread-stats">{{ thread.reply_count }} replies</span>
+                        </div>
+                        <h3>{{ thread.title }}</h3>
+                        <p class="forum-thread-preview">{{ thread.body|truncatechars:220 }}</p>
+                        <div class="forum-thread-foot">
+                            <div class="forum-thread-author">
+                                <strong>{{ thread.author.username }}</strong>
+                                <span>{{ thread.created_at|date:"M j, Y" }}</span>
+                            </div>
+                            <span class="forum-thread-cta">Open discussion</span>
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state forum-empty-state">
+            <i class="fas fa-comments"></i>
+            <h3>No discussions yet</h3>
+            <p>Be the first to start the conversation for this topic.</p>
+        </div>
+    {% endif %}
+</div>

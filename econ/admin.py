@@ -1,5 +1,5 @@
-from django.contrib import admin
-from .models import BlogPost, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, QuizQuestion, StudyItemProgress, Topic, TopicNote, vlog
+from django.contrib import admin, messages
+from .models import BlogPost, ForumReply, ForumThread, ForumThreadImage, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, QuizQuestion, StudyItemProgress, Topic, TopicNote, vlog
 
 
 @admin.register(Topic)
@@ -104,3 +104,42 @@ class JournalEntryAdmin(admin.ModelAdmin):
     search_fields = ("title", "authors", "journal_name", "citation_info", "snippet")
     filter_horizontal = ("topics",)
     ordering = ("order", "title")
+
+class ForumThreadImageInline(admin.TabularInline):
+    model = ForumThreadImage
+    extra = 0
+    fields = ("image", "order", "uploaded_at")
+    readonly_fields = ("uploaded_at",)
+    ordering = ("order", "id")
+
+
+@admin.register(ForumThread)
+class ForumThreadAdmin(admin.ModelAdmin):
+    list_display = ("title", "topic", "author", "created_at", "last_activity_at")
+    list_filter = ("topic", "additional_topics", "created_at")
+    search_fields = ("title", "body", "author__username", "topic__title", "additional_topics__title")
+    ordering = ("-last_activity_at", "-created_at")
+    inlines = (ForumThreadImageInline,)
+    filter_horizontal = ("additional_topics",)
+    actions = ("delete_forum_threads",)
+
+    @admin.action(description="Delete selected forum threads")
+    def delete_forum_threads(self, request, queryset):
+        deleted_count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f"Deleted {deleted_count} forum thread(s).", level=messages.SUCCESS)
+
+
+@admin.register(ForumReply)
+class ForumReplyAdmin(admin.ModelAdmin):
+    list_display = ("thread", "author", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("body", "author__username", "thread__title")
+    ordering = ("-created_at",)
+    actions = ("delete_forum_replies",)
+
+    @admin.action(description="Delete selected forum replies")
+    def delete_forum_replies(self, request, queryset):
+        deleted_count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f"Deleted {deleted_count} forum reply/replies.", level=messages.SUCCESS)

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+from django.core.exceptions import ImproperlyConfigured
 from django.contrib.messages import constants as messages
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -73,30 +74,42 @@ WSGI_APPLICATION = 'econ_web.wsgi.application'
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
-DB_ENGINE = os.environ.get("ECON_DB_ENGINE", "mysql").strip().lower()
+DB_ENGINE = os.environ.get("ECON_DB_ENGINE", "sqlite").strip().lower()
 
-if DB_ENGINE == "mysql":
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": "econdb",
-            "USER": "root",
-            "PASSWORD": "D28bccgs", #server
-            "HOST": "localhost",
-            "PORT": "3306",
-            "OPTIONS": {
-                "charset": "utf8mb4",
-            }
-        }
-    }
-else:
-    # SQLite remains available for local fallback by setting ECON_DB_ENGINE=sqlite.
-    DATABASES = {
+
+def _sqlite_database():
+    return {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db_local.sqlite3",
         }
     }
+
+
+def _mysql_database():
+    return {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.environ.get("ECON_MYSQL_DB_NAME", "econdb"),
+            "USER": os.environ.get("ECON_MYSQL_USER", "root"),
+            "PASSWORD": os.environ.get("ECON_MYSQL_PASSWORD", ""),
+            "HOST": os.environ.get("ECON_MYSQL_HOST", "127.0.0.1"),
+            "PORT": os.environ.get("ECON_MYSQL_PORT", "3306"),
+            "OPTIONS": {
+                "charset": "utf8mb4",
+            },
+        }
+    }
+
+
+if DB_ENGINE == "mysql":
+    DATABASES = _mysql_database()
+elif DB_ENGINE == "sqlite":
+    DATABASES = _sqlite_database()
+else:
+    raise ImproperlyConfigured(
+        "ECON_DB_ENGINE must be either 'sqlite' or 'mysql'."
+    )
 
 CACHES = {
     "default": {
@@ -147,10 +160,12 @@ STATIC_URL = '/ISO/static/'
 
 STATIC_ROOT = BASE_DIR / "static_collected/"
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'static')
+MEDIA_ROOT = BASE_DIR / "media"
 
-MEDIA_URL = '/static/'
+MEDIA_URL = "/media/"
 
 AUTH_USER_MODEL = "econ.User"
+LOGIN_URL = "/econ/login/"
+LOGIN_REDIRECT_URL = "/econ/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
