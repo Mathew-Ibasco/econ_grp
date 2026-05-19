@@ -2786,6 +2786,52 @@ hr {
     font-weight: 700;
 }
 
+.dashboard-context-section {
+    padding-top: 1.5rem;
+}
+
+.dashboard-context-section .info-card,
+.dashboard-context-section .split-item,
+.dashboard-context-section .rail-card,
+.dashboard-context-section .map-side {
+    border-radius: 18px;
+}
+
+.dashboard-context-grid .info-card {
+    box-shadow: 0 10px 24px rgba(11, 43, 59, 0.06);
+}
+
+.dashboard-rail-overview {
+    align-items: stretch;
+    margin-top: 0.5rem;
+}
+
+.dashboard-rail-overview .definition-side,
+.dashboard-rail-overview .map-side {
+    flex: 1 1 320px;
+}
+
+.dashboard-rail-overview .definition-side {
+    display: flex;
+    align-items: center;
+    padding: 1.25rem;
+    border: 1px solid #dce9f1;
+    border-radius: 18px;
+    background: #ffffff;
+}
+
+.dashboard-rail-overview .definition-side p {
+    margin: 0;
+}
+
+.dashboard-rail-cards {
+    gap: 1rem;
+}
+
+.dashboard-rail-cards .rail-card {
+    min-width: 220px;
+}
+
 .dashboard-home-hero {
     background:
         linear-gradient(135deg, rgba(18, 61, 82, 0.96) 0%, rgba(11, 43, 59, 0.98) 100%),
