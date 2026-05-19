@@ -1530,10 +1530,6 @@ hr {
     text-decoration: none !important;
 }
 
-.blog-card * {
-    text-decoration: none !important;
-}
-
 .blog-card:hover {
     transform: translateY(-4px);
     border-color: #ffb347;
@@ -1541,6 +1537,12 @@ hr {
 }
 
 .blog-card:hover h3 {
+    text-decoration: none !important;
+}
+
+.blog-card *,
+.journal-card-link *,
+.vlog-page .video-card-link * {
     text-decoration: none !important;
 }
 
@@ -1632,19 +1634,26 @@ hr {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 1.2rem;
     font-weight: 800;
-    text-decoration: none !important;
+    text-decoration: none;
 }
 
 .blog-card-title {
-    display: inline-block;
-    padding-bottom: 0.08rem;
-    border-bottom: 2px solid transparent;
-    transition: border-color 0.2s ease;
+    display: inline;
+    text-decoration: none;
+    transition: text-decoration-color 0.2s ease;
 }
 
 .blog-card:hover .blog-card-title,
-.blog-card:focus-visible .blog-card-title {
-    border-bottom-color: #0b2b3b;
+.blog-card:focus-visible .blog-card-title,
+.journal-card-link:hover .blog-card-title,
+.journal-card-link:focus-visible .blog-card-title,
+.vlog-page .video-card-link:hover .blog-card-title,
+.vlog-page .video-card-link:focus-visible .blog-card-title {
+    text-decoration: underline !important;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: #0b2b3b;
+    text-decoration-skip-ink: none;
 }
 
 .blog-card-excerpt {
