@@ -59,6 +59,113 @@
             </article>
 
             <aside class="blog-detail-sidebar">
+                {% if request.user.is_authenticated and learning %}
+                    <div class="detail-card learning-card">
+                        <h2>Study Tools</h2>
+                        <form method="POST" action="{% url 'toggle_study_progress' %}" class="learning-action-row">
+                            {% csrf_token %}
+                            <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+                            <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <button type="submit" class="bookmark-btn {% if learning.completed %}is-saved{% endif %}">
+                                <i class="fas {% if learning.completed %}fa-check{% else %}fa-plus{% endif %}"></i>
+                                {% if learning.completed %}Viewed{% else %}Mark Viewed{% endif %}
+                            </button>
+                        </form>
+                        <form method="POST" action="{% url 'save_item_note' %}" class="topic-note-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+                            <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <textarea name="note" placeholder="Add a private note for this blog.">{% if learning.note %}{{ learning.note.note }}{% endif %}</textarea>
+                            <button type="submit" class="bookmark-btn">Save note</button>
+                        </form>
+                    </div>
+                    <div class="detail-card learning-card">
+                        <h2>Mini Checkpoint</h2>
+                        <p class="quiz-score">Perfect rounds: {{ learning.perfect_rounds }} / 3</p>
+                        {% if learning.latest_attempt %}
+                            <p class="quiz-score">Latest score: {{ learning.latest_attempt.score }} / {{ learning.latest_attempt.total }}</p>
+                        {% endif %}
+                        {% if learning.mastered %}
+                            <div class="mastery-badge">
+                                <i class="fas fa-trophy"></i>
+                                <span>Mastered</span>
+                                <p>You perfected all checkpoint rounds for this content.</p>
+                            </div>
+                        {% elif learning.questions %}
+                            <button type="button" class="bookmark-btn quiz-modal-trigger" data-quiz-target="quiz-blog-{{ learning_item_id }}">
+                                Answer Quiz
+                            </button>
+                            <div class="quiz-modal" id="quiz-blog-{{ learning_item_id }}" aria-hidden="true">
+                                <div class="quiz-modal-backdrop" data-quiz-close></div>
+                                <div class="quiz-modal-panel" role="dialog" aria-modal="true" aria-labelledby="quiz-blog-title-{{ learning_item_id }}">
+                                    <div class="quiz-modal-head">
+                                        <div>
+                                            <p class="blog-eyebrow">Mini Checkpoint</p>
+                                            <h2 id="quiz-blog-title-{{ learning_item_id }}">Answer the Quiz: Round {{ learning.current_round }}</h2>
+                                        </div>
+                                        <button type="button" class="icon-action" data-quiz-close aria-label="Close quiz">
+                                            <i class="fas fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                    <form method="POST" action="{% url 'submit_item_quiz' %}" class="topic-quiz-form">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+                                        <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+                                        <input type="hidden" name="next" value="{{ request.path }}">
+                                        {% for question in learning.questions %}
+                                            <fieldset class="quiz-question">
+                                                <legend>{{ question.question }}</legend>
+                                                <label><input type="radio" name="question_{{ question.id }}" value="A" required> {{ question.option_a }}</label>
+                                                <label><input type="radio" name="question_{{ question.id }}" value="B"> {{ question.option_b }}</label>
+                                                <label><input type="radio" name="question_{{ question.id }}" value="C"> {{ question.option_c }}</label>
+                                            </fieldset>
+                                        {% endfor %}
+                                        <button type="submit" class="bookmark-btn">Submit Quiz</button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% else %}
+                            <p class="dashboard-muted">No quiz is available for this blog yet.</p>
+                        {% endif %}
+                        {% if learning.result_attempt %}
+                            <div class="quiz-modal is-open" id="quiz-result-blog-{{ learning_item_id }}" aria-hidden="false">
+                                <div class="quiz-modal-backdrop" data-quiz-close></div>
+                                <div class="quiz-modal-panel" role="dialog" aria-modal="true" aria-labelledby="quiz-result-blog-title-{{ learning_item_id }}">
+                                    <div class="quiz-modal-head">
+                                        <div>
+                                            <p class="blog-eyebrow">Quiz Result</p>
+                                            <h2 id="quiz-result-blog-title-{{ learning_item_id }}">Round {{ learning.result_attempt.round_number }}: You scored {{ learning.result_attempt.score }} / {{ learning.result_attempt.total }}</h2>
+                                        </div>
+                                        <button type="button" class="icon-action" data-quiz-close aria-label="Close result">
+                                            <i class="fas fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                    <div class="quiz-result-list">
+                                        {% for result in learning.result_questions %}
+                                            <div class="quiz-result-item {% if result.is_correct %}is-correct{% else %}is-wrong{% endif %}">
+                                                <h3>{{ result.question }}</h3>
+                                                <p>Your answer: <strong>{{ result.selected_text|default:"No answer" }}</strong></p>
+                                                {% if learning.result_is_perfect %}
+                                                    <p>Correct answer: <strong>{{ result.correct_text }}</strong></p>
+                                                {% endif %}
+                                                <span>{% if result.is_correct %}Correct{% else %}Needs review{% endif %}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if not learning.mastered and learning.questions %}
+                                        <div class="quiz-result-actions">
+                                            <button type="button" class="bookmark-btn quiz-modal-trigger" data-quiz-target="quiz-blog-{{ learning_item_id }}">
+                                                {% if learning.result_is_perfect %}Answer New Quiz{% else %}Retake Quiz{% endif %}
+                                            </button>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
                 <div class="detail-card">
                     <h2>Keywords</h2>
                     <ul class="blog-keywords">

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BlogPost, JournalEntry, MediaGalleryEntry, Topic, vlog
+from .models import BlogPost, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, QuizQuestion, StudyItemProgress, Topic, TopicNote, vlog
 
 
 @admin.register(Topic)
@@ -37,6 +37,64 @@ class VlogAdmin(admin.ModelAdmin):
     search_fields = ("title", "description")
     filter_horizontal = ("topics",)
     ordering = ("order", "title")
+
+
+@admin.register(TopicNote)
+class TopicNoteAdmin(admin.ModelAdmin):
+    list_display = ("user", "topic", "updated_at")
+    search_fields = ("user__username", "topic__title", "note")
+    list_filter = ("topic",)
+
+
+@admin.register(StudyItemProgress)
+class StudyItemProgressAdmin(admin.ModelAdmin):
+    list_display = ("user", "topic", "item_type", "item_id", "completed_at")
+    list_filter = ("topic", "item_type")
+    search_fields = ("user__username", "topic__title")
+
+
+@admin.register(QuizQuestion)
+class QuizQuestionAdmin(admin.ModelAdmin):
+    list_display = ("topic", "question", "correct_option", "order")
+    list_editable = ("order",)
+    list_filter = ("topic",)
+    search_fields = ("question", "topic__title")
+
+
+@admin.register(QuizAttempt)
+class QuizAttemptAdmin(admin.ModelAdmin):
+    list_display = ("user", "topic", "score", "total", "created_at")
+    list_filter = ("topic",)
+    search_fields = ("user__username", "topic__title")
+
+
+@admin.register(ItemNote)
+class ItemNoteAdmin(admin.ModelAdmin):
+    list_display = ("user", "item_type", "item_id", "updated_at")
+    list_filter = ("item_type",)
+    search_fields = ("user__username", "note")
+
+
+@admin.register(ItemQuizQuestion)
+class ItemQuizQuestionAdmin(admin.ModelAdmin):
+    list_display = ("item_type", "item_id", "round_number", "question", "correct_option", "order")
+    list_editable = ("round_number", "order")
+    list_filter = ("item_type", "round_number")
+    search_fields = ("question",)
+
+
+@admin.register(ItemQuizAttempt)
+class ItemQuizAttemptAdmin(admin.ModelAdmin):
+    list_display = ("user", "item_type", "item_id", "round_number", "score", "total", "created_at")
+    list_filter = ("item_type", "round_number")
+    search_fields = ("user__username",)
+
+
+@admin.register(ItemQuizProgress)
+class ItemQuizProgressAdmin(admin.ModelAdmin):
+    list_display = ("user", "item_type", "item_id", "perfect_rounds", "mastered", "updated_at")
+    list_filter = ("item_type", "mastered")
+    search_fields = ("user__username",)
 
 
 @admin.register(JournalEntry)
