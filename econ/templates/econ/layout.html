@@ -121,6 +121,39 @@
 
       window.setTimeout(dismiss, 4200);
     });
+
+    document.querySelectorAll('.quiz-modal-trigger').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var modal = document.getElementById(button.getAttribute('data-quiz-target'));
+        if (modal) {
+          document.querySelectorAll('.quiz-modal.is-open').forEach(function (openModal) {
+            openModal.classList.remove('is-open');
+            openModal.setAttribute('aria-hidden', 'true');
+          });
+          modal.classList.add('is-open');
+          modal.setAttribute('aria-hidden', 'false');
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-quiz-close]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var modal = button.closest('.quiz-modal');
+        if (modal) {
+          modal.classList.remove('is-open');
+          modal.setAttribute('aria-hidden', 'true');
+        }
+      });
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        document.querySelectorAll('.quiz-modal.is-open').forEach(function (modal) {
+          modal.classList.remove('is-open');
+          modal.setAttribute('aria-hidden', 'true');
+        });
+      }
+    });
   </script>
 
     <footer class="footer">

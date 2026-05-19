@@ -1,9 +1,39 @@
 {% extends 'econ/layout.html' %}
 {% load static %}
 {% load i18n %}
+
 {% block title %}
     Journals
 {% endblock %}
+
+{% block style %}
+  .journal-card {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .journal-card-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .journal-card-link:hover .blog-card-title,
+  .journal-card-link:focus-visible .blog-card-title {
+    text-decoration: underline;
+  }
+
+  .journal-study-panel {
+    margin: 0 1.25rem 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e3edf4;
+  }
+
+  .journal-study-panel .item-learning-panel {
+    margin-top: 0;
+  }
+{% endblock %}
+
 {% block content %}
 <main class="blogs-page">
     <section class="blogs-hero">
@@ -11,7 +41,7 @@
             <div>
                 <p class="blog-eyebrow">Journal collection</p>
                 <h1 class="blogs-title">Rail journals and research notes</h1>
-                <p class="blogs-intro">Browse the journal entries stored in the database. Each card opens a full abstract page with the journal metadata and source link.</p>
+                <p class="blogs-intro">Browse the journal entries stored in the database. Each card opens a full abstract page, and signed-in users can track progress with notes and quizzes.</p>
             </div>
             <div class="blogs-hero-card">
                 <strong>{{ journal_entries|length }}</strong>
@@ -23,18 +53,128 @@
     <section class="container blogs-list-section">
         <div class="blog-list-grid">
             {% for journal in journal_entries %}
-                <a class="blog-card" href="{% url 'journal_detail' journal.id %}" aria-label="Open {{ journal.title }} abstract">
-                    <div class="blog-card-body">
-                        <div class="blog-card-meta journal-card-meta">
-                            <span class="journal-card-source">{{ journal.journal_name }}</span>
-                            <span class="journal-card-year">{{ journal.publication_year }}</span>
+                <article class="blog-card journal-card">
+                    <a class="journal-card-link" href="{% url 'journal_detail' journal.id %}" aria-label="Open {{ journal.title }} abstract">
+                        <div class="blog-card-body">
+                            <div class="blog-card-meta journal-card-meta">
+                                <span class="journal-card-source">{{ journal.journal_name }}</span>
+                                <span class="journal-card-year">{{ journal.publication_year }}</span>
+                            </div>
+                            <h3><span class="blog-card-title">{{ journal.title }}</span></h3>
+                            <p class="journal-card-citation">{{ journal.citation_info }}</p>
+                            <p class="journal-card-authors">{{ journal.authors }}</p>
+                            <p class="blog-card-excerpt">{{ journal.snippet|truncatechars:180 }}</p>
+                            <span class="text-link">Open abstract <i class="fas fa-arrow-right"></i></span>
                         </div>
-                        <h3><span class="blog-card-title">{{ journal.title }}</span></h3>
-                        <p class="journal-card-citation">{{ journal.citation_info }}</p>
-                        <p class="journal-card-authors">{{ journal.authors }}</p>
-                        <p class="blog-card-excerpt">{{ journal.snippet|truncatechars:180 }}</p>
-                    </div>
-                </a>
+                    </a>
+
+                    {% if request.user.is_authenticated and journal.learning %}
+                        <div class="journal-study-panel">
+                            <div class="item-learning-panel">
+                                <form method="POST" action="{% url 'toggle_study_progress' %}" class="learning-action-row">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="item_type" value="journal">
+                                    <input type="hidden" name="item_id" value="{{ journal.id }}">
+                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                    <button type="submit" class="bookmark-btn {% if journal.learning.completed %}is-saved{% endif %}">
+                                        <i class="fas {% if journal.learning.completed %}fa-check{% else %}fa-plus{% endif %}"></i>
+                                        {% if journal.learning.completed %}Viewed{% else %}Mark Viewed{% endif %}
+                                    </button>
+                                </form>
+                                <details>
+                                    <summary>Add note</summary>
+                                    <form method="POST" action="{% url 'save_item_note' %}" class="topic-note-form">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="item_type" value="journal">
+                                        <input type="hidden" name="item_id" value="{{ journal.id }}">
+                                        <input type="hidden" name="next" value="{{ request.path }}">
+                                        <textarea name="note" placeholder="Add a private note for this journal.">{% if journal.learning.note %}{{ journal.learning.note.note }}{% endif %}</textarea>
+                                        <button type="submit" class="bookmark-btn">Save note</button>
+                                    </form>
+                                </details>
+                                {% if journal.learning.latest_attempt %}
+                                    <p class="quiz-score">Latest score: {{ journal.learning.latest_attempt.score }} / {{ journal.learning.latest_attempt.total }}</p>
+                                {% endif %}
+                                <p class="quiz-score">Perfect rounds: {{ journal.learning.perfect_rounds }} / 3</p>
+                                {% if journal.learning.mastered %}
+                                    <div class="mastery-badge">
+                                        <i class="fas fa-trophy"></i>
+                                        <span>Mastered</span>
+                                        <p>You perfected all checkpoint rounds for this content.</p>
+                                    </div>
+                                {% elif journal.learning.questions %}
+                                    <button type="button" class="bookmark-btn quiz-modal-trigger" data-quiz-target="quiz-journal-{{ journal.id }}">Answer Quiz</button>
+                                    <div class="quiz-modal" id="quiz-journal-{{ journal.id }}" aria-hidden="true">
+                                        <div class="quiz-modal-backdrop" data-quiz-close></div>
+                                        <div class="quiz-modal-panel" role="dialog" aria-modal="true" aria-labelledby="quiz-journal-title-{{ journal.id }}">
+                                            <div class="quiz-modal-head">
+                                                <div>
+                                                    <p class="blog-eyebrow">Mini Checkpoint</p>
+                                                    <h2 id="quiz-journal-title-{{ journal.id }}">Answer the Quiz: Round {{ journal.learning.current_round }}</h2>
+                                                </div>
+                                                <button type="button" class="icon-action" data-quiz-close aria-label="Close quiz">
+                                                    <i class="fas fa-xmark"></i>
+                                                </button>
+                                            </div>
+                                            <form method="POST" action="{% url 'submit_item_quiz' %}" class="topic-quiz-form">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="item_type" value="journal">
+                                                <input type="hidden" name="item_id" value="{{ journal.id }}">
+                                                <input type="hidden" name="next" value="{{ request.path }}">
+                                                {% for question in journal.learning.questions %}
+                                                    <fieldset class="quiz-question">
+                                                        <legend>{{ question.question }}</legend>
+                                                        <label><input type="radio" name="question_{{ question.id }}" value="A" required> {{ question.option_a }}</label>
+                                                        <label><input type="radio" name="question_{{ question.id }}" value="B"> {{ question.option_b }}</label>
+                                                        <label><input type="radio" name="question_{{ question.id }}" value="C"> {{ question.option_c }}</label>
+                                                    </fieldset>
+                                                {% endfor %}
+                                                <button type="submit" class="bookmark-btn">Submit Quiz</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <p class="dashboard-muted">No quiz is available for this journal yet.</p>
+                                {% endif %}
+                                {% if journal.learning.result_attempt %}
+                                    <div class="quiz-modal is-open" id="quiz-result-journal-{{ journal.id }}" aria-hidden="false">
+                                        <div class="quiz-modal-backdrop" data-quiz-close></div>
+                                        <div class="quiz-modal-panel" role="dialog" aria-modal="true" aria-labelledby="quiz-result-journal-title-{{ journal.id }}">
+                                            <div class="quiz-modal-head">
+                                                <div>
+                                                    <p class="blog-eyebrow">Quiz Result</p>
+                                                    <h2 id="quiz-result-journal-title-{{ journal.id }}">Round {{ journal.learning.result_attempt.round_number }}: You scored {{ journal.learning.result_attempt.score }} / {{ journal.learning.result_attempt.total }}</h2>
+                                                </div>
+                                                <button type="button" class="icon-action" data-quiz-close aria-label="Close result">
+                                                    <i class="fas fa-xmark"></i>
+                                                </button>
+                                            </div>
+                                            <div class="quiz-result-list">
+                                                {% for result in journal.learning.result_questions %}
+                                                    <div class="quiz-result-item {% if result.is_correct %}is-correct{% else %}is-wrong{% endif %}">
+                                                        <h3>{{ result.question }}</h3>
+                                                        <p>Your answer: <strong>{{ result.selected_text|default:"No answer" }}</strong></p>
+                                                        {% if journal.learning.result_is_perfect %}
+                                                            <p>Correct answer: <strong>{{ result.correct_text }}</strong></p>
+                                                        {% endif %}
+                                                        <span>{% if result.is_correct %}Correct{% else %}Needs review{% endif %}</span>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                            {% if not journal.learning.mastered and journal.learning.questions %}
+                                                <div class="quiz-result-actions">
+                                                    <button type="button" class="bookmark-btn quiz-modal-trigger" data-quiz-target="quiz-journal-{{ journal.id }}">
+                                                        {% if journal.learning.result_is_perfect %}Answer New Quiz{% else %}Retake Quiz{% endif %}
+                                                    </button>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </article>
             {% empty %}
                 <p class="gallery-empty">No journal entries have been added yet.</p>
             {% endfor %}

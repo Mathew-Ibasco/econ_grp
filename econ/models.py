@@ -146,3 +146,145 @@ class Bookmark(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["user", "item_key"], name="unique_user_bookmark")
         ]
+
+class TopicNote(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="topic_notes")
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="user_notes")
+    note = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "topic_note"
+        constraints = [
+            models.UniqueConstraint(fields=["user", "topic"], name="unique_user_topic_note")
+        ]
+
+class StudyItemProgress(models.Model):
+    ITEM_TYPES = [
+        ("blog", "Blog"),
+        ("journal", "Journal"),
+        ("media", "Media"),
+        ("video", "Video"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="study_progress")
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="study_progress")
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPES)
+    item_id = models.PositiveIntegerField()
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "study_item_progress"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "topic", "item_type", "item_id"],
+                name="unique_user_topic_study_item",
+            )
+        ]
+
+class QuizQuestion(models.Model):
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="quiz_questions")
+    question = models.CharField(max_length=300)
+    option_a = models.CharField(max_length=200)
+    option_b = models.CharField(max_length=200)
+    option_c = models.CharField(max_length=200)
+    correct_option = models.CharField(
+        max_length=1,
+        choices=[("A", "A"), ("B", "B"), ("C", "C")],
+    )
+    explanation = models.TextField(blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "quiz_question"
+        ordering = ["topic__order", "order", "id"]
+
+    def __str__(self):
+        return self.question
+
+class QuizAttempt(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="quiz_attempts")
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="quiz_attempts")
+    score = models.PositiveSmallIntegerField(default=0)
+    total = models.PositiveSmallIntegerField(default=0)
+    answers = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "quiz_attempt"
+        ordering = ["-created_at"]
+
+class ItemNote(models.Model):
+    ITEM_TYPES = [
+        ("blog", "Blog"),
+        ("journal", "Journal"),
+        ("video", "Video"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="item_notes")
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPES)
+    item_id = models.PositiveIntegerField()
+    note = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "item_note"
+        constraints = [
+            models.UniqueConstraint(fields=["user", "item_type", "item_id"], name="unique_user_item_note")
+        ]
+
+class ItemQuizQuestion(models.Model):
+    ITEM_TYPES = [
+        ("blog", "Blog"),
+        ("journal", "Journal"),
+        ("video", "Video"),
+    ]
+
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPES)
+    item_id = models.PositiveIntegerField()
+    question = models.CharField(max_length=300)
+    option_a = models.CharField(max_length=200)
+    option_b = models.CharField(max_length=200)
+    option_c = models.CharField(max_length=200)
+    correct_option = models.CharField(
+        max_length=1,
+        choices=[("A", "A"), ("B", "B"), ("C", "C")],
+    )
+    explanation = models.TextField(blank=True)
+    round_number = models.PositiveSmallIntegerField(default=1)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "item_quiz_question"
+        ordering = ["item_type", "item_id", "round_number", "order", "id"]
+
+    def __str__(self):
+        return self.question
+
+class ItemQuizAttempt(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="item_quiz_attempts")
+    item_type = models.CharField(max_length=20)
+    item_id = models.PositiveIntegerField()
+    round_number = models.PositiveSmallIntegerField(default=1)
+    score = models.PositiveSmallIntegerField(default=0)
+    total = models.PositiveSmallIntegerField(default=0)
+    answers = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "item_quiz_attempt"
+        ordering = ["-created_at"]
+
+class ItemQuizProgress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="item_quiz_progress")
+    item_type = models.CharField(max_length=20)
+    item_id = models.PositiveIntegerField()
+    perfect_rounds = models.PositiveSmallIntegerField(default=0)
+    mastered = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "item_quiz_progress"
+        constraints = [
+            models.UniqueConstraint(fields=["user", "item_type", "item_id"], name="unique_user_item_quiz_progress")
+        ]
