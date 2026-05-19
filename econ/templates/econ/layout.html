@@ -44,7 +44,7 @@
         <li><a href="{% url 'gallery' %}" class="{% if current_name == 'gallery' %}active{% endif %}">Gallery</a></li>
         {% if request.user.is_authenticated %}
           {% if request.user.is_superuser %}
-            <li><a href="{% url 'upload_sql' %}" class="{% if current_name == 'upload_sql' %}active{% endif %}">upload SQL Dump</a></li>
+            <li><a href="{% url 'upload_sql' %}" class="{% if current_name == 'upload_sql' %}active{% endif %}">Upload SQL Dump</a></li>
           {% endif %}
           <li class="profile-nav">
             <details class="profile-menu">

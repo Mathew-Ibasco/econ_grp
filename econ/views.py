@@ -59,9 +59,7 @@ def login_process(request):
         user = authenticate(request, username=account.username, password=password)
         if user is not None:
             auth_login(request, user)
-            if user.is_staff:
-                return redirect("admin_dashboard") # admin goes here
-            return redirect("index") # regular user goes here
+            return redirect("index")
         else:
             errors["password"] = "Incorrect password."
             return render(request, "econ/login.html", _auth_context(values, errors), status=400)
