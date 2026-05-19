@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
-from .models import BlogPost, Bookmark, MediaGalleryEntry, User
+from .models import BlogPost, Bookmark, JournalEntry, MediaGalleryEntry, User
 
 DASHBOARD_ITEMS = [
     {
@@ -287,7 +287,8 @@ def journal(request):
         request,
         'econ/journal.html',
         {
-            'date': datetime.now()
+            'date': datetime.now(),
+            'journal_entries': JournalEntry.objects.order_by("order", "id"),
         }
     )
 

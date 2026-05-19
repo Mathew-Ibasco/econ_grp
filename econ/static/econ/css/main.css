@@ -1127,6 +1127,36 @@ hr {
     flex-wrap: wrap;
 }
 
+.journal-card-meta {
+    justify-content: flex-start;
+    gap: 0.5rem;
+}
+
+.journal-card-source {
+    display: inline-flex;
+    width: fit-content;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    background: #e9f3f8;
+    color: #1c6e8f;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.journal-card-year {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    background: #f3f7fb;
+    color: #4f667a;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+}
+
 .blog-card h3 {
     margin-bottom: 0;
     color: #0b2b3b;
@@ -1152,6 +1182,25 @@ hr {
     margin-bottom: 0;
     color: #42576d;
     font-size: 0.95rem;
+    line-height: 1.55;
+}
+
+.journal-card-citation {
+    margin-bottom: 0;
+    color: #5f7386;
+    font-size: 0.79rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+}
+
+.journal-card-authors {
+    margin-bottom: 0;
+    color: #0b2b3b;
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
 }
 
 .blog-keywords {

@@ -5,5 +5,40 @@
     Journals
 {% endblock %}
 {% block content %}
-    JOURNAL HERE
+<main class="blogs-page">
+    <section class="blogs-hero">
+        <div class="container blogs-hero-inner">
+            <div>
+                <p class="blog-eyebrow">Journal collection</p>
+                <h1 class="blogs-title">Rail journals and research notes</h1>
+                <p class="blogs-intro">Browse the journal entries stored in the database. Each card shows a short snippet and keyword tags, and opens the journal link directly.</p>
+            </div>
+            <div class="blogs-hero-card">
+                <strong>{{ journal_entries|length }}</strong>
+                <span>published journals</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="container blogs-list-section">
+        <div class="blog-list-grid">
+            {% for journal in journal_entries %}
+                <a class="blog-card" href="{{ journal.journal_url }}" target="_blank" rel="noopener noreferrer" aria-label="Open {{ journal.title }} in a new tab">
+                    <div class="blog-card-body">
+                        <div class="blog-card-meta journal-card-meta">
+                            <span class="journal-card-source">{{ journal.journal_name }}</span>
+                            <span class="journal-card-year">{{ journal.publication_year }}</span>
+                        </div>
+                        <h3><span class="blog-card-title">{{ journal.title }}</span></h3>
+                        <p class="journal-card-citation">{{ journal.citation_info }}</p>
+                        <p class="journal-card-authors">{{ journal.authors }}</p>
+                        <p class="blog-card-excerpt">{{ journal.snippet|truncatechars:100 }}</p>
+                    </div>
+                </a>
+            {% empty %}
+                <p class="gallery-empty">No journal entries have been added yet.</p>
+            {% endfor %}
+        </div>
+    </section>
+</main>
 {% endblock %}

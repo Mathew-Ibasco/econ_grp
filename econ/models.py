@@ -105,6 +105,25 @@ class MediaGalleryEntry(models.Model):
     def __str__(self):
         return self.title
 
+class JournalEntry(models.Model):
+    title = models.CharField(max_length=350)
+    journal_url = models.URLField(max_length=500)
+    authors = models.CharField(max_length=500)
+    publication_year = models.PositiveSmallIntegerField()
+    journal_name = models.CharField(max_length=255)
+    citation_info = models.CharField(max_length=300, blank=True, default="")
+    snippet = models.TextField()
+    keywords = models.JSONField(default=list, blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "journal_entry"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.title
+
 class Bookmark(models.Model):
     BOOKMARK_TYPES = [
         ("topic", "Topic"),

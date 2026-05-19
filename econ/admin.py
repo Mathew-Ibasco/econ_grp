@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BlogPost, MediaGalleryEntry
+from .models import BlogPost, JournalEntry, MediaGalleryEntry
 
 @admin.register(BlogPost)
 class BlogPostAdmin(admin.ModelAdmin):
@@ -16,4 +16,12 @@ class MediaGalleryEntryAdmin(admin.ModelAdmin):
     list_editable = ("order",)
     list_filter = ("media_type",)
     search_fields = ("title", "description")
+    ordering = ("order", "title")
+
+
+@admin.register(JournalEntry)
+class JournalEntryAdmin(admin.ModelAdmin):
+    list_display = ("title", "journal_name", "publication_year", "order", "created_at")
+    list_editable = ("order",)
+    search_fields = ("title", "authors", "journal_name", "citation_info", "snippet")
     ordering = ("order", "title")
