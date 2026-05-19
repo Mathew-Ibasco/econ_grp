@@ -1,0 +1,72 @@
+{% extends "econ/layout.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+    <h2>Add Journal Entry</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" class="form-control"
+                   value="{{ values.title }}">
+            {% if errors.title %}
+                <div class="text-danger">{{ errors.title }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Journal URL</label>
+            <input type="url" name="journal_url" class="form-control"
+                   value="{{ values.journal_url }}">
+            {% if errors.journal_url %}
+                <div class="text-danger">{{ errors.journal_url }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Authors</label>
+            <input type="text" name="authors" class="form-control"
+                   value="{{ values.authors }}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Publication Year</label>
+            <input type="number" name="publication_year" class="form-control"
+                   value="{{ values.publication_year }}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Journal Name</label>
+            <input type="text" name="journal_name" class="form-control"
+                   value="{{ values.journal_name }}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Citation Info</label>
+            <input type="text" name="citation_info" class="form-control"
+                   value="{{ values.citation_info }}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Snippet</label>
+            <textarea name="snippet" class="form-control" rows="5">{{ values.snippet }}</textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Keywords (comma separated)</label>
+            <input type="text" name="keywords" class="form-control"
+                   value="{{ values.keywords }}">
+        </div>
+
+     
+
+        <button type="submit" class="btn btn-primary">
+            Add Journal Entry
+        </button>
+    </form>
+</div>
+
+{% endblock %}

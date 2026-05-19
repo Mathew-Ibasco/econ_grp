@@ -1,0 +1,86 @@
+{% extends "econ/layout.html" %}
+
+{% block content %}
+
+
+
+<div class="container mt-4">
+    <h2>Add Vlog</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label">Title</label>
+
+            <input
+                type="text"
+                name="title"
+                class="form-control"
+                value="{{ values.title }}"
+            >
+
+            {% if errors.title %}
+                <div class="text-danger mt-1">
+                    {{ errors.title }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+
+            <textarea
+                name="description"
+                class="form-control"
+                rows="5"
+            >{{ values.description }}</textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Video URL</label>
+
+            <input
+                type="url"
+                name="video_url"
+                class="form-control"
+                value="{{ values.video_url }}"
+            >
+
+            {% if errors.video_url %}
+                <div class="text-danger mt-1">
+                    {{ errors.video_url }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Thumbnail URL</label>
+
+            <input
+                type="url"
+                name="thumbnail_url"
+                class="form-control"
+                value="{{ values.thumbnail_url }}"
+            >
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Date</label>
+
+            <input
+                type="date"
+                name="date"
+                class="form-control"
+                value="{{ values.date }}"
+            >
+        </div>
+
+       
+        <button type="submit" class="btn btn-primary">
+            Add Vlog
+        </button>
+    </form>
+</div>
+
+{% endblock %}

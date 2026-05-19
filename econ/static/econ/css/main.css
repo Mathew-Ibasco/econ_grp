@@ -3365,3 +3365,953 @@ dt {
         height: 150px;
     }
 }
+
+.home-public-panel {
+    margin-top: 0;
+    padding-top: 1.2rem;
+}
+
+.hero {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.railway-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-top: 1rem;
+    justify-content: space-between;
+}
+
+.definition-side {
+    flex: 0 0 48%;
+    max-width: 600px;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.map-side {
+    flex: 0 0 48%;
+    background: #eef3fa;
+    padding: 1rem;
+    border-radius: 24px;
+    text-align: center;
+}
+
+.map-side img {
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+}
+
+.map-caption {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+}
+
+.split-columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.split-item {
+    flex: 1 1 45%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.split-item i {
+    font-size: 2rem;
+    color: #1c6e8f;
+}
+
+.split-item h3 {
+    margin-top: 10px;
+}
+
+.split-item img {
+    width: 100%;
+    border-radius: 18px;
+    margin-top: 15px;
+    object-fit: cover;
+    height: 180px;
+}
+
+#rail-gallery > div {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 1.2rem;
+}
+
+#rail-gallery img {
+    width: 100%;
+    border-radius: 20px;
+    height: 150px;
+    object-fit: cover;
+}
+
+.caption-img {
+    font-size: 0.85rem;
+    margin-top: 5px;
+}
+
+.resources-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.resource-list {
+    flex: 1;
+    min-width: 200px;
+    list-style: none;
+    padding-left: 0;
+}
+
+.resource-list li {
+    margin-bottom: 0.5rem;
+}
+
+.resource-note {
+    flex: 1;
+    min-width: 200px;
+}
+
+.rail-lineup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.rail-card {
+    flex: 1;
+    min-width: 200px;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.rail-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.rail-card-content {
+    padding: 1rem;
+}
+
+/* ========== RESPONSIVE FIXES ========== */
+@media (max-width: 768px) {
+    .definition-side,
+    .map-side,
+    .split-item {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .railway-flex {
+        flex-wrap: wrap;
+    }
+
+    .hero-grid {
+        flex-direction: column;
+    }
+}
+
+.home-page .site-header {
+    margin-bottom: 0 !important;
+}
+
+.home-public-panel {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.home-page .hero {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.member-hero {
+    background:
+        linear-gradient(97deg, rgba(28, 78, 111, 0.94) 0%, rgba(15, 59, 79, 0.98) 100%),
+        url("https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg") center/cover;
+}
+
+.member-hero .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.7fr);
+    gap: 2rem;
+}
+
+.member-hero .hero-text {
+    max-width: 760px;
+}
+
+.member-hero-panel {
+    align-self: stretch;
+    display: grid;
+    gap: 1rem;
+    padding: 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 22px 44px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(10px);
+}
+
+.member-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: #ffffff;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+}
+
+.member-panel-head i {
+    color: #ffb347;
+}
+
+.member-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.member-stats div {
+    min-height: 96px;
+    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(11, 43, 59, 0.38);
+}
+
+.member-next {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.member-next h3 {
+    margin: 0;
+    color: #ffcf8a;
+    font-size: 0.82rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.member-next a {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.7rem;
+    align-items: center;
+    padding: 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.member-next a:hover {
+    border-color: #ffb347;
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.member-next i {
+    color: #ffb347;
+}
+
+.member-next span {
+    display: grid;
+    gap: 0.15rem;
+}
+
+.member-next strong {
+    color: inherit;
+    line-height: 1.25;
+}
+
+.member-next small,
+.member-next p {
+    margin: 0;
+    color: #d8edf6;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.combined-dashboard-shell {
+    margin-top: 1.5rem;
+    margin-bottom: 2rem;
+    padding: 0 24px 2.5rem;
+    border-radius: 24px;
+    background: #eef5f9;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.dashboard-workspace-intro {
+    padding-bottom: 1rem;
+    border-bottom: 0;
+}
+
+.dashboard-workspace-intro p:last-child {
+    max-width: 760px;
+    color: #42576d;
+    font-weight: 700;
+}
+
+.dashboard-home-hero {
+    background:
+        linear-gradient(135deg, rgba(18, 61, 82, 0.96) 0%, rgba(11, 43, 59, 0.98) 100%),
+        url("https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg") center/cover;
+}
+
+.dashboard-home-hero .dashboard-hero-grid {
+    min-height: 260px;
+}
+
+.guest-detail-shell {
+    position: relative;
+}
+
+.guest-detail-shell .blog-detail-layout,
+.guest-detail-shell .vlog-detail-layout {
+    max-height: 620px;
+    overflow: hidden;
+    filter: blur(7px);
+    pointer-events: none;
+    user-select: none;
+}
+
+.guest-detail-shell:after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(244, 247, 252, 0.24) 0%, rgba(244, 247, 252, 0.92) 76%);
+    pointer-events: none;
+}
+
+.guest-access-card {
+    position: absolute;
+    top: min(18vw, 8rem);
+    left: 50%;
+    z-index: 2;
+    width: min(92%, 430px);
+    transform: translateX(-50%);
+    display: grid;
+    justify-items: center;
+    gap: 0.85rem;
+    padding: 1.6rem;
+    border: 1px solid #dce9f1;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 24px 60px rgba(11, 43, 59, 0.22);
+    text-align: center;
+}
+
+.guest-access-icon {
+    display: grid;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 18px;
+    background: #fff3e6;
+    color: #f59e0b;
+    font-size: 1.4rem;
+}
+
+.guest-access-card h2 {
+    margin: 0;
+    color: #0b2b3b;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 900;
+}
+
+.guest-access-card p {
+    margin: 0;
+    color: #42576d;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.guest-access-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+/* site-wide responsive hardening */
+html {
+    overflow-x: hidden;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+img,
+video,
+iframe,
+embed,
+object {
+    max-width: 100%;
+}
+
+img,
+video {
+    height: auto;
+}
+
+a,
+button,
+input,
+textarea,
+select,
+summary {
+    min-width: 0;
+}
+
+p,
+li,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+strong,
+small,
+dd,
+dt {
+    overflow-wrap: anywhere;
+}
+
+.container {
+    width: 100%;
+}
+
+.saved-grid,
+.dashboard-card-grid,
+.quick-links,
+.card-grid,
+.rail-lineup,
+.split-columns,
+.resources-grid,
+.blog-list-grid,
+.blog-gallery-grid,
+.media-gallery-grid,
+#rail-gallery > div {
+    min-width: 0;
+}
+
+@media (max-width: 1200px) {
+    .container {
+        max-width: 100%;
+        padding-left: 22px;
+        padding-right: 22px;
+    }
+
+    .header-inner {
+        align-items: flex-start;
+    }
+
+    .logo {
+        flex-basis: 360px;
+    }
+
+    .nav-links {
+        gap: 0.85rem;
+        row-gap: 0.65rem;
+        flex-wrap: wrap;
+    }
+
+    .blog-detail-layout {
+        grid-template-columns: minmax(0, 1.15fr) minmax(250px, 0.85fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .site-header {
+        position: relative;
+    }
+
+    .header-inner {
+        min-height: auto;
+    }
+
+    .logo {
+        flex: 1 1 100%;
+        align-self: flex-start;
+    }
+
+    .nav-links {
+        width: 100%;
+        justify-content: flex-start;
+        white-space: normal;
+    }
+
+    .nav-links a,
+    .profile-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+    }
+
+    .dashboard-hero,
+    .profile-hero,
+    .blogs-hero,
+    .blog-detail-hero {
+        padding: 2.5rem 0;
+    }
+
+    .hero {
+        padding: 2.75rem 0;
+    }
+
+    .hero-text,
+    .hero-img,
+    .definition-side,
+    .map-side {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+
+    .dashboard-hero-grid,
+    .member-hero .hero-grid,
+    .blogs-hero-inner,
+    .blog-detail-hero-inner,
+    .blog-detail-layout,
+    .media-gallery-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .member-hero-panel {
+        align-self: auto;
+    }
+
+    .blogs-hero-card {
+        justify-self: start;
+    }
+
+    .blog-hero-image,
+    .blog-detail-media img {
+        height: 260px;
+    }
+
+    .saved-grid,
+    .dashboard-card-grid,
+    .study-board-grid,
+    .quick-links,
+    .card-grid,
+    .rail-lineup,
+    .resources-grid,
+    .blog-list-grid,
+    .blog-gallery-grid,
+    #rail-gallery > div {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    }
+
+    .card-grid,
+    .rail-lineup,
+    .split-columns,
+    .resources-grid,
+    .railway-flex {
+        gap: 1.25rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    section,
+    .dashboard-section {
+        padding: 2rem 0;
+    }
+
+    .logo h1 {
+        font-size: 1.45rem;
+    }
+
+    .logo p {
+        font-size: 0.72rem;
+    }
+
+    .nav-links {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.55rem;
+    }
+
+    .nav-links li,
+    .nav-links a,
+    .profile-nav,
+    .profile-menu,
+    .profile-pill {
+        width: 100%;
+    }
+
+    .nav-links a,
+    .profile-pill {
+        justify-content: center;
+        padding: 0.55rem 0.65rem;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.07);
+        text-align: center;
+    }
+
+    .profile-dropdown {
+        left: 0;
+        right: auto;
+        width: min(100%, 260px);
+    }
+
+    .profile-dropdown:before {
+        right: auto;
+        left: 24px;
+    }
+
+    .dashboard-stats,
+    .profile-details div,
+    .blog-list-grid,
+    .blog-gallery-grid,
+    .media-gallery-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .dashboard-section-heading,
+    .profile-hero-inner,
+    .dashboard-card-actions,
+    .study-progress-top,
+    .resource-status-link,
+    .quiz-modal-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .dashboard-card {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .dashboard-card-icon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .bookmark-btn,
+    .topic-note-form .bookmark-btn,
+    .topic-quiz-form .bookmark-btn,
+    .dashboard-card-actions .text-link {
+        width: 100%;
+    }
+
+    .hero-text h2,
+    .dashboard-hero h2,
+    .profile-hero h2,
+    .blogs-title,
+    .blog-detail-hero h1 {
+        font-size: 1.9rem;
+        line-height: 1.18;
+    }
+
+    .section-title {
+        font-size: 1.65rem;
+    }
+
+    .info-card h3 {
+        font-size: 1.25rem;
+    }
+
+    .hero-text p,
+    .dashboard-hero p,
+    .blogs-intro,
+    .blog-detail-hero p {
+        font-size: 1rem;
+    }
+
+    .hero-img,
+    .map-side,
+    .info-card,
+    .rail-card,
+    .split-item,
+    .blog-card,
+    .media-gallery-card,
+    .blog-detail-main,
+    .blog-detail-sidebar,
+    .profile-card,
+    .auth-panel {
+        border-radius: 16px;
+    }
+
+    .blog-card-media img,
+    .media-gallery-media img,
+    .media-gallery-media video,
+    .blog-hero-image,
+    .blog-detail-media img,
+    .blog-gallery-card img {
+        height: 220px;
+    }
+
+    .quiz-modal {
+        align-items: stretch;
+        padding: 0.75rem;
+    }
+
+    .quiz-modal-panel {
+        max-height: calc(100vh - 1.5rem);
+        padding: 1rem;
+        border-radius: 16px;
+    }
+}
+
+@media (max-width: 560px) {
+    .container {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .header-inner {
+        gap: 0.8rem;
+        padding-top: 0.85rem;
+        padding-bottom: 0.85rem;
+    }
+
+    .nav-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .toast-stack {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+    }
+
+    .site-toast {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .site-toast-icon {
+        display: none;
+    }
+
+    .hero,
+    .dashboard-hero,
+    .profile-hero,
+    .blogs-hero,
+    .blog-detail-hero {
+        padding: 2rem 0;
+    }
+
+    .home-public-panel .hero,
+    .home-page .hero {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }
+
+    .hero-text h2,
+    .dashboard-hero h2,
+    .profile-hero h2,
+    .blogs-title,
+    .blog-detail-hero h1 {
+        font-size: 1.65rem;
+    }
+
+    .section-title {
+        font-size: 1.45rem;
+    }
+
+    .auth-page {
+        align-items: stretch;
+        padding: 1.25rem 0.85rem;
+    }
+
+    .auth-panel,
+    .member-hero-panel,
+    .profile-card,
+    .saved-card,
+    .dashboard-card,
+    .empty-state,
+    .info-card,
+    .split-item,
+    .blog-card-body,
+    .media-gallery-body,
+    .blog-detail-content,
+    .blog-detail-sidebar {
+        padding: 1rem;
+    }
+
+    .member-stats {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .dashboard-stats div {
+        min-height: 88px;
+    }
+
+    .dashboard-stats strong,
+    .blogs-hero-card strong {
+        font-size: 1.65rem;
+    }
+
+    .quick-links {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .quick-links a,
+    .quick-link-static {
+        align-items: flex-start;
+        min-height: auto;
+        padding: 0.85rem;
+    }
+
+    .blog-card-media img,
+    .media-gallery-media img,
+    .media-gallery-media video,
+    .blog-hero-image,
+    .blog-detail-media img,
+    .blog-gallery-card img,
+    .rail-card img,
+    .split-item img,
+    #rail-gallery img {
+        height: 180px;
+    }
+
+    .map-section,
+    .map-side {
+        padding: 0.85rem;
+    }
+
+    .footer {
+        padding: 1.5rem 0;
+    }
+}
+
+@media (max-width: 380px) {
+    .container {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .logo h1,
+    .hero-text h2,
+    .dashboard-hero h2,
+    .profile-hero h2,
+    .blogs-title,
+    .blog-detail-hero h1 {
+        font-size: 1.45rem;
+    }
+
+    .nav-links {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .btn-soft,
+    .submitBtn,
+    .bookmark-btn {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .profile-avatar {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
+
+    .blog-card-media img,
+    .media-gallery-media img,
+    .media-gallery-media video,
+    .blog-hero-image,
+    .blog-detail-media img,
+    .blog-gallery-card img,
+    .rail-card img,
+    .split-item img,
+    #rail-gallery img {
+        height: 150px;
+    }
+}
+.profile-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 10px 14px;
+
+    text-decoration: none !important;
+    color: #1e2a3e !important;
+
+    border-radius: 10px;
+
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.profile-dropdown a i {
+    width: 18px;
+    text-align: center;
+    color: #1c6e8f;
+}
+
+.profile-dropdown a:hover {
+    background: #eef3fa;
+    color: #0b2b3b !important;
+}
+
+.profile-dropdown a:hover i {
+    color: #0b2b3b;
+}
+
+.profile-dropdown a.active {
+    background: #dbeaf4;
+    color: #0b2b3b !important;
+    font-weight: 700;
+}
+
+.profile-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 10px 14px;
+
+    text-decoration: none !important;
+    color: #1e2a3e !important;
+
+    border-radius: 10px;
+
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.profile-dropdown a i {
+    width: 18px;
+    text-align: center;
+    color: #1c6e8f;
+}
+
+.profile-dropdown a:hover {
+    background: #eef3fa;
+    color: #0b2b3b !important;
+}
+
+.profile-dropdown a:hover i {
+    color: #0b2b3b;
+}
+
+.profile-dropdown a.active {
+    background: #dbeaf4;
+    color: #0b2b3b !important;
+    font-weight: 700;
+}

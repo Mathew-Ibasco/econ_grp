@@ -81,7 +81,7 @@ if DB_ENGINE == "mysql":
             "ENGINE": "django.db.backends.mysql",
             "NAME": "econdb",
             "USER": "root",
-            "PASSWORD": "SQL123", #server
+            "PASSWORD": "D28bccgs", #server
             "HOST": "localhost",
             "PORT": "3306",
             "OPTIONS": {

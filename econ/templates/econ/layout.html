@@ -47,7 +47,48 @@
         <li><a href="{% url 'gallery' %}" class="{% if current_name == 'gallery' %}active{% endif %}">Gallery</a></li>
         {% if request.user.is_authenticated %}
           {% if request.user.is_superuser %}
-            <li><a href="{% url 'upload_sql' %}" class="{% if current_name == 'upload_sql' %}active{% endif %}">Upload SQL Dump</a></li>
+            <<li class="profile-nav">
+            <details class="profile-menu">
+              <summary class="profile-pill">
+                <i class="fas fa-screwdriver-wrench"></i>
+                <span>Admin</span>
+                <i class="fas fa-chevron-down profile-chevron"></i>
+              </summary>
+
+              <div class="profile-dropdown">
+                <a href="{% url 'upload_sql' %}"
+                  class="{% if current_name == 'upload_sql' %}active{% endif %}">
+                  <i class="fas fa-database"></i>
+                  <span>Upload SQL Dump</span>
+                </a>
+
+                <a href="{% url 'add_blog' %}"
+                  class="{% if current_name == 'add_blog' %}active{% endif %}">
+                  <i class="fas fa-newspaper"></i>
+                  <span>Add Blog</span>
+                </a>
+
+                <a href="{% url 'add_journal' %}"
+                  class="{% if current_name == 'add_journal' %}active{% endif %}">
+                  <i class="fas fa-book"></i>
+                  <span>Add Journal</span>
+                </a>
+
+                <a href="{% url 'add_media' %}"
+                  class="{% if current_name == 'add_media' %}active{% endif %}">
+                  <i class="fas fa-photo-film"></i>
+                  <span>Add Gallery Item</span>
+                  
+                </a>
+
+                <a href="{% url 'add_vlog' %}"
+                  class="{% if current_name == 'add_vlog' %}active{% endif %}">
+                  <i class="fas fa-video"></i>
+                  <span>Add Media</span>
+                </a>
+              </div>
+            </details>
+          </li>
           {% endif %}
           <li class="profile-nav">
             <details class="profile-menu">

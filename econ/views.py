@@ -10,6 +10,8 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import StreamingHttpResponse
+from django.utils.text import slugify
+
 
 import os, re, sys, html, calendar, json, subprocess, sqlite3
 
@@ -978,4 +980,365 @@ def upload_sql_process(request):
         request,
         'econ/upload_sql.html',
         {'date': datetime.now()}
+    )
+
+
+def superuser_required(user):
+    return user.is_superuser
+
+def generate_filename(title):
+    clean = slugify(title)
+    return f"{clean}.jpg"
+
+@login_required
+@user_passes_test(superuser_required)
+def add_blog(request):
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        excerpt = request.POST.get("excerpt", "").strip()
+        featured_image_filename = generate_filename(title)
+        featured_image_url = request.POST.get("featured_image_url", "").strip()
+
+        body_paragraphs = request.POST.get("body_paragraphs", "").strip()
+        keywords = request.POST.get("keywords", "").strip()
+        highlights = request.POST.get("highlights", "").strip()
+        gallery = request.POST.get("gallery", "").strip()
+        sources = request.POST.get("sources", "").strip()
+
+        order = (
+            BlogPost.objects.order_by("-order")
+            .values_list("order", flat=True)
+            .first() or 0
+        ) + 1
+
+        errors = {}
+
+        if not title:
+            errors["title"] = "Title is required."
+
+        if not excerpt:
+            errors["excerpt"] = "Excerpt is required."
+
+        if errors:
+            return render(
+                request,
+                "econ/add_blog.html",
+                {
+                    "date": datetime.now(),
+                    "errors": errors,
+                    "values": request.POST,
+                },
+                status=400
+            )
+
+        slug = slugify(title)
+
+        original_slug = slug
+        counter = 1
+
+        while BlogPost.objects.filter(slug=slug).exists():
+            slug = f"{original_slug}-{counter}"
+            counter += 1
+
+        body_list = [
+            p.strip()
+            for p in re.split(r"\n\s*\n", body_paragraphs)
+            if p.strip()
+        ]
+
+        keyword_list = [
+            k.strip()
+            for k in keywords.split(",")
+            if k.strip()
+        ]
+
+        highlight_list = [
+            h.strip()
+            for h in re.split(r"\n\s*\n", highlights)
+            if h.strip()
+        ]
+
+        gallery_list = [
+            {
+                "src": g.strip(),
+                "alt": f"Gallery image {index + 1}",
+                "caption": f"Gallery image {index + 1}",
+            }
+            for index, g in enumerate(
+                re.split(r"\n\s*\n", gallery)
+            )
+            if g.strip()
+        ]
+
+        source_list = []
+
+        source_blocks = [
+            block.strip()
+            for block in re.split(r"\n\s*\n", sources)
+            if block.strip()
+        ]
+
+        for block in source_blocks:
+            lines = [
+                line.strip()
+                for line in block.splitlines()
+                if line.strip()
+            ]
+
+            if len(lines) >= 2:
+                source_list.append({
+                    "label": lines[0],
+                    "url": lines[1],
+                })
+
+        raw_text_parts = [
+            f"BLOG: {title}",
+            f"Picture: {featured_image_filename}\n{featured_image_url}",
+        ]
+
+        raw_text_parts.extend(body_list)
+
+        if highlight_list:
+            raw_text_parts.append(
+                "Highlights:\n" + "\n".join(
+                    f"- {highlight}"
+                    for highlight in highlight_list
+                )
+            )
+
+        if gallery_list:
+            raw_text_parts.append(
+                "Gallery:\n" + "\n".join(
+                    image["src"]
+                    for image in gallery_list
+                )
+            )
+
+        if source_list:
+            raw_text_parts.append(
+                "Sources:\n" + "\n".join(
+                    f"{source['label']}\n{source['url']}"
+                    for source in source_list
+                )
+            )
+
+        raw_text = "\n\n".join(raw_text_parts)
+
+        blog = BlogPost.objects.create(
+            title=title,
+            slug=slug,
+            excerpt=excerpt,
+            featured_image_filename=featured_image_filename,
+            featured_image_url=featured_image_url,
+            raw_text=raw_text,
+            body_paragraphs=body_list,
+            keywords=keyword_list,
+            highlights=highlight_list,
+            gallery=gallery_list,
+            sources=source_list,
+            order=order,
+        )
+
+        messages.success(request, f"Blog '{blog.title}' created successfully.")
+        return redirect("blog")
+
+    return render(
+        request,
+        "econ/add_blog.html",
+        {
+            "date": datetime.now(),
+        }
+    )
+
+
+@login_required
+@user_passes_test(superuser_required)
+def add_journal(request):
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        journal_url = request.POST.get("journal_url", "").strip()
+        authors = request.POST.get("authors", "").strip()
+        publication_year = request.POST.get("publication_year", "").strip()
+        journal_name = request.POST.get("journal_name", "").strip()
+        citation_info = request.POST.get("citation_info", "").strip()
+        snippet = request.POST.get("snippet", "").strip()
+        keywords = request.POST.get("keywords", "").strip()
+        order = (
+            JournalEntry.objects.order_by("-order")
+            .values_list("order", flat=True)
+            .first() or 0
+        ) + 1
+
+        errors = {}
+
+        if not title:
+            errors["title"] = "Title is required."
+
+        if not journal_url:
+            errors["journal_url"] = "Journal URL is required."
+
+        if not authors:
+            errors["authors"] = "Authors are required."
+
+        if not publication_year:
+            errors["publication_year"] = "Publication year is required."
+
+        if not journal_name:
+            errors["journal_name"] = "Journal name is required."
+
+        if errors:
+            return render(
+                request,
+                "econ/add_journal.html",
+                {
+                    "date": datetime.now(),
+                    "errors": errors,
+                    "values": request.POST,
+                },
+                status=400
+            )
+
+        journal = JournalEntry.objects.create(
+            title=title,
+            journal_url=journal_url,
+            authors=authors,
+            publication_year=int(publication_year),
+            journal_name=journal_name,
+            citation_info=citation_info,
+            snippet=snippet,
+            keywords=[
+                k.strip() for k in keywords.split(",") if k.strip()
+            ],
+           order=order,
+        )
+
+        messages.success(request, f"Journal '{journal.title}' added successfully.")
+        return redirect("journal")
+
+    return render(
+        request,
+        "econ/add_journal.html",
+        {
+            "date": datetime.now(),
+        }
+    )
+
+
+@login_required
+@user_passes_test(superuser_required)
+def add_media(request):
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        description = request.POST.get("description", "").strip()
+        media_type = request.POST.get("media_type", "").strip()
+        date = request.POST.get("date", "").strip()
+
+        image_url = request.POST.get("image_url", "").strip()
+        video_url = request.POST.get("video_url", "").strip()
+        thumbnail_url = request.POST.get("thumbnail_url", "").strip()
+
+        order = (
+            MediaGalleryEntry.objects.order_by("-order")
+            .values_list("order", flat=True)
+            .first() or 0
+        ) + 1
+        errors = {}
+
+        if not title:
+            errors["title"] = "Title is required."
+
+        if media_type not in ["image", "video"]:
+            errors["media_type"] = "Invalid media type."
+
+        if errors:
+            return render(
+                request,
+                "econ/add_media.html",
+                {
+                    "date": datetime.now(),
+                    "errors": errors,
+                    "values": request.POST,
+                },
+                status=400
+            )
+
+        media = MediaGalleryEntry.objects.create(
+            title=title,
+            description=description,
+            media_type=media_type,
+            date=date if date else None,
+            image_url=image_url,
+            video_url=video_url,
+            thumbnail_url=thumbnail_url,
+            order=order,
+        )
+
+        messages.success(request, f"Media '{media.title}' added successfully.")
+        return redirect("gallery")
+
+    return render(
+        request,
+        "econ/add_media.html",
+        {
+            "date": datetime.now(),
+        }
+    )
+
+@login_required
+@user_passes_test(superuser_required)
+def add_vlog(request):
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        description = request.POST.get("description", "").strip()
+        video_url = request.POST.get("video_url", "").strip()
+        thumbnail_url = request.POST.get("thumbnail_url", "").strip()
+        date = request.POST.get("date", "").strip()
+
+        errors = {}
+
+        if not title:
+            errors["title"] = "Title is required."
+
+        if not video_url:
+            errors["video_url"] = "Video URL is required."
+
+        if errors:
+            return render(
+                request,
+                "econ/add_vlog.html",
+                {
+                    "date": datetime.now(),
+                    "errors": errors,
+                    "values": request.POST,
+                },
+                status=400
+            )
+
+        filename = f"{slugify(title)}.mp4"
+
+        order = (
+            VlogEntry.objects.order_by("-order")
+            .values_list("order", flat=True)
+            .first() or 0
+        ) + 1
+
+        new_vlog = VlogEntry.objects.create(
+            title=title,
+            filename=filename,
+            description=description,
+            video_url=video_url,
+            thumbnail_url=thumbnail_url,
+            date=date if date else None,
+            order=order,
+        )
+
+        messages.success(request, f"Vlog '{new_vlog.title}' added successfully.")
+        return redirect("vlog")
+
+    return render(
+        request,
+        "econ/add_vlog.html",
+        {
+            "date": datetime.now(),
+        }
     )
