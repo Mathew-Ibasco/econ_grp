@@ -7,48 +7,117 @@
 {% endblock %}
 
 {% block style %}
+  .vlog-page {
+    background: #f5f7fa;
+    padding-bottom: 4rem;
+  }
+
   .vlog-page .video-gallery {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.75rem;
     margin-top: 2rem;
-    justify-items: center;
+  }
+
+  .vlog-page .video-card-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
   }
 
   .vlog-page .video-card {
-    width: 100%;
-    max-width: 500px;
+    height: 100%;
     overflow: hidden;
-    border-radius: 10px;
+    border-radius: 18px;
     background: white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 12px 24px rgba(11, 43, 59, 0.08);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .vlog-page .video-card-link:hover .video-card,
+  .vlog-page .video-card-link:focus-visible .video-card {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 36px rgba(11, 43, 59, 0.14);
+  }
+
+  .vlog-page .video-thumb {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: #0b2b3b;
+    overflow: hidden;
+  }
+
+  .vlog-page .video-thumb img,
+  .vlog-page .video-thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .vlog-page .video-thumb img {
+    object-fit: cover;
     transition: transform 0.3s ease;
   }
 
-  .vlog-page .video-card:hover {
+  .vlog-page .video-card-link:hover .video-thumb img {
     transform: scale(1.02);
   }
 
-  .vlog-page .video-card img {
-    width: 100%;
-    height: 280px;
-    object-fit: cover;
-    cursor: pointer;
+  .vlog-page .video-thumb-placeholder {
+    display: grid;
+    place-items: center;
+    color: #ffb347;
+    font-size: 3rem;
+  }
+
+  .vlog-page .video-play-badge {
+    position: absolute;
+    left: 1rem;
+    bottom: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(11, 43, 59, 0.86);
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+
+  .vlog-page .video-play-badge i {
+    color: #ffb347;
   }
 
   .vlog-page .video-info {
-    padding: 1rem;
+    padding: 1.2rem 1.2rem 1.35rem;
   }
 
   .vlog-page .video-info h3 {
-    color: #004d73;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.55rem;
+    color: #0b2b3b;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1.25;
   }
 
   .vlog-page .video-info small {
     display: block;
-    margin-bottom: 0.5rem;
-    color: #777;
+    margin-bottom: 0.65rem;
+    color: #738699;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .vlog-page .video-info p {
+    margin-bottom: 0;
+    color: #42576d;
+    font-size: 0.95rem;
+    line-height: 1.6;
   }
 
   @media (max-width: 900px) {
@@ -65,7 +134,7 @@
       <div>
         <p class="blog-eyebrow">Media collection</p>
         <h1 class="blogs-title">Railway media and video highlights</h1>
-        <p class="blogs-intro">Explore insights and innovations in rail transport through video stories, project coverage, and mobility spotlights.</p>
+        <p class="blogs-intro">Click a video to open a full detail page with the player on the left and the information on the right.</p>
       </div>
       <div class="blogs-hero-card">
         <strong>{{ vlog_entries|length }}</strong>
@@ -76,16 +145,30 @@
 
   <section class="container video-gallery">
     {% for video in vlog_entries %}
-      <div class="video-card">
-        <a href="{{ video.video_url }}" target="_blank" rel="noopener noreferrer">
-          <img src="{{ video.thumbnail_url }}" alt="{{ video.title }}">
-        </a>
-        <div class="video-info">
-          <h3>{{ video.title }}</h3>
-          {% if video.date %}<small>Date: {{ video.date|date:"M j, Y" }}</small>{% endif %}
-          <p>{{ video.description }}</p>
-        </div>
-      </div>
+      <a class="video-card-link" href="{% url 'vlog_detail' video.vlogID %}">
+        <article class="video-card">
+          <div class="video-thumb">
+            {% if video.preview_url %}
+              <img src="{{ video.preview_url }}" alt="{{ video.title }}">
+            {% else %}
+              <div class="video-thumb-placeholder">
+                <i class="fas fa-circle-play"></i>
+              </div>
+            {% endif %}
+            <span class="video-play-badge">
+              <i class="fas fa-play"></i>
+              Watch
+            </span>
+          </div>
+          <div class="video-info">
+            <h3>{{ video.title }}</h3>
+            {% if video.date %}
+              <small>Date: {{ video.date|date:"M j, Y" }}</small>
+            {% endif %}
+            <p>{{ video.description|truncatechars:180 }}</p>
+          </div>
+        </article>
+      </a>
     {% empty %}
       <p>No vlog entries have been added yet.</p>
     {% endfor %}

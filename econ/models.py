@@ -18,6 +18,7 @@ class vlog (models.Model):
     vlogID = models.AutoField(primary_key=True)
     title = models.CharField(max_length=300)
     filename = models.CharField(max_length=300)
+    channel_name = models.CharField(max_length=255, blank=True, default="")
     description = models.TextField(blank=True)
     video_url = models.URLField(max_length=500, blank=True)
     thumbnail_url = models.URLField(max_length=500, blank=True)

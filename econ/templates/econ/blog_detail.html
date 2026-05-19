@@ -32,17 +32,6 @@
                     {% endfor %}
                 </div>
 
-                {% if blog_post.highlights %}
-                    <div class="blog-detail-section">
-                        <h2>Key takeaways</h2>
-                        <ul class="blog-highlight-list">
-                            {% for highlight in blog_post.highlights %}
-                                <li>{{ highlight }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endif %}
-
                 {% if blog_post.gallery %}
                     <div class="blog-detail-section">
                         <h2>Project gallery</h2>

@@ -20,6 +20,40 @@ def _auth_context(values=None, errors=None):
         "errors": errors or {},
     }
 
+
+YOUTUBE_EMBED_PATTERNS = (
+    re.compile(r"(?:https?://)?(?:www\.)?youtu\.be/([A-Za-z0-9_-]{11})"),
+    re.compile(r"(?:https?://)?(?:www\.)?youtube\.com/watch\?v=([A-Za-z0-9_-]{11})"),
+    re.compile(r"(?:https?://)?(?:www\.)?youtube\.com/embed/([A-Za-z0-9_-]{11})"),
+    re.compile(r"(?:https?://)?(?:www\.)?youtube\.com/shorts/([A-Za-z0-9_-]{11})"),
+)
+
+
+def _youtube_video_id(video_url):
+    if not video_url:
+        return ""
+
+    for pattern in YOUTUBE_EMBED_PATTERNS:
+        match = pattern.search(video_url)
+        if match:
+            return match.group(1)
+
+    return ""
+
+
+def _youtube_embed_url(video_url):
+    video_id = _youtube_video_id(video_url)
+    if video_id:
+        return f"https://www.youtube-nocookie.com/embed/{video_id}"
+    return ""
+
+
+def _youtube_thumbnail_url(video_url):
+    video_id = _youtube_video_id(video_url)
+    if video_id:
+        return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+    return ""
+
 def custom_400(request, exception):
     return render(request, "econ/error/400.html", status=400)
 
@@ -71,16 +105,43 @@ def logout_process(request):
     logout(request)
     return redirect("index")
 
-# regular users only
-@login_required
+def _dashboard_page_context(request):
+    context = {
+        "date": datetime.now(),
+    }
+
+    if request.user.is_authenticated:
+        dashboard_topics = Topic.objects.prefetch_related(
+            "blog_posts",
+            "journal_entries",
+            "media_entries",
+            "vlog_entries",
+        ).order_by("order", "id")
+        saved_bookmarks = list(
+            request.user.bookmarks.select_related("topic").prefetch_related(
+                "topic__blog_posts",
+                "topic__journal_entries",
+                "topic__media_entries",
+                "topic__vlog_entries",
+            )
+        )
+        saved_item_keys = {bookmark.item_key for bookmark in saved_bookmarks}
+        context.update(
+            {
+                "dashboard_topics": dashboard_topics,
+                "saved_bookmarks": saved_bookmarks,
+                "saved_item_keys": saved_item_keys,
+                "available_topics_count": dashboard_topics.exclude(key__in=saved_item_keys).count(),
+                "recommended_topics": [
+                    topic for topic in dashboard_topics if topic.key not in saved_item_keys
+                ][:3],
+            }
+        )
+
+    return context
+
 def home(request):
-    return render(
-        request, 
-        "econ/home.html",
-        {
-            'date': datetime.now()
-        }
-    )
+    return render(request, "econ/index.html", {"date": datetime.now(), "show_dashboard": False})
 
 # staff/admin only
 @login_required
@@ -189,45 +250,13 @@ def toggle_bookmark(request):
     return redirect("index")
 
 def index(request):
-    dashboard_topics = Topic.objects.prefetch_related(
-        "blog_posts",
-        "journal_entries",
-        "media_entries",
-        "vlog_entries",
-    ).order_by("order", "id")
-    context = {
-        'date': datetime.now(),
-        'dashboard_topics': dashboard_topics,
-        'saved_bookmarks': [],
-        'saved_item_keys': set(),
-        'available_topics_count': dashboard_topics.count(),
-        'recommended_topics': dashboard_topics[:3],
-    }
+    return render(request, "econ/index.html", {"date": datetime.now(), "show_dashboard": False})
 
-    if request.user.is_authenticated:
-        saved_bookmarks = list(
-            request.user.bookmarks.select_related("topic").prefetch_related(
-                "topic__blog_posts",
-                "topic__journal_entries",
-                "topic__media_entries",
-                "topic__vlog_entries",
-            )
-        )
-        saved_item_keys = {bookmark.item_key for bookmark in saved_bookmarks}
-        context.update({
-            'saved_bookmarks': saved_bookmarks,
-            'saved_item_keys': saved_item_keys,
-            'available_topics_count': dashboard_topics.exclude(key__in=saved_item_keys).count(),
-            'recommended_topics': [
-                topic for topic in dashboard_topics if topic.key not in saved_item_keys
-            ][:3],
-        })
-
-    return render(
-        request,
-        'econ/index.html',
-        context
-    )
+@login_required
+def dashboard(request):
+    context = _dashboard_page_context(request)
+    context["show_dashboard"] = True
+    return render(request, "econ/index.html", context)
 
 def blog(request):
     return render(
@@ -257,17 +286,55 @@ def journal(request):
         'econ/journal.html',
         {
             'date': datetime.now(),
-            'journal_entries': JournalEntry.objects.order_by("order", "id"),
+            'journal_entries': JournalEntry.objects.prefetch_related("topics").order_by("order", "id"),
+        }
+    )
+
+def journal_detail(request, journal_id):
+    journal = get_object_or_404(
+        JournalEntry.objects.prefetch_related("topics"),
+        pk=journal_id,
+    )
+
+    return render(
+        request,
+        "econ/journal_detail.html",
+        {
+            "date": datetime.now(),
+            "journal": journal,
         }
     )
 
 def vlog(request):
+    vlog_entries = list(
+        VlogEntry.objects.prefetch_related("topics").order_by("order", "vlogID")
+    )
+
+    for entry in vlog_entries:
+        entry.embed_url = _youtube_embed_url(entry.video_url)
+        entry.preview_url = entry.thumbnail_url or _youtube_thumbnail_url(entry.video_url)
+
     return render(
         request,
         'econ/vlog.html',
         {
             'date': datetime.now(),
-            'vlog_entries': VlogEntry.objects.prefetch_related("topics").order_by("order", "vlogID"),
+            'vlog_entries': vlog_entries,
+        }
+    )
+
+
+def vlog_detail(request, vlog_id):
+    video = get_object_or_404(VlogEntry.objects.prefetch_related("topics"), pk=vlog_id)
+    video.embed_url = _youtube_embed_url(video.video_url)
+    video.preview_url = video.thumbnail_url or _youtube_thumbnail_url(video.video_url)
+
+    return render(
+        request,
+        "econ/vlog_detail.html",
+        {
+            "date": datetime.now(),
+            "video": video,
         }
     )
 

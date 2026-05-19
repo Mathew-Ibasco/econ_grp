@@ -1,0 +1,353 @@
+{% extends 'econ/layout.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}
+    {{ video.title }} | Media
+{% endblock %}
+
+{% block style %}
+  .vlog-detail-page {
+    background: #f5f7fa;
+    color: #333;
+    padding-bottom: 4rem;
+  }
+
+  .vlog-detail-page .vlog-detail-hero {
+    padding: 3rem 0 2rem;
+    background: linear-gradient(135deg, #0b2b3b 0%, #123d52 100%);
+    color: #ffffff;
+    border-bottom: 0;
+  }
+
+  .vlog-detail-page .vlog-detail-hero-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.5rem;
+    align-items: end;
+  }
+
+  .vlog-detail-page .vlog-eyebrow {
+    margin-bottom: 0.65rem;
+    color: #ffcf8a;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.78rem;
+  }
+
+  .vlog-detail-page h1 {
+    margin-bottom: 0.8rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2.35rem;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+
+  .vlog-detail-page .vlog-detail-intro {
+    max-width: 760px;
+    margin-bottom: 0;
+    color: #d6ebf4;
+    font-size: 1.02rem;
+  }
+
+  .vlog-detail-page .vlog-detail-card {
+    display: grid;
+    min-width: 180px;
+    padding: 1rem 1.1rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    text-align: center;
+  }
+
+  .vlog-detail-page .vlog-detail-card strong {
+    color: #ffb347;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .vlog-detail-page .vlog-detail-card span {
+    color: #edf7fb;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .vlog-detail-page .vlog-detail-shell {
+    padding-top: 2rem;
+  }
+
+  .vlog-detail-page .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    color: #1c6e8f;
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .vlog-detail-page .back-link:hover {
+    color: #0b2b3b;
+    text-decoration: underline;
+  }
+
+  .vlog-detail-page .vlog-detail-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .vlog-detail-page .vlog-player-card,
+  .vlog-detail-page .vlog-info-card {
+    background: #ffffff;
+    border: 1px solid #dce9f1;
+    border-radius: 24px;
+    box-shadow: 0 12px 26px rgba(11, 43, 59, 0.08);
+  }
+
+  .vlog-detail-page .vlog-player-card {
+    overflow: hidden;
+  }
+
+  .vlog-detail-page .vlog-player-frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: #000000;
+  }
+
+  .vlog-detail-page .vlog-player-frame iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  .vlog-detail-page .vlog-player-body {
+    padding: 1.35rem 1.5rem 1.5rem;
+  }
+
+  .vlog-detail-page .vlog-player-body h2 {
+    margin-bottom: 0.85rem;
+    color: #0b2b3b;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+  }
+
+  .vlog-detail-page .vlog-player-description {
+    color: #31465b;
+    line-height: 1.7;
+  }
+
+  .vlog-detail-page .topic-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .vlog-detail-page .topic-list li {
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    background: #f2f6fa;
+    color: #17384a;
+    font-size: 0.84rem;
+    font-weight: 700;
+  }
+
+  .vlog-detail-page .vlog-info-card {
+    position: sticky;
+    top: 110px;
+    padding: 1.5rem;
+  }
+
+  .vlog-detail-page .vlog-info-card h2 {
+    margin-bottom: 0.9rem;
+    color: #0b2b3b;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+  }
+
+  .vlog-detail-page .vlog-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-bottom: 1rem;
+  }
+
+  .vlog-detail-page .vlog-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.28rem 0.6rem;
+    border-radius: 999px;
+    background: #e9f3f8;
+    color: #1c6e8f;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .vlog-detail-page .vlog-description {
+    margin-bottom: 1.25rem;
+    color: #31465b;
+    line-height: 1.65;
+  }
+
+  .vlog-detail-page .uploaded-by-value {
+    margin: 0;
+    color: #17384a;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.5;
+  }
+
+  .vlog-detail-page .detail-card {
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e5eef4;
+  }
+
+  .vlog-detail-page .detail-card:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .vlog-detail-page .detail-card h3 {
+    margin-bottom: 0.85rem;
+    color: #0b2b3b;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+
+  .vlog-detail-page .video-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: #1c6e8f;
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .vlog-detail-page .video-link:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 900px) {
+    .vlog-detail-page .vlog-detail-hero-inner,
+    .vlog-detail-page .vlog-detail-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .vlog-detail-page .vlog-info-card {
+      position: static;
+    }
+
+    .vlog-detail-page h1 {
+      font-size: 2rem;
+    }
+  }
+{% endblock %}
+
+{% block content %}
+<main class="vlog-detail-page">
+  <section class="vlog-detail-hero">
+    <div class="container vlog-detail-hero-inner">
+      <div>
+        <p class="vlog-eyebrow">Media detail</p>
+        <h1>{{ video.title }}</h1>
+        <p class="vlog-detail-intro">The full video is embedded here, with details, topics, and source links shown alongside it for easy reference.</p>
+      </div>
+      <div class="vlog-detail-card">
+        <strong>{{ video.topics.all|length }}</strong>
+        <span>linked topics</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="container vlog-detail-shell">
+    <a class="back-link" href="{% url 'vlog' %}">
+      <i class="fas fa-arrow-left"></i>
+      Back to media
+    </a>
+
+    <div class="vlog-detail-layout">
+      <article class="vlog-player-card">
+        <div class="vlog-player-frame">
+          {% if video.embed_url %}
+            <iframe
+              src="{{ video.embed_url }}?rel=0"
+              title="{{ video.title }}"
+              loading="lazy"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen
+            ></iframe>
+          {% else %}
+            <div style="display:grid; place-items:center; height:100%; color:#ffb347; font-size:3rem;">
+              <i class="fas fa-circle-play"></i>
+            </div>
+          {% endif %}
+        </div>
+        <div class="vlog-player-body">
+          <h2>Description</h2>
+          <div class="vlog-player-description">
+            {{ video.description|linebreaks }}
+          </div>
+        </div>
+      </article>
+
+      <aside class="vlog-info-card">
+        <div class="detail-card">
+          <h3>Uploaded by</h3>
+          <p class="uploaded-by-value">{{ video.channel_name|default:"Unknown channel" }}</p>
+        </div>
+
+        <div class="detail-card">
+          <h3>Information</h3>
+          <div class="vlog-meta">
+            <span class="vlog-chip">Video</span>
+            {% if video.date %}
+              <span class="vlog-chip">Date: {{ video.date|date:"M j, Y" }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="detail-card">
+          <h3>Topics</h3>
+          {% if video.topics.all %}
+            <ul class="topic-list">
+              {% for topic in video.topics.all %}
+                <li>{{ topic.title }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="vlog-description">No related topics have been linked yet.</p>
+          {% endif %}
+        </div>
+
+        <div class="detail-card">
+          <h3>Source</h3>
+          {% if video.video_url %}
+            <a class="video-link" href="{{ video.video_url }}" target="_blank" rel="noopener noreferrer">
+              Open on YouTube <i class="fas fa-arrow-up-right-from-square"></i>
+            </a>
+          {% endif %}
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+{% endblock %}

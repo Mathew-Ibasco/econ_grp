@@ -1,0 +1,184 @@
+{% extends 'econ/layout.html' %}
+{% load static %}
+{% block title %}
+    {{ journal.title }} | Journals
+{% endblock %}
+{% block style %}
+  .journal-detail-hero-card {
+      display: grid;
+      gap: 0.85rem;
+      align-content: start;
+      padding: 1.35rem;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 18px 30px rgba(0, 0, 0, 0.16);
+      color: #edf7fb;
+  }
+
+  .journal-detail-hero-label {
+      display: inline-flex;
+      width: fit-content;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffcf7a;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+  }
+
+  .journal-detail-hero-card strong {
+      display: block;
+      color: #ffffff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.2rem;
+      line-height: 1.35;
+  }
+
+  .journal-detail-hero-card p {
+      margin-bottom: 0;
+      color: #d7e8ef;
+  }
+
+  .journal-detail-source-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      width: fit-content;
+      padding: 0.72rem 1rem;
+      border-radius: 999px;
+      background: #ffcf7a;
+      color: #0b2b3b;
+      font-weight: 800;
+      text-decoration: none;
+  }
+
+  .journal-detail-source-link:hover {
+      background: #ffd98f;
+      color: #0b2b3b;
+      text-decoration: none;
+  }
+
+  .journal-metadata-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.85rem;
+  }
+
+  .journal-metadata-list li {
+      display: grid;
+      gap: 0.2rem;
+  }
+
+  .journal-metadata-label {
+      color: #7a8b99;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+  }
+
+  .journal-metadata-value {
+      color: #0b2b3b;
+      font-weight: 600;
+      line-height: 1.5;
+  }
+{% endblock %}
+{% block content %}
+<main class="blogs-page">
+    <section class="blog-detail-hero">
+        <div class="container blog-detail-hero-inner">
+            <div>
+                <p class="blog-eyebrow">Journal article</p>
+                <h1>{{ journal.title }}</h1>
+                {% if journal.citation_info %}
+                    <p>{{ journal.citation_info }}</p>
+                {% else %}
+                    <p>{{ journal.journal_name }} | {{ journal.publication_year }}</p>
+                {% endif %}
+            </div>
+
+            <div class="journal-detail-hero-card">
+                <span class="journal-detail-hero-label">Publication</span>
+                <strong>{{ journal.journal_name }}</strong>
+                <p>Published in {{ journal.publication_year }}</p>
+                <p>{{ journal.authors }}</p>
+                {% if journal.journal_url %}
+                    <a class="journal-detail-source-link" href="{{ journal.journal_url }}" target="_blank" rel="noopener noreferrer">
+                        Open source article
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="container blog-detail-shell">
+        <a class="back-link" href="{% url 'journal' %}">
+            <i class="fas fa-arrow-left"></i>
+            Back to all journals
+        </a>
+
+        <div class="blog-detail-layout">
+            <article class="blog-detail-main">
+                <div class="blog-detail-content">
+                    <h2>Abstract</h2>
+                    {{ journal.snippet|linebreaks }}
+                </div>
+            </article>
+
+            <aside class="blog-detail-sidebar">
+                <div class="detail-card">
+                    <h2>Journal details</h2>
+                    <ul class="journal-metadata-list">
+                        <li>
+                            <span class="journal-metadata-label">Journal</span>
+                            <span class="journal-metadata-value">{{ journal.journal_name }}</span>
+                        </li>
+                        <li>
+                            <span class="journal-metadata-label">Year</span>
+                            <span class="journal-metadata-value">{{ journal.publication_year }}</span>
+                        </li>
+                        <li>
+                            <span class="journal-metadata-label">Authors</span>
+                            <span class="journal-metadata-value">{{ journal.authors }}</span>
+                        </li>
+                        {% if journal.citation_info %}
+                            <li>
+                                <span class="journal-metadata-label">Citation</span>
+                                <span class="journal-metadata-value">{{ journal.citation_info }}</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                {% if journal.keywords %}
+                    <div class="detail-card">
+                        <h2>Keywords</h2>
+                        <ul class="blog-keywords">
+                            {% for keyword in journal.keywords %}
+                                <li>{{ keyword }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if journal.journal_url %}
+                    <div class="detail-card">
+                        <h2>Source</h2>
+                        <ul class="detail-source-list">
+                            <li>
+                                <a href="{{ journal.journal_url }}" target="_blank" rel="noopener noreferrer">Read the source journal</a>
+                            </li>
+                        </ul>
+                    </div>
+                {% endif %}
+            </aside>
+        </div>
+    </section>
+</main>
+{% endblock %}
