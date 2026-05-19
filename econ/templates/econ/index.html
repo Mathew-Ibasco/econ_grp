@@ -18,10 +18,10 @@
                     <div class="dashboard-stats">
                         <div>
                             <strong>{{ saved_bookmarks|length }}</strong>
-                            <span>Saved items</span>
+                            <span>Saved topics</span>
                         </div>
                         <div>
-                            <strong>{{ dashboard_items|length }}</strong>
+                            <strong>{{ available_topics_count }}</strong>
                             <span>Available topics</span>
                         </div>
                     </div>
@@ -43,7 +43,7 @@
                         {% for bookmark in saved_bookmarks %}
                             <article class="saved-card">
                                 <div class="saved-card-top">
-                                    <span class="saved-type">{{ bookmark.get_item_type_display }}</span>
+                                    <span class="saved-type">Topic</span>
                                     <form method="POST" action="{% url 'toggle_bookmark' %}">
                                         {% csrf_token %}
                                         <input type="hidden" name="item_key" value="{{ bookmark.item_key }}">
@@ -54,8 +54,49 @@
                                 </div>
                                 <h3>{{ bookmark.title }}</h3>
                                 <p>{{ bookmark.summary }}</p>
-                                {% if 'http' in bookmark.url %}
-                                    <a href="{{ bookmark.url }}" class="text-link" target="_blank">Open source <i class="fas fa-arrow-right"></i></a>
+                                {% if bookmark.topic %}
+                                    {% with topic=bookmark.topic %}
+                                        {% if topic.blog_posts.all %}
+                                            <div class="saved-related">
+                                                <h4>Blogs</h4>
+                                                {% for blog in topic.blog_posts.all %}
+                                                    <a href="{% url 'blog_detail' blog.slug %}" class="text-link">{{ blog.title }}</a>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        {% if topic.journal_entries.all %}
+                                            <div class="saved-related">
+                                                <h4>Journals</h4>
+                                                {% for journal in topic.journal_entries.all %}
+                                                    <a href="{{ journal.journal_url }}" class="text-link" target="_blank" rel="noopener noreferrer">{{ journal.title }}</a>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        {% if topic.media_entries.all %}
+                                            <div class="saved-related">
+                                                <h4>Media</h4>
+                                                {% for media in topic.media_entries.all %}
+                                                    <span class="dashboard-muted">{{ media.title }}</span>
+                                                {% endfor %}
+                                                <a href="{% url 'gallery' %}" class="text-link">Open gallery <i class="fas fa-arrow-right"></i></a>
+                                            </div>
+                                        {% endif %}
+                                        {% if topic.vlog_entries.all %}
+                                            <div class="saved-related">
+                                                <h4>Videos</h4>
+                                                {% for video in topic.vlog_entries.all %}
+                                                    <a href="{{ video.video_url }}" class="text-link" target="_blank" rel="noopener noreferrer">{{ video.title }}</a>
+                                                {% endfor %}
+                                                <a href="{% url 'vlog' %}" class="text-link">Open videos <i class="fas fa-arrow-right"></i></a>
+                                            </div>
+                                        {% endif %}
+                                        {% if topic.source_url %}
+                                            <div class="saved-related">
+                                                <h4>Source</h4>
+                                                <a href="{{ topic.source_url }}" class="text-link" target="_blank" rel="noopener noreferrer">Open source <i class="fas fa-arrow-right"></i></a>
+                                            </div>
+                                        {% endif %}
+                                    {% endwith %}
                                 {% endif %}
                             </article>
                         {% endfor %}
@@ -64,7 +105,7 @@
                     <div class="empty-state">
                         <i class="fas fa-bookmark"></i>
                         <h3>No saved items yet</h3>
-                        <p>Use the bookmark buttons below to build your own rail transport reading list.</p>
+                        <p>Use the bookmark buttons below to save topics and collect their related blogs, journals, and media.</p>
                     </div>
                 {% endif %}
             </section>
@@ -73,32 +114,38 @@
                 <div class="dashboard-section-heading">
                     <div>
                         <h2 class="section-title">Explore & Bookmark</h2>
-                        <p>Save topics, media, and references that you want to revisit while studying rail transport and urban mobility.</p>
+                        <p>Save topics that you want to revisit while studying rail transport and urban mobility.</p>
                     </div>
                 </div>
                 <div class="dashboard-card-grid">
-                    {% for item in dashboard_items %}
+                    {% for topic in dashboard_topics %}
                         <article class="dashboard-card">
                             <div class="dashboard-card-icon">
-                                <i class="fas {{ item.icon }}"></i>
+                                <i class="fas {{ topic.icon }}"></i>
                             </div>
                             <div>
-                                <span class="saved-type">{{ item.type|title }}</span>
-                                <h3>{{ item.title }}</h3>
-                                <p>{{ item.summary }}</p>
+                                <span class="saved-type">Topic</span>
+                                <h3>{{ topic.title }}</h3>
+                                <p>{{ topic.summary }}</p>
+                                <p class="dashboard-muted">
+                                    {{ topic.blog_posts.all|length }} blogs ·
+                                    {{ topic.journal_entries.all|length }} journals ·
+                                    {{ topic.media_entries.all|length }} media ·
+                                    {{ topic.vlog_entries.all|length }} videos
+                                </p>
                             </div>
                             <div class="dashboard-card-actions">
-                                {% if 'http' in item.url %}
-                                    <a href="{{ item.url }}" class="text-link" target="_blank">View source</a>
+                                {% if topic.source_url %}
+                                    <a href="{{ topic.source_url }}" class="text-link" target="_blank" rel="noopener noreferrer">View source</a>
                                 {% else %}
-                                    <span class="dashboard-muted">Dashboard topic</span>
+                                    <span class="dashboard-muted">Topic collection</span>
                                 {% endif %}
                                 <form method="POST" action="{% url 'toggle_bookmark' %}">
                                     {% csrf_token %}
-                                    <input type="hidden" name="item_key" value="{{ item.key }}">
-                                    <button type="submit" class="bookmark-btn {% if item.key in saved_item_keys %}is-saved{% endif %}">
-                                        <i class="{% if item.key in saved_item_keys %}fas{% else %}far{% endif %} fa-bookmark"></i>
-                                        {% if item.key in saved_item_keys %}Saved{% else %}Save{% endif %}
+                                    <input type="hidden" name="item_key" value="{{ topic.key }}">
+                                    <button type="submit" class="bookmark-btn {% if topic.key in saved_item_keys %}is-saved{% endif %}">
+                                        <i class="{% if topic.key in saved_item_keys %}fas{% else %}far{% endif %} fa-bookmark"></i>
+                                        {% if topic.key in saved_item_keys %}Saved{% else %}Save{% endif %}
                                     </button>
                                 </form>
                             </div>
@@ -110,22 +157,15 @@
             <section class="dashboard-section">
                 <h2 class="section-title">Recommended Next</h2>
                 <div class="quick-links">
-                    {% if recommended_items %}
-                        {% for item in recommended_items %}
-                            {% if 'http' in item.url %}
-                                <a href="{{ item.url }}" target="_blank">
-                                    <i class="fas {{ item.icon }}"></i>
-                                    <span>{{ item.title }}</span>
-                                </a>
-                            {% else %}
-                                <div class="quick-link-static">
-                                    <i class="fas {{ item.icon }}"></i>
-                                    <span>{{ item.title }}</span>
-                                </div>
-                            {% endif %}
+                    {% if recommended_topics %}
+                        {% for topic in recommended_topics %}
+                            <div class="quick-link-static">
+                                <i class="fas {{ topic.icon }}"></i>
+                                <span>{{ topic.title }}</span>
+                            </div>
                         {% endfor %}
                     {% else %}
-                        <p class="dashboard-muted">You saved every available item. Nice, your dashboard is fully stocked.</p>
+                        <p class="dashboard-muted">You saved every available topic. Nice, your dashboard is fully stocked.</p>
                     {% endif %}
                 </div>
             </section>

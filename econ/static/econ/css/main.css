@@ -473,6 +473,29 @@ body {
     font-size: 0.94rem;
 }
 
+.saved-related {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid #e3edf4;
+}
+
+.saved-related h4 {
+    margin: 0;
+    color: #0b2b3b;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.saved-related .text-link,
+.saved-related .dashboard-muted {
+    font-size: 0.88rem;
+    line-height: 1.35;
+}
+
 .dashboard-card {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);

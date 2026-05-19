@@ -18,9 +18,17 @@ class vlog (models.Model):
     vlogID = models.AutoField(primary_key=True)
     title = models.CharField(max_length=300)
     filename = models.CharField(max_length=300)
+    description = models.TextField(blank=True)
+    video_url = models.URLField(max_length=500, blank=True)
+    thumbnail_url = models.URLField(max_length=500, blank=True)
+    date = models.DateField(null=True, blank=True)
+    topics = models.ManyToManyField("Topic", blank=True, related_name="vlog_entries")
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     class Meta:
         db_table = "vlog"
+        ordering = ["order", "vlogID"]
 
 class caption (models.Model):
     captionID = models.AutoField(primary_key=True)
@@ -30,6 +38,22 @@ class caption (models.Model):
 
     class Meta:
         db_table = "caption"
+
+class Topic(models.Model):
+    key = models.SlugField(max_length=80, unique=True)
+    title = models.CharField(max_length=160)
+    summary = models.TextField()
+    icon = models.CharField(max_length=80, default="fa-train")
+    source_url = models.URLField(max_length=500, blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "topic"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.title
 
 class BlogPost(models.Model):
     title = models.CharField(max_length=300)
@@ -43,6 +67,7 @@ class BlogPost(models.Model):
     highlights = models.JSONField(default=list, blank=True)
     gallery = models.JSONField(default=list, blank=True)
     sources = models.JSONField(default=list, blank=True)
+    topics = models.ManyToManyField(Topic, blank=True, related_name="blog_posts")
     order = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -66,6 +91,7 @@ class MediaGalleryEntry(models.Model):
     image_url = models.URLField(max_length=500, blank=True)
     video_url = models.URLField(max_length=500, blank=True)
     thumbnail_url = models.URLField(max_length=500, blank=True)
+    topics = models.ManyToManyField(Topic, blank=True, related_name="media_entries")
     order = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -85,6 +111,7 @@ class JournalEntry(models.Model):
     citation_info = models.CharField(max_length=300, blank=True, default="")
     snippet = models.TextField()
     keywords = models.JSONField(default=list, blank=True)
+    topics = models.ManyToManyField(Topic, blank=True, related_name="journal_entries")
     order = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -104,6 +131,7 @@ class Bookmark(models.Model):
 
     bookmarkID = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bookmarks")
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="bookmarks", null=True, blank=True)
     item_key = models.CharField(max_length=80)
     title = models.CharField(max_length=160)
     summary = models.TextField(blank=True)

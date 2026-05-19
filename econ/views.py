@@ -11,60 +11,7 @@ from django.http import StreamingHttpResponse
 
 import os, re, sys, html, calendar, json, subprocess, sqlite3
 
-from .models import BlogPost, Bookmark, JournalEntry, MediaGalleryEntry, User
-
-DASHBOARD_ITEMS = [
-    {
-        "key": "rail-transport-basics",
-        "type": "topic",
-        "title": "Rail Transport Basics",
-        "summary": "Core ideas about trains, tracks, passenger movement, freight, and why rail is efficient for dense cities.",
-        "url": "#rail-transport",
-        "icon": "fa-train",
-    },
-    {
-        "key": "philippine-rail-systems",
-        "type": "topic",
-        "title": "Philippine Rail Systems",
-        "summary": "A quick guide to MRT, LRT, and PNR, including how these systems serve Metro Manila and Luzon commuters.",
-        "url": "#philippine-rail",
-        "icon": "fa-map-location-dot",
-    },
-    {
-        "key": "mobility-economy",
-        "type": "topic",
-        "title": "Accessibility, Mobility & The Economy",
-        "summary": "How rail systems reduce congestion, connect people to opportunity, and support economic productivity.",
-        "url": "#mobility-economy",
-        "icon": "fa-chart-simple",
-    },
-    {
-        "key": "rail-gallery",
-        "type": "media",
-        "title": "Gallery Snapshot",
-        "summary": "Images of Philippine rail systems, station maps, commuters, construction, and global rail references.",
-        "url": "#rail-gallery",
-        "icon": "fa-images",
-    },
-    {
-        "key": "rail-history-resource",
-        "type": "resource",
-        "title": "Rail Transport History",
-        "summary": "External reading on how rail transport developed and why it became central to urban and regional mobility.",
-        "url": "https://www.ebsco.com/research-starters/history/rail-transport",
-        "icon": "fa-book-open",
-    },
-    {
-        "key": "world-bank-mobility-resource",
-        "type": "resource",
-        "title": "World Bank: Livable Cities",
-        "summary": "A source connecting urban mobility investment with more livable, accessible, and sustainable cities.",
-        "url": "https://www.worldbank.org/en/results/2024/03/13/promoting-livable-cities-by-investing-in-urban-mobility",
-        "icon": "fa-city",
-    },
-]
-
-BOOKMARK_ITEMS_BY_KEY = {item["key"]: item for item in DASHBOARD_ITEMS}
+from .models import BlogPost, Bookmark, JournalEntry, MediaGalleryEntry, Topic, User, vlog as VlogEntry
 
 def _auth_context(values=None, errors=None):
     return {
@@ -218,44 +165,61 @@ def toggle_bookmark(request):
         return redirect("index")
 
     item_key = request.POST.get("item_key", "").strip()
-    item = BOOKMARK_ITEMS_BY_KEY.get(item_key)
-    if item is None:
-        messages.error(request, "That bookmark item is no longer available.")
+    topic = Topic.objects.filter(key=item_key).first()
+    if topic is None:
+        messages.error(request, "That topic is no longer available.")
         return redirect("index")
 
     existing = Bookmark.objects.filter(user=request.user, item_key=item_key).first()
     if existing:
         existing.delete()
-        messages.success(request, f"Removed {item['title']} from your saved items.")
+        messages.success(request, f"Removed {topic.title} from your saved topics.")
     else:
         Bookmark.objects.create(
             user=request.user,
-            item_key=item["key"],
-            title=item["title"],
-            summary=item["summary"],
-            item_type=item["type"],
-            url=item["url"],
+            topic=topic,
+            item_key=topic.key,
+            title=topic.title,
+            summary=topic.summary,
+            item_type="topic",
+            url=topic.source_url,
         )
-        messages.success(request, f"Saved {item['title']} to your dashboard.")
+        messages.success(request, f"Saved {topic.title} to your dashboard.")
 
     return redirect("index")
 
 def index(request):
+    dashboard_topics = Topic.objects.prefetch_related(
+        "blog_posts",
+        "journal_entries",
+        "media_entries",
+        "vlog_entries",
+    ).order_by("order", "id")
     context = {
         'date': datetime.now(),
-        'dashboard_items': DASHBOARD_ITEMS,
+        'dashboard_topics': dashboard_topics,
         'saved_bookmarks': [],
         'saved_item_keys': set(),
+        'available_topics_count': dashboard_topics.count(),
+        'recommended_topics': dashboard_topics[:3],
     }
 
     if request.user.is_authenticated:
-        saved_bookmarks = list(request.user.bookmarks.all())
+        saved_bookmarks = list(
+            request.user.bookmarks.select_related("topic").prefetch_related(
+                "topic__blog_posts",
+                "topic__journal_entries",
+                "topic__media_entries",
+                "topic__vlog_entries",
+            )
+        )
         saved_item_keys = {bookmark.item_key for bookmark in saved_bookmarks}
         context.update({
             'saved_bookmarks': saved_bookmarks,
             'saved_item_keys': saved_item_keys,
-            'recommended_items': [
-                item for item in DASHBOARD_ITEMS if item["key"] not in saved_item_keys
+            'available_topics_count': dashboard_topics.exclude(key__in=saved_item_keys).count(),
+            'recommended_topics': [
+                topic for topic in dashboard_topics if topic.key not in saved_item_keys
             ][:3],
         })
 
@@ -302,7 +266,8 @@ def vlog(request):
         request,
         'econ/vlog.html',
         {
-            'date': datetime.now()
+            'date': datetime.now(),
+            'vlog_entries': VlogEntry.objects.prefetch_related("topics").order_by("order", "vlogID"),
         }
     )
 
@@ -312,12 +277,14 @@ def gallery(request):
         'econ/gallery.html',
         {
             'date': datetime.now(),
-            'gallery_entries': MediaGalleryEntry.objects.order_by("order", "id"),
+            'gallery_entries': MediaGalleryEntry.objects.prefetch_related("topics").order_by("order", "id"),
         }
     )
 
 ############################################# SQL ##############################################################################
 
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
 def upload_sql(request):
     return render(
         request,
@@ -327,6 +294,8 @@ def upload_sql(request):
         }
     )
 
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
 def download_sql_dump(request):
     db_path = settings.DATABASES['default']['NAME']
     filename = f"dump_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
@@ -372,6 +341,8 @@ def download_sql_dump(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
 def upload_sql_process(request):
     if request.method == 'POST' and request.FILES.get('sql_file'):
         db_path = settings.DATABASES['default']['NAME']

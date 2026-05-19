@@ -73,7 +73,7 @@ WSGI_APPLICATION = 'econ_web.wsgi.application'
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
-DB_ENGINE = os.environ.get("ECON_DB_ENGINE", "sqlite").strip().lower()
+DB_ENGINE = os.environ.get("ECON_DB_ENGINE", "mysql").strip().lower()
 
 if DB_ENGINE == "mysql":
     DATABASES = {
@@ -81,7 +81,7 @@ if DB_ENGINE == "mysql":
             "ENGINE": "django.db.backends.mysql",
             "NAME": "econdb",
             "USER": "root",
-            "PASSWORD": "2009-0161", #server
+            "PASSWORD": "SQL123", #server
             "HOST": "localhost",
             "PORT": "3306",
             "OPTIONS": {
@@ -90,7 +90,7 @@ if DB_ENGINE == "mysql":
         }
     }
 else:
-    # Default to SQLite so local migration commands work without a running MySQL server.
+    # SQLite remains available for local fallback by setting ECON_DB_ENGINE=sqlite.
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
