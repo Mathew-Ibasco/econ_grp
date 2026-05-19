@@ -573,16 +573,19 @@ def submit_item_quiz(request):
 
 def journal(request):
     journal_entries = list(JournalEntry.objects.prefetch_related("topics").order_by("order", "id"))
-    if request.user.is_authenticated:
-        for entry in journal_entries:
-            entry.learning = _item_learning_context(request.user, "journal", entry.id)
-            entry.learning = _attach_quiz_result(
-                entry.learning,
-                request.user,
-                "journal",
-                entry.id,
-                request.GET.get("quiz_attempt"),
-            )
+    if request.user.is_authenticated and journal_entries:
+        viewed_journal_ids = set(
+            StudyItemProgress.objects.filter(
+                user=request.user,
+                item_type="journal",
+                item_id__in=[journal.id for journal in journal_entries],
+            ).values_list("item_id", flat=True)
+        )
+        for journal_entry in journal_entries:
+            journal_entry.learning = SimpleNamespace(completed=journal_entry.id in viewed_journal_ids)
+    else:
+        for journal_entry in journal_entries:
+            journal_entry.learning = SimpleNamespace(completed=False)
 
     return render(
         request,
@@ -598,6 +601,14 @@ def journal_detail(request, journal_id):
         JournalEntry.objects.prefetch_related("topics"),
         pk=journal_id,
     )
+    learning = _item_learning_context(request.user, "journal", journal.id)
+    learning = _attach_quiz_result(
+        learning,
+        request.user,
+        "journal",
+        journal.id,
+        request.GET.get("quiz_attempt"),
+    )
 
     return render(
         request,
@@ -605,6 +616,9 @@ def journal_detail(request, journal_id):
         {
             "date": datetime.now(),
             "journal": journal,
+            "learning": learning,
+            "learning_item_type": "journal",
+            "learning_item_id": journal.id,
         }
     )
 

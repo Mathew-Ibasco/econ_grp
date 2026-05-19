@@ -88,26 +88,56 @@
       font-weight: 600;
       line-height: 1.5;
   }
+
+  .journal-quiz-details {
+      display: grid;
+      gap: 0.85rem;
+  }
+
+  .journal-quiz-details > summary {
+      list-style: none;
+  }
+
+  .journal-quiz-details > summary::-webkit-details-marker {
+      display: none;
+  }
+
+  .journal-quiz-details > summary.bookmark-btn {
+      width: fit-content;
+  }
+
+  .journal-quiz-details[open] > summary {
+      margin-bottom: 0.35rem;
+  }
+
+  .journal-quiz-inline-form {
+      margin-top: 0.25rem;
+  }
 {% endblock %}
 {% block content %}
 <main class="blogs-page">
     <section class="blog-detail-hero">
         <div class="container blog-detail-hero-inner">
+            <a class="back-link blog-detail-back-link" href="{% url 'journal' %}">
+                <i class="fas fa-arrow-left"></i>
+                Back to all journals
+            </a>
             <div>
                 <p class="blog-eyebrow">Journal article</p>
                 <h1>{{ journal.title }}</h1>
+                {% if journal.authors %}
+                    <p>{{ journal.authors }}</p>
+                {% endif %}
                 {% if journal.citation_info %}
-                    <p>{{ journal.citation_info }}</p>
+                    <p><strong>{{ journal.publication_year }}</strong> | {{ journal.citation_info }}</p>
                 {% else %}
-                    <p>{{ journal.journal_name }} | {{ journal.publication_year }}</p>
+                    <p>{{ journal.journal_name }} | <strong>{{ journal.publication_year }}</strong></p>
                 {% endif %}
             </div>
 
             <div class="journal-detail-hero-card">
                 <span class="journal-detail-hero-label">Publication</span>
                 <strong>{{ journal.journal_name }}</strong>
-                <p>Published in {{ journal.publication_year }}</p>
-                <p>{{ journal.authors }}</p>
                 {% if journal.journal_url %}
                     <a class="journal-detail-source-link" href="{{ journal.journal_url }}" target="_blank" rel="noopener noreferrer">
                         Open source article
@@ -118,20 +148,98 @@
     </section>
 
     <section class="container blog-detail-shell">
-        <a class="back-link" href="{% url 'journal' %}">
-            <i class="fas fa-arrow-left"></i>
-            Back to all journals
-        </a>
-
         <div class="blog-detail-layout">
             <article class="blog-detail-main">
                 <div class="blog-detail-content">
-                    <h2>Abstract</h2>
+                    <h2>Full Abstract</h2>
                     {{ journal.snippet|linebreaks }}
                 </div>
             </article>
 
             <aside class="blog-detail-sidebar">
+                {% if request.user.is_authenticated and learning %}
+                    <div class="detail-card learning-card">
+                        <h2>Study Tools</h2>
+                        <form method="POST" action="{% url 'toggle_study_progress' %}" class="learning-action-row">
+                            {% csrf_token %}
+                            <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+                            <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <button type="submit" class="bookmark-btn {% if learning.completed %}is-saved{% endif %}">
+                                <i class="fas {% if learning.completed %}fa-check{% else %}fa-plus{% endif %}"></i>
+                                {% if learning.completed %}Viewed{% else %}Mark Viewed{% endif %}
+                            </button>
+                        </form>
+                        <form method="POST" action="{% url 'save_item_note' %}" class="topic-note-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+                            <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <textarea name="note" placeholder="Add a private note for this journal.">{% if learning.note %}{{ learning.note.note }}{% endif %}</textarea>
+                            <button type="submit" class="bookmark-btn">Save note</button>
+                        </form>
+                    </div>
+
+                    <div class="detail-card learning-card">
+                        <h2>Mini Checkpoint</h2>
+                        <p class="quiz-score">Perfect rounds: {{ learning.perfect_rounds }} / 3</p>
+                        {% if learning.latest_attempt %}
+                            <p class="quiz-score">Latest score: {{ learning.latest_attempt.score }} / {{ learning.latest_attempt.total }}</p>
+                        {% endif %}
+                        {% if learning.mastered %}
+                            <div class="mastery-badge">
+                                <i class="fas fa-trophy"></i>
+                                <span>Mastered</span>
+                                <p>You perfected all checkpoint rounds for this content.</p>
+                            </div>
+                        {% else %}
+                            {% if learning.result_attempt %}
+                                <div class="quiz-result-list">
+                                    {% for result in learning.result_questions %}
+                                        <div class="quiz-result-item {% if result.is_correct %}is-correct{% else %}is-wrong{% endif %}">
+                                            <h3>{{ result.question }}</h3>
+                                            <p>Your answer: <strong>{{ result.selected_text|default:"No answer" }}</strong></p>
+                                            {% if learning.result_is_perfect %}
+                                                <p>Correct answer: <strong>{{ result.correct_text }}</strong></p>
+                                            {% endif %}
+                                            <span>{% if result.is_correct %}Correct{% else %}Needs review{% endif %}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            {% if learning.questions %}
+                                <details class="journal-quiz-details">
+                                    <summary class="bookmark-btn">
+                                        {% if learning.result_attempt %}
+                                            {% if learning.result_is_perfect %}Answer New Quiz{% else %}Retake Quiz{% endif %}
+                                        {% else %}
+                                            Answer Quiz
+                                        {% endif %}
+                                    </summary>
+                                    <form method="POST" action="{% url 'submit_item_quiz' %}" class="topic-quiz-form journal-quiz-inline-form">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="item_type" value="{{ learning_item_type }}">
+                                        <input type="hidden" name="item_id" value="{{ learning_item_id }}">
+                                        <input type="hidden" name="next" value="{{ request.path }}">
+                                        {% for question in learning.questions %}
+                                            <fieldset class="quiz-question">
+                                                <legend>{{ question.question }}</legend>
+                                                <label><input type="radio" name="question_{{ question.id }}" value="A" required> {{ question.option_a }}</label>
+                                                <label><input type="radio" name="question_{{ question.id }}" value="B"> {{ question.option_b }}</label>
+                                                <label><input type="radio" name="question_{{ question.id }}" value="C"> {{ question.option_c }}</label>
+                                            </fieldset>
+                                        {% endfor %}
+                                        <button type="submit" class="bookmark-btn">Submit Quiz</button>
+                                    </form>
+                                </details>
+                            {% else %}
+                                <p class="dashboard-muted">No quiz is available for this journal yet.</p>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                {% endif %}
+
                 <div class="detail-card">
                     <h2>Journal details</h2>
                     <ul class="journal-metadata-list">
