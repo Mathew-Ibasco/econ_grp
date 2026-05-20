@@ -16,8 +16,7 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 
-
-import os, re, sys, html, calendar, json, subprocess, sqlite3
+import os, re, sys, html, calendar, json, subprocess, sqlite3, pymysql
 
 from .forms import ForumReplyForm, ForumThreadCreateForm
 from .models import BlogPost, Bookmark, ForumReply, ForumThread, ForumThreadImage, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, StudyItemProgress, Topic, TopicNote, User, vlog as VlogEntry
@@ -1258,94 +1257,174 @@ def upload_sql(request):
         }
     )
 
+def get_db_engine():
+    return settings.DATABASES['default'].get('ENGINE', '')
+
+def is_sqlite():
+    return 'sqlite3' in get_db_engine()
+
+def is_mysql():
+    return 'mysql' in get_db_engine()
+
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def download_sql_dump(request):
-    db_path = settings.DATABASES['default']['NAME']
     filename = f"dump_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
 
-    def stream():
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+    if is_sqlite():
+        stream = _sqlite_dump_stream()
+    elif is_mysql():
+        stream = _mysql_dump_stream()
+    else:
+        raise ValueError(f"Unsupported database engine: {get_db_engine()}")
 
-        yield f"-- SQL Dump: {os.path.basename(db_path)}\n".encode()
-        yield f"-- Generated: {datetime.now()}\n\n".encode()
-        yield b"PRAGMA foreign_keys = OFF;\n\n"
-
-        # Get all user tables (exclude sqlite internal tables)
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-        tables = [row[0] for row in cursor.fetchall()]
-
-        for table in tables:
-            # Table structure
-            cursor.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,))
-            create_table = cursor.fetchone()[0]
-            yield f"-- Table: {table}\n".encode()
-            yield f"DROP TABLE IF EXISTS \"{table}\";\n".encode()
-            yield f"{create_table};\n\n".encode()
-
-            # Table data
-            cursor.execute(f'SELECT * FROM "{table}"')
-            rows = cursor.fetchall()
-            if rows:
-                for row in rows:
-                    values = ', '.join(
-                        'NULL' if val is None
-                        else f"'{str(val).replace(chr(39), chr(39)*2)}'"
-                        for val in row
-                    )
-                    yield f'INSERT INTO "{table}" VALUES ({values});\n'.encode()
-                yield b"\n"
-
-        yield b"PRAGMA foreign_keys = ON;\n"
-        cursor.close()
-        conn.close()
-
-    response = StreamingHttpResponse(stream(), content_type='application/sql')
+    response = StreamingHttpResponse(stream, content_type='application/sql')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+
+def _sqlite_dump_stream():
+    db_path = settings.DATABASES['default']['NAME']
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    yield f"-- SQL Dump: {os.path.basename(db_path)}\n".encode()
+    yield f"-- Generated: {datetime.now()}\n\n".encode()
+    yield b"PRAGMA foreign_keys = OFF;\n\n"
+
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+    tables = [row[0] for row in cursor.fetchall()]
+
+    for table in tables:
+        cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,))
+        create_table = cursor.fetchone()[0]
+        yield f"-- Table: {table}\n".encode()
+        yield f'DROP TABLE IF EXISTS "{table}";\n'.encode()
+        yield f"{create_table};\n\n".encode()
+
+        cursor.execute(f'SELECT * FROM "{table}"')
+        rows = cursor.fetchall()
+        if rows:
+            for row in rows:
+                values = ', '.join(
+                    'NULL' if val is None
+                    else f"'{str(val).replace(chr(39), chr(39)*2)}'"
+                    for val in row
+                )
+                yield f'INSERT INTO "{table}" VALUES ({values});\n'.encode()
+            yield b"\n"
+
+    yield b"PRAGMA foreign_keys = ON;\n"
+    cursor.close()
+    conn.close()
+
+
+def _mysql_dump_stream():
+    db = settings.DATABASES['default']
+    conn = pymysql.connect(
+        host=db['HOST'],
+        port=int(db.get('PORT', 3306)),
+        user=db['USER'],
+        password=db['PASSWORD'],
+        database=db['NAME'],
+    )
+    cursor = conn.cursor()
+
+    yield f"-- SQL Dump: {db['NAME']}\n".encode()
+    yield f"-- Generated: {datetime.now()}\n\n".encode()
+    yield b"SET FOREIGN_KEY_CHECKS=0;\n\n"
+
+    cursor.execute("SHOW TABLES")
+    tables = [row[0] for row in cursor.fetchall()]
+
+    for table in tables:
+        cursor.execute(f"SHOW CREATE TABLE `{table}`")
+        create_table = cursor.fetchone()[1]
+        yield f"-- Table: {table}\n".encode()
+        yield f"DROP TABLE IF EXISTS `{table}`;\n".encode()
+        yield f"{create_table};\n\n".encode()
+
+        cursor.execute(f"SELECT * FROM `{table}`")
+        rows = cursor.fetchall()
+        if rows:
+            for row in rows:
+                values = ', '.join(
+                    'NULL' if val is None
+                    else f"'{str(val).replace(chr(39), chr(39)*2)}'"
+                    for val in row
+                )
+                yield f"INSERT INTO `{table}` VALUES ({values});\n".encode()
+            yield b"\n"
+
+    yield b"SET FOREIGN_KEY_CHECKS=1;\n"
+    cursor.close()
+    conn.close()
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def upload_sql_process(request):
     if request.method == 'POST' and request.FILES.get('sql_file'):
-        db_path = settings.DATABASES['default']['NAME']
-        sql_file = request.FILES['sql_file']
-
-        conn = sqlite3.connect(db_path)
+        sql = request.FILES['sql_file'].read().decode('utf-8')
 
         try:
-            cursor = conn.cursor()
-            sql = sql_file.read().decode('utf-8')
-
-            # Drop all existing user tables first
-            cursor.execute("PRAGMA foreign_keys = OFF;")
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-            existing_tables = [row[0] for row in cursor.fetchall()]
-            for table in existing_tables:
-                cursor.execute(f'DROP TABLE IF EXISTS "{table}"')
-            conn.commit()
-
-            # executescript() is SQLite's native multi-statement parser —
-            # it handles semicolons inside string literals and quoted identifiers
-            # correctly, unlike a naive split(';').
-            # It also issues a COMMIT before running, so we commit the drops above first.
-            conn.executescript(sql)
-
+            if is_sqlite():
+                _sqlite_upload(sql)
+            elif is_mysql():
+                _mysql_upload(sql)
+            else:
+                raise ValueError(f"Unsupported database engine: {get_db_engine()}")
             messages.success(request, "SQL dump applied successfully.")
         except Exception as e:
-            conn.rollback()
             messages.error(request, f"Failed to apply dump: {str(e)}")
-        finally:
-            cursor.close()
-            conn.close()
 
-    return render(
-        request,
-        'econ/upload_sql.html',
-        {'date': datetime.now()}
+    return render(request, 'econ/upload_sql.html', {'date': datetime.now()})
+
+
+def _sqlite_upload(sql):
+    db_path = settings.DATABASES['default']['NAME']
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = OFF;")
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+        for (table,) in cursor.fetchall():
+            cursor.execute(f'DROP TABLE IF EXISTS "{table}"')
+        conn.commit()
+        conn.executescript(sql)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def _mysql_upload(sql):
+    db = settings.DATABASES['default']
+    conn = pymysql.connect(
+        host=db['HOST'],
+        port=int(db.get('PORT', 3306)),
+        user=db['USER'],
+        password=db['PASSWORD'],
+        database=db['NAME'],
     )
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SET FOREIGN_KEY_CHECKS=0;")
+        cursor.execute("SHOW TABLES")
+        for (table,) in cursor.fetchall():
+            cursor.execute(f"DROP TABLE IF EXISTS `{table}`")
 
+        statements = [s.strip() for s in sql.split(';') if s.strip() and not s.strip().startswith('--')]
+        for statement in statements:
+            cursor.execute(statement)
+
+        cursor.execute("SET FOREIGN_KEY_CHECKS=1;")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+########################################################################################################################
 
 def superuser_required(user):
     return user.is_superuser
