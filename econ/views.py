@@ -1478,6 +1478,17 @@ def generate_filename(title):
     return f"{clean}.jpg"
 
 
+TOPIC_ICON_OPTIONS = [
+    {"value": "fa-train", "label": "Rail / Train"},
+    {"value": "fa-map-location-dot", "label": "Map / Routes"},
+    {"value": "fa-chart-line", "label": "Mobility / Economy"},
+    {"value": "fa-images", "label": "Gallery / Visuals"},
+    {"value": "fa-book-open", "label": "Research / Reading"},
+    {"value": "fa-city", "label": "Urban / City"},
+    {"value": "fa-tags", "label": "Topic / Tags"},
+]
+
+
 def _validate_url(value, field_name, label, errors):
     if not value:
         return
@@ -1578,6 +1589,99 @@ def _content_created_at(content_date):
         datetime.combine(content_date, time.min),
         timezone.get_current_timezone(),
     )
+
+@login_required
+@user_passes_test(superuser_required)
+def add_topic(request):
+    default_icon = TOPIC_ICON_OPTIONS[0]["value"]
+    allowed_icons = {option["value"] for option in TOPIC_ICON_OPTIONS}
+    topics = list(Topic.objects.order_by("order", "title"))
+
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        summary = request.POST.get("summary", "").strip()
+        icon = request.POST.get("icon", "").strip() or default_icon
+        source_url = request.POST.get("source_url", "").strip()
+
+        errors = {}
+
+        if not title:
+            errors["title"] = "Title is required."
+        elif Topic.objects.filter(title__iexact=title).exists():
+            errors["title"] = "A topic with this title already exists."
+        _validate_text_not_number(title, "title", "Title", errors)
+
+        if not summary:
+            errors["summary"] = "Summary is required."
+        _validate_text_not_number(summary, "summary", "Summary", errors)
+
+        if icon not in allowed_icons:
+            errors["icon"] = "Choose an icon from the available options."
+
+        if source_url:
+            _validate_url(source_url, "source_url", "source", errors)
+
+        key = slugify(title)
+        if not key:
+            errors["title"] = "Title must include letters or numbers so a topic key can be created."
+
+        if errors:
+            values = {
+                "title": title,
+                "summary": summary,
+                "icon": icon,
+                "source_url": source_url,
+            }
+            return render(
+                request,
+                "econ/add_topic.html",
+                {
+                    "date": datetime.now(),
+                    "errors": errors,
+                    "values": values,
+                    "icon_options": TOPIC_ICON_OPTIONS,
+                    "topics": topics,
+                },
+                status=400
+            )
+
+        original_key = key
+        counter = 1
+        while Topic.objects.filter(key=key).exists():
+            key = f"{original_key}-{counter}"
+            counter += 1
+
+        order = (
+            Topic.objects.order_by("-order")
+            .values_list("order", flat=True)
+            .first() or 0
+        ) + 1
+
+        topic = Topic.objects.create(
+            key=key,
+            title=title,
+            summary=summary,
+            icon=icon,
+            source_url=source_url,
+            order=order,
+        )
+
+        messages.success(request, f"Topic '{topic.title}' added successfully.")
+        return redirect("add_topic")
+
+    return render(
+        request,
+        "econ/add_topic.html",
+        {
+            "date": datetime.now(),
+            "icon_options": TOPIC_ICON_OPTIONS,
+            "topics": topics,
+            "values": {
+                "icon": default_icon,
+            },
+        }
+    )
+
 
 @login_required
 @user_passes_test(superuser_required)

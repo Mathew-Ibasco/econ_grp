@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <form class="forum-composer-form forum-modal-form" method="post" action="{% url 'forum_create_thread' %}" enctype="multipart/form-data">
                             {% csrf_token %}
                             <div class="forum-field">
-                                <label>Tags</label>
+                                <label>Topics</label>
                                 {{ thread_form.tags }}
                                 {{ thread_form.tags.errors }}
                                 <p class="forum-help">{{ thread_form.tags.help_text }}</p>
