@@ -2,14 +2,15 @@
 
 {% block content %}
 
-<div class="container mt-4">
-    <h2>Add Gallery Entry</h2>
+<div class="container mt-4 admin-form-page">
+    <h2>Add Image</h2>
+    <p class="admin-form-intro">Add a gallery image for the visual collection. Use the date when the image comes from an external URL.</p>
 
-    <form method="POST">
+    <form method="POST" class="admin-content-form">
         {% csrf_token %}
 
         <div class="mb-3">
-            <label class="form-label">Title</label>
+            <label class="form-label">Title <small class="text-muted">Text only; cannot be only numbers.</small></label>
 
             <input
                 type="text"
@@ -19,50 +20,29 @@
             >
 
             {% if errors.title %}
-                <div class="text-danger">
+                <div class="text-danger field-error" role="alert">
                     {{ errors.title }}
                 </div>
             {% endif %}
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Description</label>
+            <label class="form-label">Description <small class="text-muted">Text only; cannot be only numbers.</small></label>
 
             <textarea
                 name="description"
                 class="form-control"
                 rows="4"
             >{{ values.description }}</textarea>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Media Type</label>
-
-            <select
-                name="media_type"
-                id="mediaType"
-                class="form-select"
-            >
-                <option value="image"
-                    {% if values.media_type == "image" %}selected{% endif %}>
-                    Image
-                </option>
-
-                <option value="video"
-                    {% if values.media_type == "video" %}selected{% endif %}>
-                    Video
-                </option>
-            </select>
-
-            {% if errors.media_type %}
-                <div class="text-danger">
-                    {{ errors.media_type }}
+            {% if errors.description %}
+                <div class="text-danger field-error" role="alert">
+                    {{ errors.description }}
                 </div>
             {% endif %}
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Date</label>
+            <label class="form-label">Date Taken <small class="text-muted">Required when the image comes from a URL.</small></label>
 
             <input
                 type="date"
@@ -70,90 +50,34 @@
                 class="form-control"
                 value="{{ values.date }}"
             >
+            {% if errors.date %}
+                <div class="text-danger field-error" role="alert">
+                    {{ errors.date }}
+                </div>
+            {% endif %}
         </div>
 
-        <!-- IMAGE FIELDS -->
-        <div id="imageFields">
+        <div class="mb-3">
+            <label class="form-label">Image URL <small class="text-muted">Example: https://example.com/image.jpg</small></label>
 
-            <div class="mb-3">
-                <label class="form-label">Image URL</label>
+            <input
+                type="url"
+                name="image_url"
+                class="form-control"
+                value="{{ values.image_url }}"
+            >
 
-                <input
-                    type="url"
-                    name="image_url"
-                    class="form-control"
-                    value="{{ values.image_url }}"
-                >
-
-                {% if errors.image_url %}
-                    <div class="text-danger">
-                        {{ errors.image_url }}
-                    </div>
-                {% endif %}
-            </div>
-
-        </div>
-
-        <!-- VIDEO FIELDS -->
-        <div id="videoFields">
-
-            <div class="mb-3">
-                <label class="form-label">Video URL</label>
-
-                <input
-                    type="url"
-                    name="video_url"
-                    class="form-control"
-                    value="{{ values.video_url }}"
-                >
-
-                {% if errors.video_url %}
-                    <div class="text-danger">
-                        {{ errors.video_url }}
-                    </div>
-                {% endif %}
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Thumbnail URL</label>
-
-                <input
-                    type="url"
-                    name="thumbnail_url"
-                    class="form-control"
-                    value="{{ values.thumbnail_url }}"
-                >
-            </div>
-
+            {% if errors.image_url %}
+                <div class="text-danger field-error" role="alert">
+                    {{ errors.image_url }}
+                </div>
+            {% endif %}
         </div>
 
         <button type="submit" class="btn btn-primary">
-            Add Media Entry
+            Add Image
         </button>
     </form>
 </div>
-
-<script>
-    const mediaTypeSelect = document.getElementById("mediaType");
-    const imageFields = document.getElementById("imageFields");
-    const videoFields = document.getElementById("videoFields");
-
-    function toggleMediaFields() {
-        const mediaType = mediaTypeSelect.value;
-
-        if (mediaType === "image") {
-            imageFields.style.display = "block";
-            videoFields.style.display = "none";
-        }
-        else {
-            imageFields.style.display = "none";
-            videoFields.style.display = "block";
-        }
-    }
-
-    mediaTypeSelect.addEventListener("change", toggleMediaFields);
-
-    toggleMediaFields();
-</script>
 
 {% endblock %}

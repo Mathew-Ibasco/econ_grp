@@ -2,70 +2,87 @@
 
 {% block content %}
 
-<div class="container mt-4">
+<div class="container mt-4 admin-form-page">
     <h2>Add Blog Post</h2>
+    <p class="admin-form-intro">Create a new learning blog with structured sections, sources, and gallery references.</p>
 
-    <form method="POST">
+    <form method="POST" class="admin-content-form">
         {% csrf_token %}
 
         <div class="mb-3">
-            <label class="form-label">Title</label>
+            <label class="form-label">Title <small class="text-muted">Text only; cannot be only numbers.</small></label>
             <input type="text" name="title" class="form-control"
                    value="{{ values.title }}">
             {% if errors.title %}
-                <div class="text-danger">{{ errors.title }}</div>
+                <div class="text-danger field-error" role="alert">{{ errors.title }}</div>
             {% endif %}
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Excerpt</label>
+            <label class="form-label">Date Created/Posted <small class="text-muted">Recorded automatically when the blog is created.</small></label>
+            <input type="date" class="form-control" value="{{ date|date:'Y-m-d' }}" readonly>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Excerpt <small class="text-muted">Text only; cannot be only numbers.</small></label>
             <textarea name="excerpt" class="form-control" rows="3">{{ values.excerpt }}</textarea>
             {% if errors.excerpt %}
-                <div class="text-danger">{{ errors.excerpt }}</div>
+                <div class="text-danger field-error" role="alert">{{ errors.excerpt }}</div>
             {% endif %}
         </div>
 
     
 
         <div class="mb-3">
-            <label class="form-label">Featured Image URL</label>
+            <label class="form-label">Featured Image URL <small class="text-muted">Example: https://example.com/image.jpg</small></label>
             <input type="url" name="featured_image_url" class="form-control"
                    value="{{ values.featured_image_url }}">
+            {% if errors.featured_image_url %}
+                <div class="text-danger field-error" role="alert">{{ errors.featured_image_url }}</div>
+            {% endif %}
         </div>
 
     
 
         <div class="mb-3">
-            <label class="form-label">Body Paragraphs</label>
+            <label class="form-label">Body Paragraphs <small class="text-muted">Write paragraph text; cannot be only numbers.</small></label>
             <textarea name="body_paragraphs" class="form-control" rows="8">{{ values.body_paragraphs }}</textarea>
+            {% if errors.body_paragraphs %}
+                <div class="text-danger field-error" role="alert">{{ errors.body_paragraphs }}</div>
+            {% endif %}
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Keywords (comma separated)</label>
+            <label class="form-label">Keywords <small class="text-muted">Comma separated. Example: rail, mobility, economy</small></label>
             <input type="text" name="keywords" class="form-control"
                    value="{{ values.keywords }}">
+            {% if errors.keywords %}
+                <div class="text-danger field-error" role="alert">{{ errors.keywords }}</div>
+            {% endif %}
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Highlights (separate with a blank line) </label>
+            <label class="form-label">Highlights <small class="text-muted">Separate each highlight with a blank line. Example: First point [blank line] Second point</small></label>
             <textarea name="highlights" class="form-control" rows="4">{{ values.highlights }}</textarea>
+            {% if errors.highlights %}
+                <div class="text-danger field-error" role="alert">{{ errors.highlights }}</div>
+            {% endif %}
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Gallery URLs (separate with a blank line)</label>
+            <label class="form-label">Gallery URLs <small class="text-muted">One image URL per block, separated with a blank line.</small></label>
             <textarea name="gallery" class="form-control" rows="4">{{ values.gallery }}</textarea>
+            {% if errors.gallery %}
+                <div class="text-danger field-error" role="alert">{{ errors.gallery }}</div>
+            {% endif %}
         </div>
 
         <div class="mb-3">
-            <label class="form-label">
-                Sources
-            </label>
-
-            <small class="text-muted">
-                Enter the source label on the first line and the URL on the second line.
-                Separate sources with a blank line.
-            </small>
+            <label class="form-label">Sources <small class="text-muted">Two lines per source: label, then URL. Separate sources with a blank line.</small></label>
             <textarea name="sources" class="form-control" rows="4">{{ values.sources }}</textarea>
+            {% if errors.sources %}
+                <div class="text-danger field-error" role="alert">{{ errors.sources }}</div>
+            {% endif %}
         </div>
 
        

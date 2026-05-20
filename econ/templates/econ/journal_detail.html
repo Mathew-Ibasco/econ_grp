@@ -133,6 +133,26 @@
             </article>
 
             <aside class="blog-detail-sidebar">
+                {% if request.user.is_superuser %}
+                    <div class="detail-card admin-delete-card">
+                        <h2>Admin actions</h2>
+                        <form method="POST" action="{% url 'delete_journal' journal.id %}">
+                            {% csrf_token %}
+                            <button
+                                type="button"
+                                class="content-delete-btn"
+                                data-content-delete-trigger
+                                data-delete-title="Delete Journal?"
+                                data-delete-message="Delete {{ journal.title }}?"
+                                data-delete-warning="This will permanently remove this journal entry and its topic links."
+                                data-delete-action="Delete Journal"
+                            >
+                                <i class="fas fa-trash"></i>
+                                Delete Journal
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
                 {% if request.user.is_authenticated and learning %}
                     <div class="detail-card learning-card">
                         <h2>Study Tools</h2>

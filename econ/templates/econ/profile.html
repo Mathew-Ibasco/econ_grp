@@ -69,7 +69,7 @@
                     <div class="profile-password-tools {% if errors.new_password or errors.confirm_password %}is-visible{% endif %}">
                         <button type="button" class="profile-secondary-btn" data-profile-password-toggle>
                             <i class="fas fa-key"></i>
-                            Change password
+                            Change Password
                         </button>
                     </div>
 
@@ -98,14 +98,14 @@
                     </div>
 
                     <div class="profile-action-row">
-                        <button class="profile-primary-btn" type="submit">
-                            <i class="fas fa-floppy-disk"></i>
-                            Save Changes
-                        </button>
                         <a class="profile-cancel-btn" href="{% url 'profile' %}">
                             <i class="fas fa-xmark"></i>
                             Cancel
                         </a>
+                        <button class="profile-primary-btn" type="submit">
+                            <i class="fas fa-floppy-disk"></i>
+                            Save Changes
+                        </button>
                     </div>
                 </form>
             {% else %}

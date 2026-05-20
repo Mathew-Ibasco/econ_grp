@@ -47,6 +47,26 @@
             </article>
 
             <aside class="blog-detail-sidebar">
+                {% if request.user.is_superuser %}
+                    <div class="detail-card admin-delete-card">
+                        <h2>Admin actions</h2>
+                        <form method="POST" action="{% url 'delete_blog' blog_post.slug %}">
+                            {% csrf_token %}
+                            <button
+                                type="button"
+                                class="content-delete-btn"
+                                data-content-delete-trigger
+                                data-delete-title="Delete Blog?"
+                                data-delete-message="Delete {{ blog_post.title }}?"
+                                data-delete-warning="This will permanently remove this blog post and its topic links."
+                                data-delete-action="Delete Blog"
+                            >
+                                <i class="fas fa-trash"></i>
+                                Delete Blog
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
                 {% if request.user.is_authenticated and learning %}
                     <div class="detail-card learning-card">
                         <h2>Study Tools</h2>

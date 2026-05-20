@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.core.validators import validate_email
+from django.core.validators import URLValidator, validate_email
 from django.db.models import Count, F, Prefetch, Q
 from django.http import JsonResponse, StreamingHttpResponse
 from django.template.loader import render_to_string
@@ -316,6 +316,15 @@ def _item_learning_context(user, item_type, item_id):
         "mastered": quiz_progress.mastered,
         "completed": StudyItemProgress.objects.filter(user=user, item_type=item_type, item_id=item_id).exists(),
     }
+
+
+def _delete_item_learning_data(item_type, item_id):
+    item_id = int(item_id)
+    StudyItemProgress.objects.filter(item_type=item_type, item_id=item_id).delete()
+    ItemNote.objects.filter(item_type=item_type, item_id=item_id).delete()
+    ItemQuizProgress.objects.filter(item_type=item_type, item_id=item_id).delete()
+    ItemQuizAttempt.objects.filter(item_type=item_type, item_id=item_id).delete()
+    ItemQuizQuestion.objects.filter(item_type=item_type, item_id=item_id).delete()
 
 
 def _attach_quiz_result(learning, user, item_type, item_id, attempt_id):
@@ -927,6 +936,22 @@ def blog_detail(request, slug):
         }
     )
 
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def delete_blog(request, slug):
+    if request.method != "POST":
+        return redirect("blog_detail", slug=slug)
+
+    blog_post = get_object_or_404(BlogPost, slug=slug)
+    title = blog_post.title
+    item_id = blog_post.id
+    blog_post.delete()
+    _delete_item_learning_data("blog", item_id)
+    messages.success(request, f"Deleted blog: {title}")
+    return redirect("blog")
+
+
 @login_required
 def toggle_study_progress(request):
     if request.method != "POST":
@@ -1100,6 +1125,22 @@ def journal_detail(request, journal_id):
         }
     )
 
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def delete_journal(request, journal_id):
+    if request.method != "POST":
+        return redirect("journal_detail", journal_id=journal_id)
+
+    journal = get_object_or_404(JournalEntry, pk=journal_id)
+    title = journal.title
+    item_id = journal.id
+    journal.delete()
+    _delete_item_learning_data("journal", item_id)
+    messages.success(request, f"Deleted journal: {title}")
+    return redirect("journal")
+
+
 def vlog(request):
     vlog_entries = list(
         VlogEntry.objects.prefetch_related("topics").order_by("order", "vlogID")
@@ -1157,15 +1198,48 @@ def vlog_detail(request, vlog_id):
         }
     )
 
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def delete_vlog(request, vlog_id):
+    if request.method != "POST":
+        return redirect("vlog_detail", vlog_id=vlog_id)
+
+    video = get_object_or_404(VlogEntry, pk=vlog_id)
+    title = video.title
+    item_id = video.vlogID
+    video.delete()
+    _delete_item_learning_data("video", item_id)
+    messages.success(request, f"Deleted media: {title}")
+    return redirect("vlog")
+
+
 def gallery(request):
+    gallery_entries = list(MediaGalleryEntry.objects.order_by("order", "id"))
     return render(
         request,
         'econ/gallery.html',
         {
             'date': datetime.now(),
-            'gallery_count': 10,
+            'gallery_entries': gallery_entries,
+            'gallery_count': len(gallery_entries),
         }
     )
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def delete_gallery_entry(request, media_id):
+    if request.method != "POST":
+        return redirect("gallery")
+
+    media = get_object_or_404(MediaGalleryEntry, pk=media_id)
+    title = media.title
+    item_id = media.id
+    media.delete()
+    _delete_item_learning_data("media", item_id)
+    messages.success(request, f"Deleted gallery item: {title}")
+    return redirect("gallery")
 
 ############################################# SQL ##############################################################################
 
@@ -1276,6 +1350,101 @@ def generate_filename(title):
     clean = slugify(title)
     return f"{clean}.jpg"
 
+
+def _validate_url(value, field_name, label, errors):
+    if not value:
+        return
+    validator = URLValidator()
+    try:
+        validator(value)
+    except ValidationError:
+        errors[field_name] = f"Enter a valid {label} URL."
+
+
+def _is_number_only(value):
+    clean_value = value.strip()
+    return bool(re.search(r"\d", clean_value) and re.fullmatch(r"[\d\s.,+-]+", clean_value))
+
+
+def _validate_text_not_number(value, field_name, label, errors):
+    if value and field_name not in errors and _is_number_only(value):
+        errors[field_name] = f"{label} cannot be only numbers."
+
+
+def _blank_line_blocks(value):
+    return [
+        block.strip()
+        for block in re.split(r"\n\s*\n", value)
+        if block.strip()
+    ]
+
+
+def _validate_keywords_format(value, field_name, errors):
+    if not value or field_name in errors:
+        return
+    if "," not in value:
+        errors[field_name] = "Use comma-separated keywords, for example: rail, mobility, economy."
+        return
+
+    keywords = [keyword.strip() for keyword in value.split(",")]
+    if any(not keyword for keyword in keywords):
+        errors[field_name] = "Remove empty keywords and separate each keyword with one comma."
+        return
+    if any(_is_number_only(keyword) for keyword in keywords):
+        errors[field_name] = "Keywords cannot be only numbers."
+
+
+def _validate_blank_line_format(value, field_name, label, errors):
+    if not value or field_name in errors:
+        return []
+    if "\n" in value and not re.search(r"\n\s*\n", value):
+        errors[field_name] = f"Separate each {label.lower()} with a blank line."
+        return []
+    blocks = _blank_line_blocks(value)
+    if any(_is_number_only(block) for block in blocks):
+        errors[field_name] = f"{label} cannot be only numbers."
+    return blocks
+
+
+def _validate_gallery_urls(value, errors):
+    blocks = _validate_blank_line_format(value, "gallery", "Gallery URL", errors)
+    if not blocks or "gallery" in errors:
+        return
+    for url in blocks:
+        _validate_url(url, "gallery", "gallery image", errors)
+        if "gallery" in errors:
+            return
+
+
+def _validate_sources_format(value, errors):
+    blocks = _validate_blank_line_format(value, "sources", "Source", errors)
+    if not blocks or "sources" in errors:
+        return
+    for block in blocks:
+        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        if len(lines) != 2:
+            errors["sources"] = "Use two lines per source: label on line 1, URL on line 2. Separate sources with a blank line."
+            return
+        if _is_number_only(lines[0]):
+            errors["sources"] = "Source labels cannot be only numbers."
+            return
+        _validate_url(lines[1], "sources", "source", errors)
+        if "sources" in errors:
+            return
+
+
+def _parse_optional_content_date(value, has_url, errors):
+    if has_url and not value:
+        errors["date"] = "Date is required when this content comes from a URL."
+        return None
+    if not value:
+        return timezone.localdate()
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        errors["date"] = "Enter a valid date."
+        return None
+
 @login_required
 @user_passes_test(superuser_required)
 def add_blog(request):
@@ -1301,9 +1470,37 @@ def add_blog(request):
 
         if not title:
             errors["title"] = "Title is required."
+        elif BlogPost.objects.filter(title__iexact=title).exists():
+            errors["title"] = "A blog with this title already exists."
+        _validate_text_not_number(title, "title", "Title", errors)
 
         if not excerpt:
             errors["excerpt"] = "Excerpt is required."
+        _validate_text_not_number(excerpt, "excerpt", "Excerpt", errors)
+
+        if not body_paragraphs:
+            errors["body_paragraphs"] = "Body paragraphs are required."
+        _validate_text_not_number(body_paragraphs, "body_paragraphs", "Body paragraphs", errors)
+
+        if not keywords:
+            errors["keywords"] = "Keywords are required."
+        _validate_keywords_format(keywords, "keywords", errors)
+
+        if not highlights:
+            errors["highlights"] = "Highlights are required."
+        _validate_blank_line_format(highlights, "highlights", "Highlight", errors)
+
+        if not gallery:
+            errors["gallery"] = "Gallery URLs are required."
+        _validate_gallery_urls(gallery, errors)
+
+        if not sources:
+            errors["sources"] = "Sources are required."
+        _validate_sources_format(sources, errors)
+
+        if not featured_image_url:
+            errors["featured_image_url"] = "Featured image URL is required."
+        _validate_url(featured_image_url, "featured_image_url", "featured image", errors)
 
         if errors:
             return render(
@@ -1459,18 +1656,40 @@ def add_journal(request):
 
         if not title:
             errors["title"] = "Title is required."
+        elif JournalEntry.objects.filter(title__iexact=title).exists():
+            errors["title"] = "A journal with this title already exists."
+        _validate_text_not_number(title, "title", "Title", errors)
 
         if not journal_url:
             errors["journal_url"] = "Journal URL is required."
+        _validate_url(journal_url, "journal_url", "journal", errors)
 
         if not authors:
             errors["authors"] = "Authors are required."
+        _validate_text_not_number(authors, "authors", "Authors", errors)
 
-        if not publication_year:
+        if journal_url and not publication_year:
             errors["publication_year"] = "Publication year is required."
+        elif not publication_year:
+            publication_year = str(timezone.localdate().year)
+        elif not publication_year.isdigit():
+            errors["publication_year"] = "Publication year must be a number."
 
         if not journal_name:
             errors["journal_name"] = "Journal name is required."
+        _validate_text_not_number(journal_name, "journal_name", "Journal name", errors)
+
+        if not citation_info:
+            errors["citation_info"] = "Citation info is required."
+        _validate_text_not_number(citation_info, "citation_info", "Citation info", errors)
+
+        if not snippet:
+            errors["snippet"] = "Snippet is required."
+        _validate_text_not_number(snippet, "snippet", "Snippet", errors)
+
+        if not keywords:
+            errors["keywords"] = "Keywords are required."
+        _validate_keywords_format(keywords, "keywords", errors)
 
         if errors:
             return render(
@@ -1512,16 +1731,12 @@ def add_journal(request):
 
 @login_required
 @user_passes_test(superuser_required)
-def add_media(request):
+def add_image(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
         description = request.POST.get("description", "").strip()
-        media_type = request.POST.get("media_type", "").strip()
         date = request.POST.get("date", "").strip()
-
         image_url = request.POST.get("image_url", "").strip()
-        video_url = request.POST.get("video_url", "").strip()
-        thumbnail_url = request.POST.get("thumbnail_url", "").strip()
 
         order = (
             MediaGalleryEntry.objects.order_by("-order")
@@ -1532,9 +1747,16 @@ def add_media(request):
 
         if not title:
             errors["title"] = "Title is required."
+        elif MediaGalleryEntry.objects.filter(title__iexact=title).exists():
+            errors["title"] = "A gallery image with this title already exists."
+        _validate_text_not_number(title, "title", "Title", errors)
 
-        if media_type not in ["image", "video"]:
-            errors["media_type"] = "Invalid media type."
+        if not description:
+            errors["description"] = "Description is required."
+        _validate_text_not_number(description, "description", "Description", errors)
+
+        _validate_url(image_url, "image_url", "image", errors)
+        parsed_date = _parse_optional_content_date(date, bool(image_url), errors)
 
         if errors:
             return render(
@@ -1551,15 +1773,13 @@ def add_media(request):
         media = MediaGalleryEntry.objects.create(
             title=title,
             description=description,
-            media_type=media_type,
-            date=date if date else None,
+            media_type="image",
+            date=parsed_date,
             image_url=image_url,
-            video_url=video_url,
-            thumbnail_url=thumbnail_url,
             order=order,
         )
 
-        messages.success(request, f"Media '{media.title}' added successfully.")
+        messages.success(request, f"Image '{media.title}' added successfully.")
         return redirect("gallery")
 
     return render(
@@ -1572,21 +1792,38 @@ def add_media(request):
 
 @login_required
 @user_passes_test(superuser_required)
-def add_vlog(request):
+def add_video(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
+        channel_name = request.POST.get("channel_name", "").strip()
         description = request.POST.get("description", "").strip()
         video_url = request.POST.get("video_url", "").strip()
-        thumbnail_url = request.POST.get("thumbnail_url", "").strip()
         date = request.POST.get("date", "").strip()
 
         errors = {}
 
         if not title:
             errors["title"] = "Title is required."
+        elif VlogEntry.objects.filter(title__iexact=title).exists():
+            errors["title"] = "A video with this title already exists."
+        _validate_text_not_number(title, "title", "Title", errors)
+
+        if not channel_name:
+            errors["channel_name"] = "Channel is required."
+        _validate_text_not_number(channel_name, "channel_name", "Channel", errors)
+
+        if not description:
+            errors["description"] = "Description is required."
+        _validate_text_not_number(description, "description", "Description", errors)
 
         if not video_url:
-            errors["video_url"] = "Video URL is required."
+            errors["video_url"] = "Video URL is required so the video can be embedded."
+        _validate_url(video_url, "video_url", "video", errors)
+        if not date:
+            errors["date"] = "Date is required for videos."
+            parsed_date = None
+        else:
+            parsed_date = _parse_optional_content_date(date, True, errors)
 
         if errors:
             return render(
@@ -1611,14 +1848,14 @@ def add_vlog(request):
         new_vlog = VlogEntry.objects.create(
             title=title,
             filename=filename,
+            channel_name=channel_name,
             description=description,
             video_url=video_url,
-            thumbnail_url=thumbnail_url,
-            date=date if date else None,
+            date=parsed_date,
             order=order,
         )
 
-        messages.success(request, f"Vlog '{new_vlog.title}' added successfully.")
+        messages.success(request, f"Video '{new_vlog.title}' added successfully.")
         return redirect("vlog")
 
     return render(
@@ -1628,3 +1865,11 @@ def add_vlog(request):
             "date": datetime.now(),
         }
     )
+
+
+def add_media(request):
+    return redirect("add_image")
+
+
+def add_vlog(request):
+    return redirect("add_video")
