@@ -112,6 +112,7 @@ def _sqlite_database():
         }
     }
 
+CSRF_TRUSTED_ORIGINS = ['https://econ-grp.onrender.com']
 
 def _mysql_database():
     return {
