@@ -136,14 +136,15 @@ class ForumThreadDeleteModalTests(TestCase):
         self.assertNotContains(response, "active topics")
         self.assertNotContains(response, "?topic=")
 
-    def test_forum_thread_form_uses_tags_language(self):
+    def test_forum_thread_form_uses_topics_language(self):
         self.client.force_login(self.user)
 
         response = self.client.get(reverse("forum"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Tags")
-        self.assertNotContains(response, "Topics")
+        self.assertContains(response, "Topics")
+        self.assertContains(response, "Select one or more topics that fit this thread.")
+        self.assertNotContains(response, "Select one or more tags that fit this thread.")
 
     def test_mobility_economy_topic_uses_chart_line_icon(self):
         economy_topic = Topic.objects.get(key="mobility-economy")

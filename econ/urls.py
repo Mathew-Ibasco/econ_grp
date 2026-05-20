@@ -39,6 +39,7 @@ urlpatterns = [
     path('download_sql_dump', views.download_sql_dump, name='download_sql_dump'),
     path('upload_sql_process', views.upload_sql_process, name='upload_sql_process'),
     path('upload_sql', views.upload_sql, name='upload_sql'),
+    path("admin/add-topic/", views.add_topic, name="add_topic"),
     path("admin/add-blog/", views.add_blog, name="add_blog"),
     path("admin/add-journal/", views.add_journal, name="add_journal"),
     path("admin/add-image/", views.add_image, name="add_image"),
