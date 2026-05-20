@@ -61,14 +61,6 @@ Add Video
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Thumbnail URL <small class="text-muted">Optional. Leave blank to use the default generated thumbnail when available.</small></label>
-                    <input type="url" name="thumbnail_url" class="form-control" value="{{ values.thumbnail_url }}">
-                    {% if errors.thumbnail_url %}
-                        <div class="text-danger field-error" role="alert">{{ errors.thumbnail_url }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="mb-3">
                     <label class="form-label">Date Uploaded <small class="text-muted">Required for all videos.</small></label>
                     <input type="date" name="date" class="form-control" value="{{ values.date }}">
                     {% if errors.date %}
