@@ -9,15 +9,13 @@
 {% block script %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // --- Delete Modal Logic ---
     var deleteModal = document.getElementById('forumDeleteModal');
     var imageModal = document.getElementById('forumImageModal');
     var activeDeleteForm = null;
 
     var closeDeleteModal = function () {
-        if (!deleteModal) {
-            return;
-        }
-
+        if (!deleteModal) return;
         deleteModal.classList.remove('is-open');
         deleteModal.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('forum-modal-open');
@@ -34,33 +32,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var openDeleteModal = function (trigger) {
             var form = trigger.closest('form');
-            if (!form) {
-                return;
-            }
-
+            if (!form) return;
             activeDeleteForm = form;
-            if (deleteModalTitle) {
-                deleteModalTitle.textContent = trigger.getAttribute('data-delete-title') || 'Delete item?';
-            }
-            if (deleteModalMessage) {
-                deleteModalMessage.textContent = trigger.getAttribute('data-delete-message') || 'Are you sure you want to delete this item?';
-            }
-            if (deleteModalWarning) {
-                deleteModalWarning.textContent = trigger.getAttribute('data-delete-warning') || 'This cannot be undone.';
-            }
-            if (deleteModalAction) {
-                deleteModalAction.textContent = trigger.getAttribute('data-delete-action') || 'Delete';
-            }
-
+            if (deleteModalTitle) deleteModalTitle.textContent = trigger.getAttribute('data-delete-title') || 'Delete item?';
+            if (deleteModalMessage) deleteModalMessage.textContent = trigger.getAttribute('data-delete-message') || 'Are you sure you want to delete this item?';
+            if (deleteModalWarning) deleteModalWarning.textContent = trigger.getAttribute('data-delete-warning') || 'This cannot be undone.';
+            if (deleteModalAction) deleteModalAction.textContent = trigger.getAttribute('data-delete-action') || 'Delete';
             deleteModal.classList.add('is-open');
             deleteModal.setAttribute('aria-hidden', 'false');
             document.body.classList.add('forum-modal-open');
-
-            window.setTimeout(function () {
-                if (deleteModalConfirm) {
-                    deleteModalConfirm.focus();
-                }
-            }, 0);
+            setTimeout(function () { if (deleteModalConfirm) deleteModalConfirm.focus(); }, 0);
         };
 
         document.querySelectorAll('[data-forum-delete-trigger]').forEach(function (button) {
@@ -76,16 +57,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (deleteModalConfirm) {
             deleteModalConfirm.addEventListener('click', function () {
-                if (!activeDeleteForm) {
-                    return;
-                }
+                if (!activeDeleteForm) return;
                 var form = activeDeleteForm;
                 closeDeleteModal();
-                if (typeof form.requestSubmit === 'function') {
-                    form.requestSubmit();
-                } else {
-                    form.submit();
-                }
+                if (typeof form.requestSubmit === 'function') form.requestSubmit();
+                else form.submit();
             });
         }
 
@@ -96,63 +72,119 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // --- Image Modal Logic ---
     if (imageModal) {
         var imageModalPreview = imageModal.querySelector('[data-forum-image-preview]');
-
         var openImageModal = function (trigger) {
             var imageUrl = trigger.getAttribute('href') || trigger.getAttribute('data-image-url');
-            if (!imageUrl || !imageModalPreview) {
-                return;
-            }
-
+            if (!imageUrl || !imageModalPreview) return;
             var imageAlt = trigger.getAttribute('data-image-alt') || trigger.getAttribute('aria-label') || 'Image preview';
             imageModalPreview.src = imageUrl;
             imageModalPreview.alt = imageAlt;
-
             imageModal.classList.add('is-open');
             imageModal.setAttribute('aria-hidden', 'false');
             document.body.classList.add('forum-modal-open');
         };
-
         var closeImageModal = function () {
             imageModal.classList.remove('is-open');
             imageModal.setAttribute('aria-hidden', 'true');
             document.body.classList.remove('forum-modal-open');
-
             if (imageModalPreview) {
                 imageModalPreview.removeAttribute('src');
                 imageModalPreview.removeAttribute('alt');
             }
         };
-
         document.addEventListener('click', function (event) {
             var trigger = event.target.closest('[data-forum-image-trigger]');
-            if (!trigger) {
-                return;
-            }
-
-            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button === 1) {
-                return;
-            }
-
+            if (!trigger) return;
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button === 1) return;
             var imageUrl = trigger.getAttribute('href') || trigger.getAttribute('data-image-url');
-            if (!imageUrl) {
-                return;
-            }
-
+            if (!imageUrl) return;
             event.preventDefault();
             openImageModal(trigger);
         });
-
         imageModal.addEventListener('click', function (event) {
-            if (event.target === imageModal) {
-                closeImageModal();
+            if (event.target === imageModal) closeImageModal();
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && imageModal.classList.contains('is-open')) closeImageModal();
+        });
+    }
+
+    // --- Photo upload preview ---
+    function setupPhotoPreview(inputElement) {
+        if (!inputElement) return;
+        
+        inputElement.addEventListener('change', function(e) {
+            var formField = this.closest('.forum-form-field');
+            var previewContainer = formField ? formField.querySelector('.photo-preview') : null;
+            
+            if (!previewContainer) {
+                var parent = this.parentElement;
+                while (parent && !previewContainer) {
+                    previewContainer = parent.querySelector('.photo-preview');
+                    parent = parent.parentElement;
+                }
+            }
+            
+            if (!previewContainer) return;
+            
+            previewContainer.innerHTML = '';
+            var files = this.files;
+            
+            if (files && files.length > 0) {
+                for (var i = 0; i < Math.min(files.length, 5); i++) {
+                    var reader = new FileReader();
+                    reader.onload = (function(fileIndex) {
+                        return function(ev) {
+                            var img = document.createElement('img');
+                            img.src = ev.target.result;
+                            img.style.width = '70px';
+                            img.style.height = '70px';
+                            img.style.objectFit = 'cover';
+                            img.style.borderRadius = '8px';
+                            img.style.border = '2px solid #ffb347';
+                            previewContainer.appendChild(img);
+                        };
+                    })(i);
+                    reader.readAsDataURL(files[i]);
+                }
             }
         });
+    }
+    
+    var photoInput = document.getElementById('id_images');
+    if (photoInput) {
+        setupPhotoPreview(photoInput);
+    } else {
+        var replyForm = document.querySelector('.forum-reply-form form');
+        if (replyForm) {
+            var fileInputs = replyForm.querySelectorAll('input[type="file"]');
+            fileInputs.forEach(function(input) {
+                setupPhotoPreview(input);
+            });
+        }
+    }
 
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape' && imageModal.classList.contains('is-open')) {
-                closeImageModal();
+    // --- Collapsible Replies Section ---
+    var repliesHeader = document.querySelector('.forum-replies-header');
+    var repliesList = document.querySelector('.forum-replies-list');
+    var emptyState = document.querySelector('.forum-empty');
+    var collapseIcon = document.querySelector('.collapse-icon');
+    
+    if (repliesHeader) {
+        repliesHeader.style.cursor = 'pointer';
+        repliesHeader.addEventListener('click', function() {
+            if (repliesList) {
+                var isHidden = repliesList.style.display === 'none';
+                repliesList.style.display = isHidden ? 'flex' : 'none';
+                if (collapseIcon) {
+                    collapseIcon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+                }
+            }
+            if (emptyState && emptyState.style.display !== 'none') {
+                var emptyHidden = emptyState.style.display === 'none';
+                emptyState.style.display = emptyHidden ? 'block' : 'none';
             }
         });
     }
@@ -161,245 +193,1167 @@ document.addEventListener('DOMContentLoaded', function () {
 {% endblock %}
 
 {% block content %}
-<main class="forum-page blogs-page forum-thread-page">
-    <section class="blogs-hero" {% if not request.user.is_authenticated %}aria-hidden="true" inert{% endif %}>
-        <div class="container blogs-hero-inner">
-            <div>
-                <a class="back-link forum-thread-back-link" href="{% url 'forum' %}">
-                    <i class="fas fa-arrow-left"></i>
-                    Back to forum
-                </a>
-                <p class="blog-eyebrow">Forum thread</p>
-                <h1 class="blogs-title">{{ thread.title }}</h1>
-                <p class="blogs-intro">Read the thread below and add your reply when you're ready.</p>
-            </div>
-            <div class="blogs-hero-card">
-                <strong>{{ replies|length }}</strong>
-                <span>replies</span>
+<main class="forum-thread-page">
+    <!-- Breadcrumb -->
+    <div class="forum-breadcrumb">
+        <div class="forum-container">
+            <a href="{% url 'forum' %}" class="forum-back-link">
+                <i class="fas fa-arrow-left"></i> 
+                <span>Back to Forum</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Thread Header -->
+    <div class="forum-thread-header" {% if not request.user.is_authenticated %}aria-hidden="true" inert{% endif %}>
+        <div class="forum-container">
+            <h1 class="forum-thread-title">{{ thread.title }}</h1>
+            <div class="forum-thread-meta">
+                <div class="forum-author">
+                    <span class="forum-author-avatar">{{ thread.author.username|first|upper }}</span>
+                    <span class="forum-author-name">{{ thread.author.username }}</span>
+                </div>
+                <span class="forum-meta-sep">•</span>
+                <span class="forum-date">{{ thread.created_at|date:"M j, Y" }}</span>
+                <span class="forum-meta-sep">•</span>
+                <span class="forum-reply-count"><i class="far fa-comment"></i> {% if replies|length == 1 %}1 reply{% else %}{{ replies|length }} replies{% endif %}</span>
             </div>
         </div>
-    </section>
+    </div>
 
-    <section class="container forum-detail-layout {% if not request.user.is_authenticated %}guest-detail-shell{% endif %}">
-        <div class="forum-feed" {% if not request.user.is_authenticated %}aria-hidden="true" inert{% endif %}>
-            <article class="forum-post-card forum-post-card--thread" id="thread">
-                <div class="forum-post-main">
-                    <div class="forum-post-meta">
+    <!-- Main Content -->
+    <div class="forum-container forum-main">
+        <!-- Original Post -->
+        <div class="forum-post" id="thread">
+            <div class="forum-post-card">
+                {% if request.user.is_authenticated %}
+                    {% if request.user == thread.author or request.user.is_staff or request.user.is_superuser %}
+                    <div class="forum-post-actions">
+                        <form method="post" action="{% url 'forum_delete_thread' thread.id %}">
+                            {% csrf_token %}
+                            <button type="button" class="forum-delete-icon" data-forum-delete-trigger data-delete-title="Delete thread?" data-delete-message="Delete this thread and all attached pictures?" data-delete-warning="This cannot be undone." data-delete-action="Delete thread">
+                                <i class="far fa-trash-alt"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                {% endif %}
+                
+                <div class="forum-post-body">
+                    <p>{{ thread.body|linebreaksbr }}</p>
+                </div>
+
+                {% with thread_images=thread.images.all %}
+                    {% if thread_images %}
+                        <div class="forum-post-images">
+                            {% for attachment in thread_images %}
+                                <a href="{{ attachment.image.url }}" class="forum-image-link" data-forum-image-trigger>
+                                    <img src="{{ attachment.image.url }}" alt="Image {{ forloop.counter }}" loading="lazy">
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="forum-post-footer">
                         {% if request.user.is_authenticated %}
-                            {% if request.user == thread.author or request.user.is_staff or request.user.is_superuser %}
-                            <form class="forum-admin-action-form" method="post" action="{% url 'forum_delete_thread' thread.id %}">
+                            <form method="post" action="{% url 'forum_toggle_thread_like' thread.id %}" class="forum-like-form">
                                 {% csrf_token %}
-                                <button type="button" class="forum-admin-delete-btn" aria-label="Delete thread" title="Delete thread" data-forum-delete-trigger data-delete-title="Delete thread?" data-delete-message="Delete this thread and all attached pictures?" data-delete-warning="This will permanently remove the discussion, replies, and images." data-delete-action="Delete thread">
-                                    <i class="fas fa-trash" aria-hidden="true"></i>
-                                    <span class="sr-only">Delete thread</span>
+                                <button type="submit" class="forum-like-button {% if thread.user_liked %}is-liked{% endif %}">
+                                    <i class="{% if thread.user_liked %}fas{% else %}far{% endif %} fa-heart"></i>
+                                    <span>{{ thread.like_count }}</span>
                                 </button>
                             </form>
-                            {% endif %}
+                        {% else %}
+                            <span class="forum-like-button disabled">
+                                <i class="far fa-heart"></i>
+                                <span>{{ thread.like_count }}</span>
+                            </span>
                         {% endif %}
                     </div>
-                    <h2>{{ thread.title }}</h2>
-                    <div class="forum-post-author">
-                        <span><i class="fas fa-circle-user"></i> {{ thread.author.username }}</span>
-                        <span>{{ thread.created_at|date:"M j, Y, g:i A" }}</span>
-                    </div>
-                    <p class="forum-post-body">{{ thread.body|linebreaksbr }}</p>
-                    {% with thread_images=thread.images.all %}
-                        <div class="forum-post-stats">
-                            <span>{% if replies|length == 1 %}1 reply{% else %}{{ replies|length }} replies{% endif %}</span>
-                            {% if thread_images %}
-                                <span>{% if thread_images|length == 1 %}1 photo{% else %}{{ thread_images|length }} photos{% endif %}</span>
-                            {% endif %}
-                        </div>
-                        <div class="forum-reaction-row forum-reaction-row--thread">
-                            {% if request.user.is_authenticated %}
-                                <form class="forum-like-form" method="post" action="{% url 'forum_toggle_thread_like' thread.id %}">
-                                    {% csrf_token %}
-                                    <button
-                                        type="submit"
-                                        class="forum-like-btn {% if thread.user_liked %}is-liked{% endif %}"
-                                        aria-pressed="{% if thread.user_liked %}true{% else %}false{% endif %}"
-                                        data-forum-thread-like-trigger
-                                    >
-                                        <i class="{% if thread.user_liked %}fas{% else %}far{% endif %} fa-heart" aria-hidden="true"></i>
-                                        <span>{% if thread.user_liked %}Unlike thread{% else %}Like thread{% endif %}</span>
-                                    </button>
-                                </form>
-                            {% endif %}
-                            <span class="forum-reaction-count">{{ thread.like_count }} like{{ thread.like_count|pluralize }}</span>
-                        </div>
-                        {% if thread_images %}
-                            <div class="forum-post-gallery">
-                                {% for attachment in thread_images %}
-                                    <a
-                                        class="forum-post-gallery-item"
-                                        href="{{ attachment.image.url }}"
-                                        data-forum-image-trigger
-                                        data-image-caption="{{ thread.title }} picture {{ forloop.counter }}"
-                                        data-image-alt="{{ thread.title }} picture {{ forloop.counter }}"
-                                        aria-label="Open {{ thread.title }} picture {{ forloop.counter }}"
-                                    >
-                                        <img src="{{ attachment.image.url }}" alt="{{ thread.title }} picture {{ forloop.counter }}" loading="lazy">
-                                    </a>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    {% endwith %}
-                </div>
-            </article>
+                {% endwith %}
+            </div>
+        </div>
 
-            <div class="forum-replies-card forum-comments-card" id="replies">
-                <div class="forum-comments-head">
-                    <h2>Replies</h2>
-                    <p>{% if replies|length == 1 %}1 reply{% else %}{{ replies|length }} replies{% endif %}</p>
-                </div>
-                {% if replies %}
-                    <div class="forum-reply-list">
-                        {% for reply in replies %}
-                            <article class="forum-reply-card forum-comment-card" id="reply-{{ reply.id }}">
-                                <div class="forum-reply-avatar">
-                                    {{ reply.author.username|first|upper }}
-                                </div>
-                                <div class="forum-comment-body">
-                                    <div class="forum-comment-head">
-                                        <div class="forum-comment-meta">
-                                            <strong>{{ reply.author.username }}</strong>
-                                            <time datetime="{{ reply.created_at|date:'c' }}">{{ reply.created_at|date:"M j, Y, g:i A" }}</time>
-                        </div>
-                        {% if request.user.is_authenticated %}
-                            {% if request.user == reply.author or request.user.is_staff or request.user.is_superuser %}
-                                <form class="forum-admin-action-form" method="post" action="{% url 'forum_delete_reply' reply.id %}">
-                                    {% csrf_token %}
-                                    <button type="button" class="forum-admin-delete-btn forum-admin-delete-btn--ghost" aria-label="Delete reply" title="Delete reply" data-forum-delete-trigger data-delete-title="Delete reply?" data-delete-message="Delete this reply?" data-delete-warning="This will permanently remove the reply from the thread." data-delete-action="Delete reply">
-                                        <i class="fas fa-trash" aria-hidden="true"></i>
-                                        <span class="sr-only">Delete reply</span>
-                                    </button>
-                                </form>
-                            {% endif %}
-                        {% endif %}
+        <!-- Reply Form -->
+        <div class="forum-reply-form">
+            <div class="forum-reply-form-header">
+                <i class="fas fa-reply"></i>
+                <h3>Post a Reply</h3>
+            </div>
+            {% if request.user.is_authenticated %}
+                <form method="post" action="{% url 'forum_reply' thread.id %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="forum-form-field">
+                        {{ reply_form.body }}
+                        {{ reply_form.body.errors }}
                     </div>
-                    <p>{{ reply.body|linebreaksbr }}</p>
-                                    {% with reply_images=reply.images.all %}
-                                        {% if reply_images %}
-                                            <div class="forum-post-gallery forum-reply-gallery">
-                                                {% for attachment in reply_images %}
-                                                    <a
-                                                        class="forum-post-gallery-item"
-                                                        href="{{ attachment.image.url }}"
-                                                        data-forum-image-trigger
-                                                        data-image-caption="{{ reply.author.username }} reply picture {{ forloop.counter }}"
-                                                        data-image-alt="{{ reply.author.username }} reply picture {{ forloop.counter }}"
-                                                        aria-label="Open {{ reply.author.username }} reply picture {{ forloop.counter }}"
-                                                    >
-                                                        <img src="{{ attachment.image.url }}" alt="{{ reply.author.username }} reply picture {{ forloop.counter }}" loading="lazy">
-                                                    </a>
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-                                    {% endwith %}
-                                    <div class="forum-reaction-row forum-reaction-row--reply">
-                                        {% if request.user.is_authenticated %}
-                                            <form class="forum-like-form" method="post" action="{% url 'forum_toggle_reply_like' reply.id %}">
+                    <div class="forum-form-field">
+                        <label class="forum-photo-label">
+                            <i class="fas fa-camera"></i> Add photos
+                            {{ reply_form.images }}
+                        </label>
+                        <div class="photo-preview"></div>
+                        {{ reply_form.images.errors }}
+                        <small class="forum-field-hint">Optional: Add up to 5 photos</small>
+                    </div>
+                    <div class="forum-form-actions">
+                        <button type="submit" class="forum-submit-btn">
+                            <i class="fas fa-paper-plane"></i> Post reply
+                        </button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="forum-login-prompt">
+                    <i class="fas fa-lock"></i>
+                    <p>Log in or sign up to join the conversation</p>
+                    <div class="forum-login-buttons">
+                        <a href="{% url 'registration' %}" class="forum-btn-outline">Sign up</a>
+                        <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="forum-btn-primary">Log in</a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Replies Section - Collapsible -->
+        <div class="forum-replies" id="replies">
+            <div class="forum-replies-header">
+                <i class="fas fa-chevron-down collapse-icon"></i>
+                <h2>Replies</h2>
+                <span class="forum-replies-badge">{{ replies|length }}</span>
+            </div>
+
+            {% if replies %}
+                <div class="forum-replies-list">
+                    {% for reply in replies %}
+                        <div class="forum-reply" id="reply-{{ reply.id }}">
+                            <div class="forum-reply-avatar">{{ reply.author.username|first|upper }}</div>
+                            <div class="forum-reply-content">
+                                <div class="forum-reply-header">
+                                    <div class="forum-reply-author">
+                                        <strong>{{ reply.author.username }}</strong>
+                                        <span class="forum-reply-time">{{ reply.created_at|date:"M j, Y g:i A" }}</span>
+                                    </div>
+                                    {% if request.user.is_authenticated %}
+                                        {% if request.user == reply.author or request.user.is_staff or request.user.is_superuser %}
+                                            <form method="post" action="{% url 'forum_delete_reply' reply.id %}">
                                                 {% csrf_token %}
-                                                <button
-                                                    type="submit"
-                                                    class="forum-like-btn {% if reply.user_liked %}is-liked{% endif %}"
-                                                    aria-pressed="{% if reply.user_liked %}true{% else %}false{% endif %}"
-                                                    data-forum-reply-like-trigger
-                                                >
-                                                    <i class="{% if reply.user_liked %}fas{% else %}far{% endif %} fa-heart" aria-hidden="true"></i>
-                                                    <span>{% if reply.user_liked %}Unlike reply{% else %}Like reply{% endif %}</span>
+                                                <button type="button" class="forum-reply-delete" data-forum-delete-trigger data-delete-title="Delete reply?" data-delete-message="Delete this reply?" data-delete-warning="This cannot be undone." data-delete-action="Delete reply">
+                                                    <i class="far fa-trash-alt"></i>
                                                 </button>
                                             </form>
                                         {% endif %}
-                                        <span class="forum-reaction-count">{{ reply.like_count }} like{{ reply.like_count|pluralize }}</span>
-                                    </div>
+                                    {% endif %}
                                 </div>
-                            </article>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="empty-state forum-empty-state">
-                        <i class="fas fa-comment-dots"></i>
-                        <h3>No replies yet</h3>
-                        <p>Be the first to reply and keep this thread moving.</p>
-                    </div>
-                {% endif %}
-            </div>
-
-            <div class="forum-reply-form-card">
-                <h2>Join the conversation</h2>
-                {% if request.user.is_authenticated %}
-                    <form method="post" action="{% url 'forum_reply' thread.id %}" class="forum-composer-form" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <div class="forum-field">
-                            <label for="{{ reply_form.body.id_for_label }}">Your reply</label>
-                            {{ reply_form.body }}
-                            {{ reply_form.body.errors }}
+                                <div class="forum-reply-text">
+                                    <p>{{ reply.body|linebreaksbr }}</p>
+                                </div>
+                                {% with reply_images=reply.images.all %}
+                                    {% if reply_images %}
+                                        <div class="forum-reply-images">
+                                            {% for attachment in reply_images %}
+                                                <a href="{{ attachment.image.url }}" class="forum-image-link" data-forum-image-trigger>
+                                                    <img src="{{ attachment.image.url }}" alt="Reply image" loading="lazy">
+                                                </a>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+                                <div class="forum-reply-footer">
+                                    {% if request.user.is_authenticated %}
+                                        <form method="post" action="{% url 'forum_toggle_reply_like' reply.id %}" class="forum-like-form">
+                                            {% csrf_token %}
+                                            <button type="submit" class="forum-like-button-small {% if reply.user_liked %}is-liked{% endif %}">
+                                                <i class="{% if reply.user_liked %}fas{% else %}far{% endif %} fa-heart"></i>
+                                                <span>{{ reply.like_count }}</span>
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="forum-like-button-small disabled">
+                                            <i class="far fa-heart"></i>
+                                            <span>{{ reply.like_count }}</span>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
-                        <div class="forum-field">
-                            <label for="{{ reply_form.images.id_for_label }}">Pictures</label>
-                            {{ reply_form.images }}
-                            {{ reply_form.images.errors }}
-                            <p class="forum-help">Upload one or more pictures to support your reply.</p>
-                        </div>
-                        <button type="submit" class="btn-soft">Post reply</button>
-                    </form>
-                {% else %}
-                    <div class="forum-login-card">
-                        <p>Log in to join the discussion and add your perspective.</p>
-                        <p class="forum-help">Use the access card to create an account or sign in.</p>
-                    </div>
-                {% endif %}
-            </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="forum-empty">
+                    <i class="far fa-comment-dots"></i>
+                    <p>No replies yet</p>
+                    <span>Be the first to respond</span>
+                </div>
+            {% endif %}
         </div>
+    </div>
 
-        {% if not request.user.is_authenticated %}
-            <div class="guest-access-card forum-guest-access-card" role="dialog" aria-labelledby="guest-forum-thread-access-title">
-                <div class="guest-access-icon"><i class="fas fa-lock"></i></div>
-                <h2 id="guest-forum-thread-access-title">Want to read the full discussion?</h2>
-                <p>Create a free account or log in to read threads, join replies, and share your own perspective.</p>
-                <div class="guest-access-actions">
-                    <a href="{% url 'registration' %}" class="profile-primary-btn">Create Account</a>
-                    <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="profile-cancel-btn">Log In</a>
+    <!-- Guest Prompt -->
+    {% if not request.user.is_authenticated %}
+        <div class="forum-guest-bar">
+            <div class="forum-container">
+                <div class="forum-guest-card">
+                    <i class="fas fa-comments"></i>
+                    <div>
+                        <strong>Join the discussion</strong>
+                        <p>Create an account to read and reply to threads</p>
+                    </div>
+                    <div class="forum-guest-actions">
+                        <a href="{% url 'registration' %}" class="forum-guest-btn-primary">Sign up</a>
+                        <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="forum-guest-btn-outline">Log in</a>
+                    </div>
                 </div>
             </div>
-        {% endif %}
-    </section>
-
+        </div>
+    {% endif %}
 </main>
 
+<!-- Modals -->
 {% if request.user.is_authenticated %}
-    <div class="forum-confirm-modal" id="forumDeleteModal" aria-hidden="true">
-        <div class="forum-confirm-modal-backdrop" data-forum-delete-close></div>
-        <div class="forum-confirm-modal-shell" role="dialog" aria-modal="true" aria-labelledby="forumDeleteModalTitle">
-            <div class="forum-confirm-modal-content">
-                <div class="forum-confirm-modal-header">
-                    <div>
-                        <p class="forum-confirm-modal-eyebrow">Confirm delete</p>
-                        <h2 class="forum-confirm-modal-title" id="forumDeleteModalTitle" data-forum-delete-title>Delete item?</h2>
-                    </div>
-                    <button type="button" class="forum-confirm-modal-close" data-forum-delete-close aria-label="Close delete confirmation">
-                        <i class="fas fa-xmark"></i>
-                    </button>
-                </div>
-                <div class="forum-confirm-modal-body">
-                    <p class="forum-confirm-modal-message" data-forum-delete-message>Are you sure you want to delete this item?</p>
-                    <p class="forum-confirm-modal-warning" data-forum-delete-warning>This cannot be undone.</p>
-                    <div class="forum-confirm-modal-actions">
-                        <button type="button" class="btn-soft forum-confirm-cancel" data-forum-delete-close>Cancel</button>
-                        <button type="button" class="btn-soft forum-confirm-delete" data-forum-delete-confirm>
-                            <span data-forum-delete-action>Delete</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+<div class="forum-modal" id="forumDeleteModal" aria-hidden="true">
+    <div class="forum-modal-backdrop" data-forum-delete-close></div>
+    <div class="forum-modal-dialog">
+        <div class="forum-modal-header">
+            <h3 data-forum-delete-title>Delete item?</h3>
+            <button class="forum-modal-close" data-forum-delete-close><i class="fas fa-times"></i></button>
+        </div>
+        <div class="forum-modal-body">
+            <p data-forum-delete-message>Are you sure you want to delete this item?</p>
+            <p class="forum-modal-warning" data-forum-delete-warning>This cannot be undone.</p>
+        </div>
+        <div class="forum-modal-footer">
+            <button class="forum-modal-cancel" data-forum-delete-close>Cancel</button>
+            <button class="forum-modal-delete" data-forum-delete-confirm>
+                <span data-forum-delete-action>Delete</span>
+            </button>
         </div>
     </div>
+</div>
+
+<div class="forum-image-modal" id="forumImageModal" aria-hidden="true">
+    <div class="forum-image-modal-backdrop"></div>
+    <img src="" alt="" class="forum-image-modal-img" data-forum-image-preview>
+    <button class="forum-image-modal-close" onclick="this.closest('.forum-image-modal').classList.remove('is-open')"><i class="fas fa-times"></i></button>
+</div>
 {% endif %}
 
-{% if request.user.is_authenticated %}
-    <div class="forum-image-modal" id="forumImageModal" aria-hidden="true" role="dialog" aria-label="Image preview">
-        <img src="" alt="" class="forum-image-modal-preview" data-forum-image-preview>
-    </div>
-{% endif %}
+<style>
+/* Forum Container - centers content */
+.forum-container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Breadcrumb */
+.forum-breadcrumb {
+    background: #0b2b3b;
+    padding: 16px 0;
+    border-bottom: 1px solid #1a4a5f;
+}
+
+.forum-back-link {
+    color: #ffdd99;
+    text-decoration: none;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.forum-back-link:hover {
+    color: #ffb347;
+    transform: translateX(-4px);
+}
+
+/* Thread Header */
+.forum-thread-header {
+    background: #0b2b3b;
+    padding: 40px 0 48px 0;
+    border-bottom: 1px solid #1a4a5f;
+}
+
+/* Title */
+.forum-thread-title {
+    font-size: 42px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 32px 0;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    text-align: left;
+}
+
+/* Meta row - FIXED: matching your HTML class */
+.thread-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0;
+}
+
+/* Author badge */
+.forum-author {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.08);
+    padding: 6px 14px 6px 8px;
+    border-radius: 40px;
+}
+
+.forum-author-avatar {
+    width: 28px;
+    height: 28px;
+    background: #ffb347;
+    color: #0b2b3b;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.forum-author-name {
+    font-weight: 600;
+    color: #ffdd99;
+    font-size: 14px;
+}
+
+/* Date */
+.forum-date {
+    color: #7a9cbb;
+    font-size: 14px;
+    margin-left: 32px;
+}
+
+/* Reply count */
+.thread-stat-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #7a9cbb;
+    font-size: 14px;
+    margin-left: 32px;
+}
+
+.thread-stat-item i {
+    font-size: 14px;
+    color: #ffb347;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .forum-thread-header {
+        padding: 28px 0 32px 0;
+    }
+    
+    .forum-thread-title {
+        font-size: 28px;
+        margin-bottom: 24px;
+    }
+    
+    .forum-date {
+        margin-left: 20px;
+    }
+    
+    .thread-stat-item {
+        margin-left: 20px;
+    }
+    
+    .forum-container {
+        padding: 0 16px;
+    }
+}
+
+/* Main Content */
+.forum-main {
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+/* Post Card */
+.forum-post-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 2px 8px rgba(11,43,59,0.06);
+    position: relative;
+    border: 1px solid #ffdd99;
+}
+
+.forum-post-actions {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+}
+
+.forum-delete-icon {
+    background: none;
+    border: none;
+    color: #cbd5e1;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.forum-delete-icon:hover {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+.forum-post-body {
+    font-size: 16px;
+    line-height: 1.7;
+    color: #1a1a1a;
+    margin-bottom: 24px;
+}
+
+.forum-post-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.forum-image-link {
+    width: 100px;
+    height: 100px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f8fafc;
+    flex-shrink: 0;
+    border: 2px solid #ffdd99;
+    transition: all 0.2s;
+}
+
+.forum-image-link:hover {
+    transform: scale(1.03);
+    border-color: #ffb347;
+    box-shadow: 0 4px 12px rgba(255,179,71,0.2);
+}
+
+.forum-image-link img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.forum-post-footer {
+    padding-top: 16px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.forum-like-button {
+    background: none;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 40px;
+    cursor: pointer;
+    color: #64748b;
+    font-size: 14px;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.forum-like-button:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.forum-like-button.is-liked {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+/* Reply Form */
+.forum-reply-form {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 2px 8px rgba(11,43,59,0.06);
+    border: 1px solid #ffdd99;
+    border-top: 4px solid #ffb347;
+}
+
+.forum-reply-form-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.forum-reply-form-header i {
+    font-size: 22px;
+    color: #ffb347;
+}
+
+.forum-reply-form-header h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    color: #0b2b3b;
+}
+
+.forum-form-field {
+    margin-bottom: 24px;
+}
+
+.forum-form-field textarea {
+    width: 100%;
+    padding: 16px;
+    border: 2px solid #ffdd99;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 15px;
+    resize: vertical;
+    transition: all 0.2s;
+    background: #ffffff;
+}
+
+.forum-form-field textarea:focus {
+    outline: none;
+    border-color: #ffb347;
+    box-shadow: 0 0 0 3px rgba(255,179,71,0.15);
+    background: #ffffff;
+}
+
+.forum-photo-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #f8fafc;
+    padding: 10px 20px;
+    border-radius: 40px;
+    font-size: 14px;
+    color: #0b2b3b;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: fit-content;
+    font-weight: 500;
+    border: 2px solid #ffdd99;
+}
+
+.forum-photo-label:hover {
+    background: #ffdd99;
+    border-color: #ffb347;
+}
+
+.forum-photo-label input {
+    display: none;
+}
+
+.photo-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.photo-preview img {
+    width: 70px;
+    height: 70px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 2px solid #ffb347;
+}
+
+.forum-field-hint {
+    display: block;
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 8px;
+}
+
+.forum-form-actions {
+    margin-top: 8px;
+}
+
+.forum-submit-btn {
+    background: #ffb347;
+    color: #0b2b3b;
+    border: none;
+    padding: 14px 36px;
+    border-radius: 40px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.forum-submit-btn:hover {
+    background: #ffa01e;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255,179,71,0.3);
+}
+
+/* Replies Section */
+.forum-replies {
+    background: #ffffff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(11,43,59,0.06);
+    border: 1px solid #ffdd99;
+}
+
+.forum-replies-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 28px;
+    background: #fafbfc;
+    border-bottom: 1px solid #ffdd99;
+    transition: background 0.2s;
+}
+
+.forum-replies-header:hover {
+    background: #f5f6f8;
+}
+
+.forum-replies-header i {
+    color: #0b2b3b;
+    font-size: 14px;
+    transition: transform 0.2s;
+}
+
+.forum-replies-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    color: #0b2b3b;
+}
+
+.forum-replies-badge {
+    background: #ffb347;
+    color: #0b2b3b;
+    padding: 3px 12px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 700;
+    margin-left: auto;
+}
+
+.forum-replies-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.forum-reply {
+    display: flex;
+    gap: 18px;
+    padding: 24px 28px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.2s;
+}
+
+.forum-reply:hover {
+    background: #fafbfc;
+}
+
+.forum-reply:last-child {
+    border-bottom: none;
+}
+
+.forum-reply-avatar {
+    width: 48px;
+    height: 48px;
+    background: #e8edf2;
+    color: #0b2b3b;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.forum-reply-content {
+    flex: 1;
+}
+
+.forum-reply-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.forum-reply-author {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.forum-reply-author strong {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0b2b3b;
+}
+
+.forum-reply-time {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.forum-reply-delete {
+    background: none;
+    border: none;
+    color: #cbd5e1;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.forum-reply-delete:hover {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+.forum-reply-text {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #334155;
+    margin-bottom: 14px;
+}
+
+.forum-reply-text p {
+    margin: 0;
+}
+
+.forum-reply-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 14px 0;
+}
+
+.forum-reply-images .forum-image-link {
+    width: 70px;
+    height: 70px;
+    border: none;
+}
+
+.forum-reply-images .forum-image-link:hover {
+    border: none;
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.forum-reply-footer {
+    margin-top: 10px;
+}
+
+.forum-like-button-small {
+    background: none;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 30px;
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 12px;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.forum-like-button-small:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.forum-like-button-small.is-liked {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+/* Empty State */
+.forum-empty {
+    text-align: center;
+    padding: 60px 28px;
+    color: #64748b;
+}
+
+.forum-empty i {
+    font-size: 56px;
+    margin-bottom: 16px;
+    color: #cbd5e1;
+}
+
+.forum-empty p {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #0b2b3b;
+}
+
+.forum-empty span {
+    font-size: 14px;
+    color: #64748b;
+}
+
+/* Login Prompt */
+.forum-login-prompt {
+    text-align: center;
+    padding: 40px 24px;
+    background: #f8fafc;
+    border-radius: 16px;
+    border: 1px solid #ffdd99;
+}
+
+.forum-login-prompt i {
+    font-size: 48px;
+    color: #ffb347;
+    margin-bottom: 20px;
+}
+
+.forum-login-prompt p {
+    margin: 0 0 24px;
+    color: #0b2b3b;
+    font-weight: 500;
+}
+
+.forum-login-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.forum-btn-outline {
+    background: white;
+    color: #ffb347;
+    border: 2px solid #ffdd99;
+    padding: 10px 28px;
+    border-radius: 40px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.forum-btn-outline:hover {
+    border-color: #ffb347;
+    background: #fef7e8;
+}
+
+.forum-btn-primary {
+    background: #ffb347;
+    color: #0b2b3b;
+    padding: 10px 28px;
+    border-radius: 40px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.forum-btn-primary:hover {
+    background: #ffa01e;
+}
+
+/* Guest Bar */
+.forum-guest-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(11,43,59,0.95) 0%, rgba(11,43,59,0) 100%);
+    padding: 40px 0 20px;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.forum-guest-card {
+    max-width: 860px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 60px;
+    padding: 16px 28px 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    pointer-events: auto;
+    box-shadow: 0 8px 25px rgba(11,43,59,0.15);
+    border: 2px solid #ffdd99;
+}
+
+.forum-guest-card i {
+    font-size: 32px;
+    color: #ffb347;
+}
+
+.forum-guest-card strong {
+    font-size: 18px;
+    color: #0b2b3b;
+}
+
+.forum-guest-card p {
+    margin: 0;
+    font-size: 14px;
+    color: #475569;
+}
+
+.forum-guest-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.forum-guest-btn-primary {
+    background: #ffb347;
+    color: #0b2b3b;
+    padding: 8px 24px;
+    border-radius: 40px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    transition: background 0.2s;
+}
+
+.forum-guest-btn-primary:hover {
+    background: #ffa01e;
+}
+
+.forum-guest-btn-outline {
+    background: transparent;
+    color: #ffb347;
+    border: 2px solid #ffdd99;
+    padding: 8px 24px;
+    border-radius: 40px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.forum-guest-btn-outline:hover {
+    border-color: #ffb347;
+    background: #fef7e8;
+}
+
+/* Modals */
+.forum-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+.forum-modal.is-open {
+    visibility: visible;
+    opacity: 1;
+}
+
+.forum-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(11,43,59,0.6);
+}
+
+.forum-modal-dialog {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 400px;
+    background: #ffffff;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 20px 35px rgba(11,43,59,0.2);
+}
+
+.forum-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 28px;
+    border-bottom: 2px solid #ffdd99;
+}
+
+.forum-modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: #0b2b3b;
+}
+
+.forum-modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #94a3b8;
+    padding: 4px;
+}
+
+.forum-modal-body {
+    padding: 28px;
+}
+
+.forum-modal-body p {
+    font-size: 16px;
+    color: #1a1a1a;
+}
+
+.forum-modal-warning {
+    color: #dc2626;
+    font-size: 14px;
+    margin-top: 12px;
+    font-weight: 600;
+}
+
+.forum-modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 20px 28px 28px;
+}
+
+.forum-modal-cancel {
+    background: #f1f5f9;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 40px;
+    cursor: pointer;
+    color: #0b2b3b;
+    font-weight: 600;
+}
+
+.forum-modal-delete {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 40px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* Image Modal */
+.forum-image-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(11,43,59,0.95);
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+.forum-image-modal.is-open {
+    visibility: visible;
+    opacity: 1;
+}
+
+.forum-image-modal-img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+}
+
+.forum-image-modal-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    font-size: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.forum-image-modal-close:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.forum-modal-open {
+    overflow: hidden;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .forum-container {
+        padding: 0 16px;
+    }
+    
+    .forum-thread-header {
+        padding: 28px 0 32px 0;
+    }
+    
+    .forum-thread-title {
+        font-size: 26px;
+        margin-bottom: 24px;
+    }
+
+    .forum-post-card {
+        padding: 20px;
+    }
+
+    .forum-reply-form {
+        padding: 20px;
+    }
+
+    .forum-reply {
+        padding: 18px;
+        gap: 12px;
+    }
+
+    .forum-reply-avatar {
+        width: 38px;
+        height: 38px;
+        font-size: 15px;
+    }
+
+    .forum-image-link {
+        width: 75px;
+        height: 75px;
+    }
+
+    .forum-guest-card {
+        border-radius: 20px;
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+        margin: 0 16px;
+    }
+}
+
+.forum-reply-count {
+    color: #ffdd99 !important;
+}
+
+.forum-reply-count i {
+    color: #ffb347 !important;
+}
+</style>
 {% endblock %}
