@@ -83,11 +83,16 @@
                   <span>Add Journal</span>
                 </a>
 
+                <a href="{% url 'add_topic' %}"
+                  class="{% if current_name == 'add_topic' %}active{% endif %}">
+                  <i class="fas fa-tags"></i>
+                  <span>Add Topic</span>
+                </a>
+
                 <a href="{% url 'add_image' %}"
                   class="{% if current_name == 'add_image' %}active{% endif %}">
                   <i class="fas fa-image"></i>
                   <span>Add Image</span>
-                  
                 </a>
 
                 <a href="{% url 'add_video' %}"

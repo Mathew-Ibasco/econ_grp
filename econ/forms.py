@@ -22,9 +22,9 @@ class ForumThreadCreateForm(forms.Form):
     tags = forms.ModelMultipleChoiceField(
         queryset=Topic.objects.none(),
         required=True,
-        label="Tags",
+        label="Topics",
         widget=forms.CheckboxSelectMultiple(),
-        help_text="Select one or more tags that fit this thread.",
+        help_text="Select one or more topics that fit this thread.",
     )
     title = forms.CharField(
         max_length=220,
