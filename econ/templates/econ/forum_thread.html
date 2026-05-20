@@ -218,6 +218,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <span class="forum-meta-sep">•</span>
                 <span class="forum-reply-count"><i class="far fa-comment"></i> {% if replies|length == 1 %}1 reply{% else %}{{ replies|length }} replies{% endif %}</span>
             </div>
+           
         </div>
     </div>
 
@@ -226,6 +227,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <!-- Original Post -->
         <div class="forum-post" id="thread">
             <div class="forum-post-card">
+                <!-- Delete button - TOP RIGHT CORNER -->
                 {% if request.user.is_authenticated %}
                     {% if request.user == thread.author or request.user.is_staff or request.user.is_superuser %}
                     <div class="forum-post-actions">
@@ -238,6 +240,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     {% endif %}
                 {% endif %}
+                
+                <!-- Tags inside post -->
+                <div class="forum-thread-tags">
+                    {% for topic in thread.all_topics %}
+                        <a href="{% url 'forum' %}?topic={{ topic.key }}" class="forum-thread-topic">
+                            <i class="fas {{ topic.icon }}"></i>
+                            {{ topic.title }}
+                        </a>
+                    {% endfor %}
+                </div>
                 
                 <div class="forum-post-body">
                     <p>{{ thread.body|linebreaksbr }}</p>
@@ -486,13 +498,39 @@ document.addEventListener('DOMContentLoaded', function () {
     text-align: left;
 }
 
-/* Meta row - FIXED: matching your HTML class */
-.thread-meta-row {
+/* Meta row */
+.forum-thread-meta {
     display: flex;
     align-items: center;
     justify-content: flex-start;
     flex-wrap: wrap;
-    gap: 0;
+    margin-bottom: 16px;
+}
+
+/* Tags in header */
+.forum-thread-tags--hero {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.forum-thread-topic {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.1);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #ffdd99;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.forum-thread-topic:hover {
+    background: rgba(255,255,255,0.2);
+    color: #ffb347;
 }
 
 /* Author badge */
@@ -524,50 +562,31 @@ document.addEventListener('DOMContentLoaded', function () {
     font-size: 14px;
 }
 
+/* Separator */
+.forum-meta-sep {
+    color: #4a6a7a;
+    font-size: 14px;
+    margin: 0 15px;
+}
+
 /* Date */
 .forum-date {
     color: #7a9cbb;
     font-size: 14px;
-    margin-left: 32px;
 }
 
 /* Reply count */
-.thread-stat-item {
+.forum-reply-count {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: #7a9cbb;
+    color: #ffdd99;
     font-size: 14px;
-    margin-left: 32px;
 }
 
-.thread-stat-item i {
+.forum-reply-count i {
     font-size: 14px;
     color: #ffb347;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .forum-thread-header {
-        padding: 28px 0 32px 0;
-    }
-    
-    .forum-thread-title {
-        font-size: 28px;
-        margin-bottom: 24px;
-    }
-    
-    .forum-date {
-        margin-left: 20px;
-    }
-    
-    .thread-stat-item {
-        margin-left: 20px;
-    }
-    
-    .forum-container {
-        padding: 0 16px;
-    }
 }
 
 /* Main Content */
@@ -588,10 +607,12 @@ document.addEventListener('DOMContentLoaded', function () {
     border: 1px solid #ffdd99;
 }
 
+/* Delete button - TOP RIGHT CORNER */
 .forum-post-actions {
     position: absolute;
-    top: 24px;
-    right: 24px;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
 }
 
 .forum-delete-icon {
@@ -607,6 +628,38 @@ document.addEventListener('DOMContentLoaded', function () {
 .forum-delete-icon:hover {
     color: #dc2626;
     background: #fee2e2;
+}
+
+/* Tags inside post */
+.forum-post-card .forum-thread-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.forum-post-card .forum-thread-topic {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fef7e8;
+    border: 1px solid #ffdd99;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #0b2b3b;
+    text-decoration: none;
+}
+
+.forum-post-card .forum-thread-topic i {
+    font-size: 10px;
+    color: #ffb347;
+}
+
+.forum-post-card .forum-thread-topic:hover {
+    background: #ffdd99;
+    border-color: #ffb347;
 }
 
 .forum-post-body {
@@ -1314,6 +1367,10 @@ document.addEventListener('DOMContentLoaded', function () {
         font-size: 26px;
         margin-bottom: 24px;
     }
+    
+    .forum-meta-sep {
+        margin: 0 8px;
+    }
 
     .forum-post-card {
         padding: 20px;
@@ -1347,14 +1404,5 @@ document.addEventListener('DOMContentLoaded', function () {
         margin: 0 16px;
     }
 }
-
-.forum-reply-count {
-    color: #ffdd99 !important;
-}
-
-.forum-reply-count i {
-    color: #ffb347 !important;
-}
-
 </style>
 {% endblock %}
