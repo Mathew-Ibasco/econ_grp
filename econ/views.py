@@ -2511,12 +2511,46 @@ def _validate_topic_selections(post_data, errors, create=True):
 
     return selected_topics
 
+
+def _topic_admin_context(extra=None):
+    default_icon = TOPIC_ICON_OPTIONS[0]["value"]
+    context = {
+        "date": datetime.now(),
+        "icon_options": TOPIC_ICON_OPTIONS,
+        "topics": list(Topic.objects.order_by("order", "title")),
+        "values": {
+            "icon": default_icon,
+        },
+    }
+    if extra:
+        context.update(extra)
+    return context
+
+
+def _topic_original_values(topic):
+    return {
+        "title": topic.title,
+        "summary": topic.summary,
+        "icon": topic.icon,
+        "source_url": topic.source_url,
+        "order": str(topic.order),
+    }
+
+
+def _topic_has_content_links(topic):
+    return (
+        topic.blog_posts.exists()
+        or topic.journal_entries.exists()
+        or topic.media_entries.exists()
+        or topic.vlog_entries.exists()
+    )
+
+
 @login_required
 @user_passes_test(superuser_required)
 def add_topic(request):
     default_icon = TOPIC_ICON_OPTIONS[0]["value"]
     allowed_icons = {option["value"] for option in TOPIC_ICON_OPTIONS}
-    topics = list(Topic.objects.order_by("order", "title"))
 
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
@@ -2556,13 +2590,10 @@ def add_topic(request):
             return render(
                 request,
                 "econ/add_topic.html",
-                {
-                    "date": datetime.now(),
+                _topic_admin_context({
                     "errors": errors,
                     "values": values,
-                    "icon_options": TOPIC_ICON_OPTIONS,
-                    "topics": topics,
-                },
+                }),
                 status=400
             )
 
@@ -2593,15 +2624,105 @@ def add_topic(request):
     return render(
         request,
         "econ/add_topic.html",
-        {
-            "date": datetime.now(),
-            "icon_options": TOPIC_ICON_OPTIONS,
-            "topics": topics,
-            "values": {
-                "icon": default_icon,
-            },
-        }
+        _topic_admin_context()
     )
+
+
+@login_required
+@user_passes_test(superuser_required)
+def edit_topic(request, topic_id):
+    topic = get_object_or_404(Topic, pk=topic_id)
+    allowed_icons = {option["value"] for option in TOPIC_ICON_OPTIONS}
+
+    if request.method != "POST":
+        return redirect("add_topic")
+
+    original_values = _topic_original_values(topic)
+    values = {
+        "title": request.POST.get("title", "").strip(),
+        "summary": request.POST.get("summary", "").strip(),
+        "icon": request.POST.get("icon", "").strip(),
+        "source_url": request.POST.get("source_url", "").strip(),
+        "order": request.POST.get("order", "").strip(),
+    }
+    errors = {}
+
+    _validate_edit_text(values["title"], original_values, "title", "Title", errors)
+    if values["title"] and Topic.objects.exclude(pk=topic.pk).filter(title__iexact=values["title"]).exists():
+        errors["title"] = "A topic with this title already exists."
+
+    _validate_edit_text(values["summary"], original_values, "summary", "Summary", errors)
+
+    if original_values["icon"] and not values["icon"]:
+        errors["icon"] = "Icon cannot be left blank."
+    elif values["icon"] not in allowed_icons:
+        errors["icon"] = "Choose an icon from the available options."
+
+    _validate_edit_url(values["source_url"], original_values, "source_url", "source", errors)
+
+    if original_values["order"] and not values["order"]:
+        errors["order"] = "Order cannot be left blank."
+    elif values["order"] and not values["order"].isdigit():
+        errors["order"] = "Order must be a whole number."
+
+    changed = any(values[field] != str(original_values[field] or "").strip() for field in values)
+    if not changed and not errors:
+        errors["non_field"] = "Make at least one change before saving."
+
+    key = slugify(values["title"])
+    if values["title"] and not key:
+        errors["title"] = "Title must include letters or numbers so a topic key can be created."
+
+    if errors:
+        return render(
+            request,
+            "econ/add_topic.html",
+            _topic_admin_context({
+                "topic_edit_open": True,
+                "topic_edit_item_id": topic.id,
+                "topic_edit_errors": errors,
+                "topic_edit_values": values,
+            }),
+            status=400,
+        )
+
+    original_key = key
+    counter = 1
+    while Topic.objects.exclude(pk=topic.pk).filter(key=key).exists():
+        key = f"{original_key}-{counter}"
+        counter += 1
+
+    topic.title = values["title"]
+    topic.key = key
+    topic.summary = values["summary"]
+    topic.icon = values["icon"]
+    topic.source_url = values["source_url"]
+    topic.order = int(values["order"])
+    topic.save(update_fields=["title", "key", "summary", "icon", "source_url", "order"])
+
+    messages.success(request, f"Topic '{topic.title}' updated successfully.")
+    return redirect("add_topic")
+
+
+@login_required
+@user_passes_test(superuser_required)
+def delete_topic(request, topic_id):
+    topic = get_object_or_404(Topic, pk=topic_id)
+
+    if request.method != "POST":
+        return redirect("add_topic")
+
+    title = topic.title
+    if _topic_has_content_links(topic):
+        messages.error(
+            request,
+            f"Topic '{title}' cannot be deleted because it is linked to existing blog, journal, media, or gallery content.",
+        )
+        return redirect("add_topic")
+
+    topic.delete()
+    messages.success(request, f"Topic '{title}' deleted successfully.")
+    return redirect("add_topic")
 
 
 @login_required

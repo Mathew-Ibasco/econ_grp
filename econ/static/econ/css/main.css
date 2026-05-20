@@ -4291,6 +4291,10 @@ hr {
     gap: 0.38rem;
 }
 
+.content-edit-field-wide {
+    grid-column: 1 / -1;
+}
+
 .content-edit-field label {
     margin: 0;
     color: #0b2b3b;
@@ -4901,6 +4905,35 @@ hr {
     list-style: none;
 }
 
+.admin-topic-list-scroll {
+    max-height: 648px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.45rem;
+    scrollbar-color: #1c6e8f #e9f3f8;
+    scrollbar-width: thin;
+}
+
+.admin-topic-list-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+
+.admin-topic-list-scroll::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: #e9f3f8;
+    box-shadow: inset 0 0 0 1px #dce9f1;
+}
+
+.admin-topic-list-scroll::-webkit-scrollbar-thumb {
+    border: 2px solid #e9f3f8;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #1c6e8f 0%, #0b2b3b 100%);
+}
+
+.admin-topic-list-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ffb347 0%, #1c6e8f 100%);
+}
+
 .admin-topic-list-item {
     display: grid;
     grid-template-columns: 48px minmax(0, 1fr);
@@ -4968,6 +5001,53 @@ hr {
     color: #5f7386;
     font-size: 0.82rem;
     font-weight: 700;
+}
+
+.admin-topic-list-actions,
+.admin-topic-delete-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.admin-topic-delete-form {
+    margin: 0;
+}
+
+.admin-topic-icon-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #cbdde9;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #1c6e8f;
+    cursor: pointer;
+    font-size: 0.82rem;
+    line-height: 1;
+    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-topic-icon-btn:hover,
+.admin-topic-icon-btn:focus-visible {
+    transform: translateY(-1px);
+    border-color: #ffb347;
+    background: #fff3e6;
+    color: #0b2b3b;
+    box-shadow: 0 8px 18px rgba(11, 43, 59, 0.08);
+    outline: 0;
+}
+
+.admin-topic-delete-btn {
+    color: #b91c1c;
+}
+
+.admin-topic-delete-btn:hover,
+.admin-topic-delete-btn:focus-visible {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
 }
 
 .admin-topic-list-meta a {

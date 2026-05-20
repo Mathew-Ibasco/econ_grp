@@ -84,7 +84,7 @@ Add Topic
             </div>
 
             {% if topics %}
-                <ul class="admin-topic-list">
+                <ul class="admin-topic-list{% if topics|length > 6 %} admin-topic-list-scroll{% endif %}">
                     {% for topic in topics %}
                         <li class="admin-topic-list-item">
                             <div class="admin-topic-list-icon" aria-hidden="true">
@@ -96,7 +96,34 @@ Add Topic
                                     <span class="admin-topic-list-key">#{{ topic.key }}</span>
                                 </div>
                                 <div class="admin-topic-list-meta">
-                                    <span>Order {{ topic.order }}</span>
+                                    <div class="admin-topic-list-actions">
+                                        <span>Order {{ topic.order }}</span>
+                                        <button
+                                            type="button"
+                                            class="admin-topic-icon-btn admin-topic-edit-btn"
+                                            data-content-edit-target="topicEditModal{{ topic.id }}"
+                                            aria-label="Edit {{ topic.title }}"
+                                            title="Edit topic"
+                                        >
+                                            <i class="fas fa-pen"></i>
+                                        </button>
+                                        <form method="POST" action="{% url 'delete_topic' topic.id %}" class="admin-topic-delete-form">
+                                            {% csrf_token %}
+                                            <button
+                                                type="button"
+                                                class="admin-topic-icon-btn admin-topic-delete-btn"
+                                                data-content-delete-trigger
+                                                data-delete-title="Delete {{ topic.title }}?"
+                                                data-delete-message="Are you sure you want to delete this topic?"
+                                                data-delete-warning="This topic can only be deleted if no blog, journal, media, or gallery content is linked to it."
+                                                data-delete-action="Delete topic"
+                                                aria-label="Delete {{ topic.title }}"
+                                                title="Delete topic"
+                                            >
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 {% if topic.source_url %}
                                         <a href="{{ topic.source_url }}" class="text-link" target="_blank" rel="noopener">View source</a>
                                 {% else %}
@@ -104,6 +131,113 @@ Add Topic
                                 {% endif %}
                                 </div>
                             </div>
+                        <div
+                            class="content-edit-modal {% if topic_edit_open and topic_edit_item_id == topic.id %}is-open{% endif %}"
+                            id="topicEditModal{{ topic.id }}"
+                            aria-hidden="{% if topic_edit_open and topic_edit_item_id == topic.id %}false{% else %}true{% endif %}"
+                        >
+                            <div class="content-edit-modal-backdrop" data-content-edit-close></div>
+                            <div class="content-edit-modal-shell" role="dialog" aria-modal="true" aria-labelledby="topicEditModalTitle{{ topic.id }}">
+                                <div class="content-edit-modal-content">
+                                    <div class="content-edit-modal-header">
+                                        <div>
+                                            <p class="content-edit-modal-eyebrow">Admin edit</p>
+                                            <h2 id="topicEditModalTitle{{ topic.id }}">Edit {{ topic.title }}</h2>
+                                        </div>
+                                        <button type="button" class="content-edit-modal-close" data-content-edit-close aria-label="Close edit modal">
+                                            <i class="fas fa-xmark"></i>
+                                        </button>
+                                    </div>
+
+                                    <form method="POST" action="{% url 'edit_topic' topic.id %}" class="content-edit-form">
+                                        {% csrf_token %}
+                                        {% if topic_edit_open and topic_edit_item_id == topic.id and topic_edit_errors.non_field %}
+                                            <div class="text-danger field-error" role="alert">{{ topic_edit_errors.non_field }}</div>
+                                        {% endif %}
+                                        <div class="content-edit-grid">
+                                            <div class="content-edit-field">
+                                                <label for="topic-title-{{ topic.id }}">Title</label>
+                                                <input
+                                                    type="text"
+                                                    id="topic-title-{{ topic.id }}"
+                                                    name="title"
+                                                    value="{% if topic_edit_open and topic_edit_item_id == topic.id %}{{ topic_edit_values.title }}{% else %}{{ topic.title }}{% endif %}"
+                                                >
+                                                {% if topic_edit_open and topic_edit_item_id == topic.id and topic_edit_errors.title %}
+                                                    <div class="text-danger field-error" role="alert">{{ topic_edit_errors.title }}</div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="content-edit-field">
+                                                <label for="topic-key-{{ topic.id }}">Topic key</label>
+                                                <input type="text" id="topic-key-{{ topic.id }}" value="#{{ topic.key }}" disabled>
+                                            </div>
+
+                                            <div class="content-edit-field">
+                                                <label for="topic-icon-{{ topic.id }}">Icon</label>
+                                                <select id="topic-icon-{{ topic.id }}" name="icon">
+                                                    {% for option in icon_options %}
+                                                        <option
+                                                            value="{{ option.value }}"
+                                                            {% if topic_edit_open and topic_edit_item_id == topic.id %}
+                                                                {% if topic_edit_values.icon == option.value %}selected{% endif %}
+                                                            {% else %}
+                                                                {% if topic.icon == option.value %}selected{% endif %}
+                                                            {% endif %}
+                                                        >
+                                                            {{ option.label }} ({{ option.value }})
+                                                        </option>
+                                                    {% endfor %}
+                                                </select>
+                                                {% if topic_edit_open and topic_edit_item_id == topic.id and topic_edit_errors.icon %}
+                                                    <div class="text-danger field-error" role="alert">{{ topic_edit_errors.icon }}</div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="content-edit-field">
+                                                <label for="topic-order-{{ topic.id }}">Order</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    id="topic-order-{{ topic.id }}"
+                                                    name="order"
+                                                    value="{% if topic_edit_open and topic_edit_item_id == topic.id %}{{ topic_edit_values.order }}{% else %}{{ topic.order }}{% endif %}"
+                                                >
+                                                {% if topic_edit_open and topic_edit_item_id == topic.id and topic_edit_errors.order %}
+                                                    <div class="text-danger field-error" role="alert">{{ topic_edit_errors.order }}</div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="content-edit-field content-edit-field-wide">
+                                                <label for="topic-summary-{{ topic.id }}">Summary</label>
+                                                <textarea id="topic-summary-{{ topic.id }}" name="summary" rows="4">{% if topic_edit_open and topic_edit_item_id == topic.id %}{{ topic_edit_values.summary }}{% else %}{{ topic.summary }}{% endif %}</textarea>
+                                                {% if topic_edit_open and topic_edit_item_id == topic.id and topic_edit_errors.summary %}
+                                                    <div class="text-danger field-error" role="alert">{{ topic_edit_errors.summary }}</div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="content-edit-field content-edit-field-wide">
+                                                <label for="topic-source-{{ topic.id }}">Source URL</label>
+                                                <input
+                                                    type="url"
+                                                    id="topic-source-{{ topic.id }}"
+                                                    name="source_url"
+                                                    value="{% if topic_edit_open and topic_edit_item_id == topic.id %}{{ topic_edit_values.source_url }}{% else %}{{ topic.source_url }}{% endif %}"
+                                                >
+                                                {% if topic_edit_open and topic_edit_item_id == topic.id and topic_edit_errors.source_url %}
+                                                    <div class="text-danger field-error" role="alert">{{ topic_edit_errors.source_url }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <div class="content-edit-actions">
+                                            <button type="button" class="profile-cancel-btn" data-content-edit-close>Cancel</button>
+                                            <button type="submit" class="profile-primary-btn">Save changes</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                         </li>
                     {% endfor %}
                 </ul>

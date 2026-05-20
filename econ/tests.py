@@ -192,6 +192,105 @@ class AdminContentTopicTests(TestCase):
                 self.assertContains(response, "Rail Policy")
                 self.assertContains(response, "Other")
 
+    def test_add_topic_page_renders_edit_and_delete_controls(self):
+        response = self.client.get(reverse("add_topic"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-content-edit-target="topicEditModal')
+        self.assertContains(response, 'data-content-delete-trigger')
+        self.assertContains(response, reverse("edit_topic", args=[self.topic.id]))
+        self.assertContains(response, reverse("delete_topic", args=[self.topic.id]))
+
+    def test_edit_topic_rejects_no_changes_inline(self):
+        response = self.client.post(
+            reverse("edit_topic", args=[self.topic.id]),
+            {
+                "title": self.topic.title,
+                "summary": self.topic.summary,
+                "icon": self.topic.icon,
+                "source_url": self.topic.source_url,
+                "order": str(self.topic.order),
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "Make at least one change before saving.", status_code=400)
+        self.assertContains(response, f'id="topicEditModal{self.topic.id}"', status_code=400)
+        self.assertContains(response, "is-open", status_code=400)
+
+    def test_edit_topic_rejects_duplicate_title(self):
+        response = self.client.post(
+            reverse("edit_topic", args=[self.topic.id]),
+            {
+                "title": self.second_topic.title,
+                "summary": self.topic.summary,
+                "icon": self.topic.icon,
+                "source_url": self.topic.source_url,
+                "order": str(self.topic.order),
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "A topic with this title already exists.", status_code=400)
+
+    def test_edit_topic_rejects_clearing_original_value(self):
+        self.topic.source_url = "https://example.com/source"
+        self.topic.save(update_fields=["source_url"])
+
+        response = self.client.post(
+            reverse("edit_topic", args=[self.topic.id]),
+            {
+                "title": self.topic.title,
+                "summary": self.topic.summary,
+                "icon": self.topic.icon,
+                "source_url": "",
+                "order": str(self.topic.order),
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "source cannot be left blank.", status_code=400)
+
+    def test_edit_topic_allows_originally_blank_source_to_remain_blank(self):
+        response = self.client.post(
+            reverse("edit_topic", args=[self.topic.id]),
+            {
+                "title": "Updated Rail Policy",
+                "summary": self.topic.summary,
+                "icon": self.topic.icon,
+                "source_url": "",
+                "order": str(self.topic.order),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.topic.refresh_from_db()
+        self.assertEqual(self.topic.title, "Updated Rail Policy")
+        self.assertEqual(self.topic.source_url, "")
+
+    def test_delete_topic_blocks_linked_content(self):
+        blog = BlogPost.objects.create(
+            title="Linked Topic Blog",
+            slug="linked-topic-blog",
+            excerpt="A linked topic blog",
+            featured_image_filename="linked-topic-blog.jpg",
+            body_paragraphs=["Body"],
+            order=1,
+        )
+        blog.topics.add(self.topic)
+
+        response = self.client.post(reverse("delete_topic", args=[self.topic.id]), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Topic.objects.filter(pk=self.topic.pk).exists())
+        self.assertContains(response, "cannot be deleted because it is linked", status_code=200)
+
+    def test_delete_topic_removes_unlinked_topic(self):
+        response = self.client.post(reverse("delete_topic", args=[self.second_topic.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Topic.objects.filter(pk=self.second_topic.pk).exists())
+
     def test_add_content_pages_disable_date_until_url_is_entered(self):
         expected_sources = {
             "add_blog": "featured_image_url",
