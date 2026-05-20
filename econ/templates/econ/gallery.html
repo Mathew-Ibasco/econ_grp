@@ -80,6 +80,12 @@
     padding: 1.35rem;
   }
 
+  .gallery-page .gallery-admin-actions {
+    padding: 0 1.35rem 1.35rem;
+    display: flex;
+    justify-content: center;
+  }
+
   .gallery-page .gallery-card-body h3 {
     margin-bottom: 0;
     color: #0b2b3b;
@@ -161,125 +167,64 @@
   </section>
 
   <section class="container gallery">
-    <a class="gallery-card-link" href="https://i0.wp.com/tokyotreatblog.wpcomstaging.com/wp-content/uploads/2023/10/bullet-train-thumbnail.png?fit=1024%2C683&ssl=1" data-gallery-image="https://i0.wp.com/tokyotreatblog.wpcomstaging.com/wp-content/uploads/2023/10/bullet-train-thumbnail.png?fit=1024%2C683&ssl=1" aria-label="Open Modern City Trains image">
+    {% for entry in gallery_entries %}
       <article class="gallery-card">
-        <div class="gallery-card-media">
-          <img src="https://i0.wp.com/tokyotreatblog.wpcomstaging.com/wp-content/uploads/2023/10/bullet-train-thumbnail.png?fit=1024%2C683&ssl=1" alt="Modern City Trains">
-        </div>
-        <div class="gallery-card-body">
-          <h3><span class="blog-card-title">Modern City Trains</span></h3>
-          <p>Urban rail systems help people travel quickly and efficiently within cities.</p>
-        </div>
+        {% if entry.media_type == "image" and entry.image_url %}
+          <a class="gallery-card-link" href="{{ entry.image_url }}" data-gallery-image="{{ entry.image_url }}" aria-label="Open {{ entry.title }} image">
+        {% elif entry.video_url %}
+          <a class="gallery-card-link" href="{{ entry.video_url }}" target="_blank" rel="noopener noreferrer" aria-label="Open {{ entry.title }} video">
+        {% else %}
+          <div class="gallery-card-link" aria-label="{{ entry.title }}">
+        {% endif %}
+            <div class="gallery-card-media">
+              {% if entry.thumbnail_url %}
+                <img src="{{ entry.thumbnail_url }}" alt="{{ entry.title }}">
+              {% elif entry.image_url %}
+                <img src="{{ entry.image_url }}" alt="{{ entry.title }}">
+              {% else %}
+                <div class="gallery-card-fallback">
+                  <i class="fas {% if entry.media_type == 'video' %}fa-circle-play{% else %}fa-image{% endif %}"></i>
+                </div>
+              {% endif %}
+            </div>
+            <div class="gallery-card-body">
+              <div class="blog-card-meta">
+                <span class="saved-type">{{ entry.get_media_type_display }}</span>
+                {% if entry.date %}
+                  <span class="journal-card-year">{{ entry.date|date:"M j, Y" }}</span>
+                {% endif %}
+              </div>
+              <h3><span class="blog-card-title">{{ entry.title }}</span></h3>
+              <p>{{ entry.description }}</p>
+            </div>
+        {% if entry.media_type == "image" and entry.image_url or entry.video_url %}
+          </a>
+        {% else %}
+          </div>
+        {% endif %}
+        {% if request.user.is_superuser %}
+          <div class="gallery-admin-actions">
+            <form method="POST" action="{% url 'delete_gallery_entry' entry.id %}">
+              {% csrf_token %}
+              <button
+                type="button"
+                class="content-delete-btn content-delete-btn--compact"
+                data-content-delete-trigger
+                data-delete-title="Delete Image?"
+                data-delete-message="Delete {{ entry.title }}?"
+                data-delete-warning="This will permanently remove this gallery item and its topic links."
+                data-delete-action="Delete Image"
+              >
+                <i class="fas fa-trash"></i>
+                Delete Image
+              </button>
+            </form>
+          </div>
+        {% endif %}
       </article>
-    </a>
-
-    <a class="gallery-card-link" href="https://www.rappler.com/tachyon/r3-assets/612F469A6EA84F6BAE882D2B94A4B421/img/8A05DA686544457A950EEC3E0DAAF221/mrt-photo-edsa-taft.jpg" data-gallery-image="https://www.rappler.com/tachyon/r3-assets/612F469A6EA84F6BAE882D2B94A4B421/img/8A05DA686544457A950EEC3E0DAAF221/mrt-photo-edsa-taft.jpg" aria-label="Open Crowded Rush Hour Train image">
-      <article class="gallery-card">
-        <div class="gallery-card-media">
-          <img src="https://www.rappler.com/tachyon/r3-assets/612F469A6EA84F6BAE882D2B94A4B421/img/8A05DA686544457A950EEC3E0DAAF221/mrt-photo-edsa-taft.jpg" alt="Crowded Rush Hour Train">
-        </div>
-        <div class="gallery-card-body">
-          <h3><span class="blog-card-title">Crowded Rush Hour Train</span></h3>
-          <p>Rail transport moves thousands of passengers daily, reducing traffic congestion.</p>
-        </div>
-      </article>
-    </a>
-
-    <a class="gallery-card-link" href="https://www.manilatimes.net/manilatimes/uploads/images/2021/05/23/1543.jpg" data-gallery-image="https://www.manilatimes.net/manilatimes/uploads/images/2021/05/23/1543.jpg" aria-label="Open Elevated Railways image">
-      <article class="gallery-card">
-        <div class="gallery-card-media">
-          <img src="https://www.manilatimes.net/manilatimes/uploads/images/2021/05/23/1543.jpg" alt="Elevated Railways">
-        </div>
-        <div class="gallery-card-body">
-          <h3><span class="blog-card-title">Elevated Railways</span></h3>
-          <p>Improve mobility while saving valuable road space.</p>
-        </div>
-      </article>
-    </a>
-
-    <a class="gallery-card-link" href="https://www.lrta.gov.ph/wp-content/uploads/2025/07/photo_2025-07-31_12-59-03-1024x768.jpg" data-gallery-image="https://www.lrta.gov.ph/wp-content/uploads/2025/07/photo_2025-07-31_12-59-03-1024x768.jpg" aria-label="Open Inclusive Transport image">
-      <article class="gallery-card">
-        <div class="gallery-card-media">
-          <img src="https://www.lrta.gov.ph/wp-content/uploads/2025/07/photo_2025-07-31_12-59-03-1024x768.jpg" alt="Inclusive Transport">
-        </div>
-        <div class="gallery-card-body">
-          <h3><span class="blog-card-title">Inclusive Transport</span></h3>
-          <p>Accessible train stations support transportation for all passengers.</p>
-        </div>
-      </article>
-    </a>
-
-    <a class="gallery-card-link" href="https://images.topgear.com.ph/topgear/images/2020/08/20/dotr-mrt-3-escalators-elevators-1597909548.jpg" data-gallery-image="https://images.topgear.com.ph/topgear/images/2020/08/20/dotr-mrt-3-escalators-elevators-1597909548.jpg" aria-label="Open Empowering Mobility image">
-      <article class="gallery-card">
-        <div class="gallery-card-media">
-          <img src="https://images.topgear.com.ph/topgear/images/2020/08/20/dotr-mrt-3-escalators-elevators-1597909548.jpg" alt="Empowering Mobility">
-        </div>
-        <div class="gallery-card-body">
-          <h3><span class="blog-card-title">Empowering Mobility</span></h3>
-          <p>Stations cater to people with disabilities for equitable access.</p>
-        </div>
-      </article>
-    </a>
-
-    <a class="gallery-card-link" href="https://www.shutterstock.com/image-vector/vector-illustration-electricpowered-mrt-train-260nw-2550253671.jpg" data-gallery-image="https://www.shutterstock.com/image-vector/vector-illustration-electricpowered-mrt-train-260nw-2550253671.jpg" aria-label="Open Sustainable Mobility image">
-      <article class="gallery-card">
-        <div class="gallery-card-media">
-          <img src="https://www.shutterstock.com/image-vector/vector-illustration-electricpowered-mrt-train-260nw-2550253671.jpg" alt="Sustainable Mobility">
-        </div>
-        <div class="gallery-card-body">
-          <h3><span class="blog-card-title">Sustainable Mobility</span></h3>
-          <p>Promotes eco-friendly travel by reducing fuel consumption.</p>
-        </div>
-      </article>
-    </a>
-
-    <a class="gallery-card-link" href="https://exclusive.multibriefs.com/images/exclusive/0427transportation.jpg" data-gallery-image="https://exclusive.multibriefs.com/images/exclusive/0427transportation.jpg" aria-label="Open Connected Systems image">
-      <article class="gallery-card">
-        <div class="gallery-card-media">
-          <img src="https://exclusive.multibriefs.com/images/exclusive/0427transportation.jpg" alt="Connected Systems">
-        </div>
-        <div class="gallery-card-body">
-          <h3><span class="blog-card-title">Connected Systems</span></h3>
-          <p>Rail links with other transport modes for smoother commuting.</p>
-        </div>
-      </article>
-    </a>
-
-    <a class="gallery-card-link" href="https://www.urbanrail.net/as/manila/manila-metro-map.png" data-gallery-image="https://www.urbanrail.net/as/manila/manila-metro-map.png" aria-label="Open Transit Networks image">
-      <article class="gallery-card">
-        <div class="gallery-card-media">
-          <img src="https://www.urbanrail.net/as/manila/manila-metro-map.png" alt="Transit Networks">
-        </div>
-        <div class="gallery-card-body">
-          <h3><span class="blog-card-title">Transit Networks</span></h3>
-          <p>Improve accessibility across different parts of the city.</p>
-        </div>
-      </article>
-    </a>
-
-    <a class="gallery-card-link" href="https://www.railway-technology.com/wp-content/uploads/sites/13/2022/06/rail-system.jpeg" data-gallery-image="https://www.railway-technology.com/wp-content/uploads/sites/13/2022/06/rail-system.jpeg" aria-label="Open Urban Growth image">
-      <article class="gallery-card">
-        <div class="gallery-card-media">
-          <img src="https://www.railway-technology.com/wp-content/uploads/sites/13/2022/06/rail-system.jpeg" alt="Urban Growth">
-        </div>
-        <div class="gallery-card-body">
-          <h3><span class="blog-card-title">Urban Growth</span></h3>
-          <p>Encourages development near transportation hubs.</p>
-        </div>
-      </article>
-    </a>
-
-    <a class="gallery-card-link" href="https://cdn.audleytravel.com/1024/731/79/16028680-faade-of-manila-cathedral.jpg" data-gallery-image="https://cdn.audleytravel.com/1024/731/79/16028680-faade-of-manila-cathedral.jpg" aria-label="Open Tourism Boost image">
-      <article class="gallery-card">
-        <div class="gallery-card-media">
-          <img src="https://cdn.audleytravel.com/1024/731/79/16028680-faade-of-manila-cathedral.jpg" alt="Tourism Boost">
-        </div>
-        <div class="gallery-card-body">
-          <h3><span class="blog-card-title">Tourism Boost</span></h3>
-          <p>Rail transport enhances tourism and local economic activity.</p>
-        </div>
-      </article>
-    </a>
+    {% empty %}
+      <p class="gallery-empty">No gallery items have been added yet.</p>
+    {% endfor %}
   </section>
 
   <div id="lightbox" class="lightbox" aria-hidden="true">

@@ -1,86 +1,76 @@
 {% extends "econ/layout.html" %}
 
+{% block title %}
+Add Video
+{% endblock %}
+
 {% block content %}
+<main class="blogs-page admin-form-page">
+    <section class="admin-form-hero">
+        <div class="container admin-form-hero-inner">
+            <div>
+                <p class="admin-form-eyebrow">Admin tools</p>
+                <h1 class="admin-form-title">Add Video</h1>
+                <p class="admin-form-intro">Create a new video entry with channel, source, thumbnail, and publication details.</p>
+            </div>
+            <div class="admin-form-hero-card">
+                <strong>Video</strong>
+                <span>media entry</span>
+            </div>
+        </div>
+    </section>
 
+    <section class="container admin-form-shell">
+        <div class="admin-form-card">
+            <h2>Video Details</h2>
+            <p>Add a media video with channel, source, and publication details.</p>
 
+            <form method="POST" class="admin-form-fields">
+                {% csrf_token %}
 
-<div class="container mt-4">
-    <h2>Add Vlog</h2>
-
-    <form method="POST">
-        {% csrf_token %}
-
-        <div class="mb-3">
-            <label class="form-label">Title</label>
-
-            <input
-                type="text"
-                name="title"
-                class="form-control"
-                value="{{ values.title }}"
-            >
-
-            {% if errors.title %}
-                <div class="text-danger mt-1">
-                    {{ errors.title }}
+                <div class="mb-3">
+                    <label class="form-label">Title <small class="text-muted">Text only; cannot be only numbers.</small></label>
+                    <input type="text" name="title" class="form-control" value="{{ values.title }}">
+                    {% if errors.title %}
+                        <div class="text-danger field-error" role="alert">{{ errors.title }}</div>
+                    {% endif %}
                 </div>
-            {% endif %}
-        </div>
 
-        <div class="mb-3">
-            <label class="form-label">Description</label>
-
-            <textarea
-                name="description"
-                class="form-control"
-                rows="5"
-            >{{ values.description }}</textarea>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Video URL</label>
-
-            <input
-                type="url"
-                name="video_url"
-                class="form-control"
-                value="{{ values.video_url }}"
-            >
-
-            {% if errors.video_url %}
-                <div class="text-danger mt-1">
-                    {{ errors.video_url }}
+                <div class="mb-3">
+                    <label class="form-label">Channel <small class="text-muted">Text only; cannot be only numbers.</small></label>
+                    <input type="text" name="channel_name" class="form-control" value="{{ values.channel_name }}">
+                    {% if errors.channel_name %}
+                        <div class="text-danger field-error" role="alert">{{ errors.channel_name }}</div>
+                    {% endif %}
                 </div>
-            {% endif %}
+
+                <div class="mb-3">
+                    <label class="form-label">Description <small class="text-muted">Text only; cannot be only numbers.</small></label>
+                    <textarea name="description" class="form-control" rows="5">{{ values.description }}</textarea>
+                    {% if errors.description %}
+                        <div class="text-danger field-error" role="alert">{{ errors.description }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Video URL <small class="text-muted">Required for the embedded video. Example: https://www.youtube.com/watch?v=...</small></label>
+                    <input type="url" name="video_url" class="form-control" value="{{ values.video_url }}">
+                    {% if errors.video_url %}
+                        <div class="text-danger field-error" role="alert">{{ errors.video_url }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Date Uploaded <small class="text-muted">Required for all videos.</small></label>
+                    <input type="date" name="date" class="form-control" value="{{ values.date }}">
+                    {% if errors.date %}
+                        <div class="text-danger field-error" role="alert">{{ errors.date }}</div>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-primary admin-form-submit">Add Video</button>
+            </form>
         </div>
-
-        <div class="mb-3">
-            <label class="form-label">Thumbnail URL</label>
-
-            <input
-                type="url"
-                name="thumbnail_url"
-                class="form-control"
-                value="{{ values.thumbnail_url }}"
-            >
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Date</label>
-
-            <input
-                type="date"
-                name="date"
-                class="form-control"
-                value="{{ values.date }}"
-            >
-        </div>
-
-       
-        <button type="submit" class="btn btn-primary">
-            Add Vlog
-        </button>
-    </form>
-</div>
-
+    </section>
+</main>
 {% endblock %}

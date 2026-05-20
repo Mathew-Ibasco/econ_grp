@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+from django.core.exceptions import ImproperlyConfigured
 from django.contrib.messages import constants as messages
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -100,6 +101,17 @@ WSGI_APPLICATION = 'econ_web.wsgi.application'
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
+DB_ENGINE = os.environ.get("ECON_DB_ENGINE", "sqlite").strip().lower()
+
+
+def _sqlite_database():
+    return {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db_local.sqlite3",
+        }
+    }
+
 
 def _mysql_database():
     return {
@@ -117,7 +129,14 @@ def _mysql_database():
     }
 
 
-DATABASES = _mysql_database()
+if DB_ENGINE == "sqlite":
+    DATABASES = _sqlite_database()
+elif DB_ENGINE == "mysql":
+    DATABASES = _mysql_database()
+else:
+    raise ImproperlyConfigured(
+        "ECON_DB_ENGINE must be either 'sqlite' or 'mysql'."
+    )
 
 CACHES = {
     "default": {

@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, time
 from types import SimpleNamespace
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -8,8 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.core.validators import validate_email
-from django.db import connection
+from django.core.validators import URLValidator, validate_email
 from django.db.models import Count, F, Prefetch, Q
 from django.http import JsonResponse, StreamingHttpResponse
 from django.template.loader import render_to_string
@@ -17,8 +16,12 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 
+import os, re, sys, html, calendar, json, subprocess, sqlite3
 
-import os, re, sys, html, calendar, json, subprocess
+try:
+    import pymysql
+except ImportError:  # Optional dependency; only needed for MySQL support.
+    pymysql = None
 
 from .forms import ForumReplyForm, ForumThreadCreateForm
 from .models import BlogPost, Bookmark, ForumReply, ForumReplyImage, ForumThread, ForumThreadImage, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, StudyItemProgress, Topic, TopicNote, User, vlog as VlogEntry
@@ -320,6 +323,15 @@ def _item_learning_context(user, item_type, item_id):
     }
 
 
+def _delete_item_learning_data(item_type, item_id):
+    item_id = int(item_id)
+    StudyItemProgress.objects.filter(item_type=item_type, item_id=item_id).delete()
+    ItemNote.objects.filter(item_type=item_type, item_id=item_id).delete()
+    ItemQuizProgress.objects.filter(item_type=item_type, item_id=item_id).delete()
+    ItemQuizAttempt.objects.filter(item_type=item_type, item_id=item_id).delete()
+    ItemQuizQuestion.objects.filter(item_type=item_type, item_id=item_id).delete()
+
+
 def _attach_quiz_result(learning, user, item_type, item_id, attempt_id):
     if not learning or not attempt_id:
         return learning
@@ -460,6 +472,8 @@ def logout_process(request):
 def profile(request):
     user = request.user
     edit_mode = request.GET.get("edit") == "1"
+    role_label = "ADMINISTRATOR" if user.is_superuser else "STAFF MEMBER" if user.is_staff else "MEMBER"
+    access_label = "System Admin Access" if user.is_superuser or user.is_staff else "Standard Member Access"
     values = {
         "username": user.username,
         "email": user.email,
@@ -544,6 +558,8 @@ def profile(request):
         {
             "date": datetime.now(),
             "edit_mode": edit_mode,
+            "profile_role_label": role_label,
+            "profile_access_label": access_label,
             "values": values,
             "errors": errors,
             "bio_limit": bio_limit,
@@ -961,6 +977,22 @@ def blog_detail(request, slug):
         }
     )
 
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def delete_blog(request, slug):
+    if request.method != "POST":
+        return redirect("blog_detail", slug=slug)
+
+    blog_post = get_object_or_404(BlogPost, slug=slug)
+    title = blog_post.title
+    item_id = blog_post.id
+    blog_post.delete()
+    _delete_item_learning_data("blog", item_id)
+    messages.success(request, f"Deleted blog: {title}")
+    return redirect("blog")
+
+
 @login_required
 def toggle_study_progress(request):
     if request.method != "POST":
@@ -1134,6 +1166,22 @@ def journal_detail(request, journal_id):
         }
     )
 
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def delete_journal(request, journal_id):
+    if request.method != "POST":
+        return redirect("journal_detail", journal_id=journal_id)
+
+    journal = get_object_or_404(JournalEntry, pk=journal_id)
+    title = journal.title
+    item_id = journal.id
+    journal.delete()
+    _delete_item_learning_data("journal", item_id)
+    messages.success(request, f"Deleted journal: {title}")
+    return redirect("journal")
+
+
 def vlog(request):
     vlog_entries = list(
         VlogEntry.objects.prefetch_related("topics").order_by("order", "vlogID")
@@ -1191,15 +1239,48 @@ def vlog_detail(request, vlog_id):
         }
     )
 
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def delete_vlog(request, vlog_id):
+    if request.method != "POST":
+        return redirect("vlog_detail", vlog_id=vlog_id)
+
+    video = get_object_or_404(VlogEntry, pk=vlog_id)
+    title = video.title
+    item_id = video.vlogID
+    video.delete()
+    _delete_item_learning_data("video", item_id)
+    messages.success(request, f"Deleted media: {title}")
+    return redirect("vlog")
+
+
 def gallery(request):
+    gallery_entries = list(MediaGalleryEntry.objects.order_by("order", "id"))
     return render(
         request,
         'econ/gallery.html',
         {
             'date': datetime.now(),
-            'gallery_count': 10,
+            'gallery_entries': gallery_entries,
+            'gallery_count': len(gallery_entries),
         }
     )
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def delete_gallery_entry(request, media_id):
+    if request.method != "POST":
+        return redirect("gallery")
+
+    media = get_object_or_404(MediaGalleryEntry, pk=media_id)
+    title = media.title
+    item_id = media.id
+    media.delete()
+    _delete_item_learning_data("media", item_id)
+    messages.success(request, f"Deleted gallery item: {title}")
+    return redirect("gallery")
 
 ############################################# SQL ##############################################################################
 
@@ -1214,155 +1295,180 @@ def upload_sql(request):
         }
     )
 
+def get_db_engine():
+    return settings.DATABASES['default'].get('ENGINE', '')
+
+def is_sqlite():
+    return 'sqlite3' in get_db_engine()
+
+def is_mysql():
+    return 'mysql' in get_db_engine()
+
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def download_sql_dump(request):
     filename = f"dump_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
 
-    def stream():
-        yield f"-- SQL Dump: {connection.settings_dict['NAME']}\n".encode()
-        yield f"-- Generated: {datetime.now()}\n\n".encode()
-        yield b"SET FOREIGN_KEY_CHECKS = 0;\n\n"
+    if is_sqlite():
+        stream = _sqlite_dump_stream()
+    elif is_mysql():
+        stream = _mysql_dump_stream()
+    else:
+        raise ValueError(f"Unsupported database engine: {get_db_engine()}")
 
-        with connection.cursor() as cursor:
-            tables = connection.introspection.table_names(cursor)
-
-            for table in tables:
-                quoted_table = connection.ops.quote_name(table)
-                cursor.execute(f"SHOW CREATE TABLE {quoted_table}")
-                create_table = cursor.fetchone()[1]
-                yield f"-- Table: {table}\n".encode()
-                yield f"DROP TABLE IF EXISTS {quoted_table};\n".encode()
-                yield f"{create_table};\n\n".encode()
-
-                cursor.execute(f"SELECT * FROM {quoted_table}")
-                rows = cursor.fetchall()
-                if rows:
-                    placeholders = ", ".join(["%s"] * len(rows[0]))
-                    insert_sql = f"INSERT INTO {quoted_table} VALUES ({placeholders})"
-                    for row in rows:
-                        statement = cursor.mogrify(insert_sql, row)
-                        if isinstance(statement, bytes):
-                            statement = statement.decode("utf-8")
-                        yield f"{statement};\n".encode()
-                    yield b"\n"
-
-        yield b"SET FOREIGN_KEY_CHECKS = 1;\n"
-
-    response = StreamingHttpResponse(stream(), content_type='application/sql')
+    response = StreamingHttpResponse(stream, content_type='application/sql')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
 
-def _split_sql_statements(sql_text):
-    statements = []
-    buffer = []
-    state = "code"
-    index = 0
-    length = len(sql_text)
+def _sqlite_dump_stream():
+    db_path = settings.DATABASES['default']['NAME']
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
 
-    while index < length:
-        ch = sql_text[index]
-        nxt = sql_text[index + 1] if index + 1 < length else ""
-        nxt2 = sql_text[index + 2] if index + 2 < length else ""
+    yield f"-- SQL Dump: {os.path.basename(db_path)}\n".encode()
+    yield f"-- Generated: {datetime.now()}\n\n".encode()
+    yield b"PRAGMA foreign_keys = OFF;\n\n"
 
-        if state == "code":
-            if ch == "'":
-                buffer.append(ch)
-                state = "single"
-            elif ch == '"':
-                buffer.append(ch)
-                state = "double"
-            elif ch == "`":
-                buffer.append(ch)
-                state = "backtick"
-            elif ch == "-" and nxt == "-" and (not nxt2 or nxt2.isspace()):
-                state = "line_comment"
-                index += 1
-            elif ch == "#":
-                state = "line_comment"
-            elif ch == "/" and nxt == "*":
-                state = "block_comment"
-                index += 1
-            elif ch == ";":
-                statement = "".join(buffer).strip()
-                if statement:
-                    statements.append(statement)
-                buffer = []
-            else:
-                buffer.append(ch)
-        elif state == "single":
-            buffer.append(ch)
-            if ch == "\\" and nxt:
-                buffer.append(nxt)
-                index += 1
-            elif ch == "'":
-                if nxt == "'":
-                    buffer.append(nxt)
-                    index += 1
-                else:
-                    state = "code"
-        elif state == "double":
-            buffer.append(ch)
-            if ch == "\\" and nxt:
-                buffer.append(nxt)
-                index += 1
-            elif ch == '"':
-                if nxt == '"':
-                    buffer.append(nxt)
-                    index += 1
-                else:
-                    state = "code"
-        elif state == "backtick":
-            buffer.append(ch)
-            if ch == "`":
-                state = "code"
-        elif state == "line_comment":
-            if ch in "\r\n":
-                buffer.append(ch)
-                state = "code"
-        elif state == "block_comment":
-            if ch == "*" and nxt == "/":
-                index += 1
-                state = "code"
-        index += 1
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+    tables = [row[0] for row in cursor.fetchall()]
 
-    trailing = "".join(buffer).strip()
-    if trailing:
-        statements.append(trailing)
+    for table in tables:
+        cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,))
+        create_table = cursor.fetchone()[0]
+        yield f"-- Table: {table}\n".encode()
+        yield f'DROP TABLE IF EXISTS "{table}";\n'.encode()
+        yield f"{create_table};\n\n".encode()
 
-    return statements
+        cursor.execute(f'SELECT * FROM "{table}"')
+        rows = cursor.fetchall()
+        if rows:
+            for row in rows:
+                values = ', '.join(
+                    'NULL' if val is None
+                    else f"'{str(val).replace(chr(39), chr(39)*2)}'"
+                    for val in row
+                )
+                yield f'INSERT INTO "{table}" VALUES ({values});\n'.encode()
+            yield b"\n"
+
+    yield b"PRAGMA foreign_keys = ON;\n"
+    cursor.close()
+    conn.close()
+
+
+def _mysql_dump_stream():
+    if pymysql is None:
+        raise ImportError("PyMySQL is required for MySQL database support.")
+
+    db = settings.DATABASES['default']
+    conn = pymysql.connect(
+        host=db['HOST'],
+        port=int(db.get('PORT', 3306)),
+        user=db['USER'],
+        password=db['PASSWORD'],
+        database=db['NAME'],
+    )
+    cursor = conn.cursor()
+
+    yield f"-- SQL Dump: {db['NAME']}\n".encode()
+    yield f"-- Generated: {datetime.now()}\n\n".encode()
+    yield b"SET FOREIGN_KEY_CHECKS=0;\n\n"
+
+    cursor.execute("SHOW TABLES")
+    tables = [row[0] for row in cursor.fetchall()]
+
+    for table in tables:
+        cursor.execute(f"SHOW CREATE TABLE `{table}`")
+        create_table = cursor.fetchone()[1]
+        yield f"-- Table: {table}\n".encode()
+        yield f"DROP TABLE IF EXISTS `{table}`;\n".encode()
+        yield f"{create_table};\n\n".encode()
+
+        cursor.execute(f"SELECT * FROM `{table}`")
+        rows = cursor.fetchall()
+        if rows:
+            for row in rows:
+                values = ', '.join(
+                    'NULL' if val is None
+                    else f"'{str(val).replace(chr(39), chr(39)*2)}'"
+                    for val in row
+                )
+                yield f"INSERT INTO `{table}` VALUES ({values});\n".encode()
+            yield b"\n"
+
+    yield b"SET FOREIGN_KEY_CHECKS=1;\n"
+    cursor.close()
+    conn.close()
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def upload_sql_process(request):
     if request.method == 'POST' and request.FILES.get('sql_file'):
-        sql_file = request.FILES['sql_file']
-        sql = sql_file.read().decode('utf-8')
+        sql = request.FILES['sql_file'].read().decode('utf-8')
 
         try:
-            with connection.cursor() as cursor:
-                cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-
-                existing_tables = connection.introspection.table_names(cursor)
-                for table in existing_tables:
-                    cursor.execute(f"DROP TABLE IF EXISTS {connection.ops.quote_name(table)}")
-
-                for statement in _split_sql_statements(sql):
-                    cursor.execute(statement)
-
-                cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
-
+            if is_sqlite():
+                _sqlite_upload(sql)
+            elif is_mysql():
+                _mysql_upload(sql)
+            else:
+                raise ValueError(f"Unsupported database engine: {get_db_engine()}")
             messages.success(request, "SQL dump applied successfully.")
         except Exception as e:
             messages.error(request, f"Failed to apply dump: {str(e)}")
 
-    return render(
-        request,
-        'econ/upload_sql.html',
-        {'date': datetime.now()}
-    )
+    return render(request, 'econ/upload_sql.html', {'date': datetime.now()})
 
+
+def _sqlite_upload(sql):
+    db_path = settings.DATABASES['default']['NAME']
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = OFF;")
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+        for (table,) in cursor.fetchall():
+            cursor.execute(f'DROP TABLE IF EXISTS "{table}"')
+        conn.commit()
+        conn.executescript(sql)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def _mysql_upload(sql):
+    if pymysql is None:
+        raise ImportError("PyMySQL is required for MySQL database support.")
+
+    db = settings.DATABASES['default']
+    conn = pymysql.connect(
+        host=db['HOST'],
+        port=int(db.get('PORT', 3306)),
+        user=db['USER'],
+        password=db['PASSWORD'],
+        database=db['NAME'],
+    )
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SET FOREIGN_KEY_CHECKS=0;")
+        cursor.execute("SHOW TABLES")
+        for (table,) in cursor.fetchall():
+            cursor.execute(f"DROP TABLE IF EXISTS `{table}`")
+
+        statements = [s.strip() for s in sql.split(';') if s.strip() and not s.strip().startswith('--')]
+        for statement in statements:
+            cursor.execute(statement)
+
+        cursor.execute("SET FOREIGN_KEY_CHECKS=1;")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+########################################################################################################################
 
 def superuser_required(user):
     return user.is_superuser
@@ -1371,11 +1477,114 @@ def generate_filename(title):
     clean = slugify(title)
     return f"{clean}.jpg"
 
+
+def _validate_url(value, field_name, label, errors):
+    if not value:
+        return
+    validator = URLValidator()
+    try:
+        validator(value)
+    except ValidationError:
+        errors[field_name] = f"Enter a valid {label} URL."
+
+
+def _is_number_only(value):
+    clean_value = value.strip()
+    return bool(re.search(r"\d", clean_value) and re.fullmatch(r"[\d\s.,+-]+", clean_value))
+
+
+def _validate_text_not_number(value, field_name, label, errors):
+    if value and field_name not in errors and _is_number_only(value):
+        errors[field_name] = f"{label} cannot be only numbers."
+
+
+def _blank_line_blocks(value):
+    return [
+        block.strip()
+        for block in re.split(r"\n\s*\n", value)
+        if block.strip()
+    ]
+
+
+def _validate_keywords_format(value, field_name, errors):
+    if not value or field_name in errors:
+        return
+    if "," not in value:
+        errors[field_name] = "Use comma-separated keywords, for example: rail, mobility, economy."
+        return
+
+    keywords = [keyword.strip() for keyword in value.split(",")]
+    if any(not keyword for keyword in keywords):
+        errors[field_name] = "Remove empty keywords and separate each keyword with one comma."
+        return
+    if any(_is_number_only(keyword) for keyword in keywords):
+        errors[field_name] = "Keywords cannot be only numbers."
+
+
+def _validate_blank_line_format(value, field_name, label, errors):
+    if not value or field_name in errors:
+        return []
+    if "\n" in value and not re.search(r"\n\s*\n", value):
+        errors[field_name] = f"Separate each {label.lower()} with a blank line."
+        return []
+    blocks = _blank_line_blocks(value)
+    if any(_is_number_only(block) for block in blocks):
+        errors[field_name] = f"{label} cannot be only numbers."
+    return blocks
+
+
+def _validate_gallery_urls(value, errors):
+    blocks = _validate_blank_line_format(value, "gallery", "Gallery URL", errors)
+    if not blocks or "gallery" in errors:
+        return
+    for url in blocks:
+        _validate_url(url, "gallery", "gallery image", errors)
+        if "gallery" in errors:
+            return
+
+
+def _validate_sources_format(value, errors):
+    blocks = _validate_blank_line_format(value, "sources", "Source", errors)
+    if not blocks or "sources" in errors:
+        return
+    for block in blocks:
+        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        if len(lines) != 2:
+            errors["sources"] = "Use two lines per source: label on line 1, URL on line 2. Separate sources with a blank line."
+            return
+        if _is_number_only(lines[0]):
+            errors["sources"] = "Source labels cannot be only numbers."
+            return
+        _validate_url(lines[1], "sources", "source", errors)
+        if "sources" in errors:
+            return
+
+
+def _parse_optional_content_date(value, has_url, errors):
+    if has_url and not value:
+        errors["date"] = "Date is required when this content comes from a URL."
+        return None
+    if not value:
+        return timezone.localdate()
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        errors["date"] = "Enter a valid date."
+        return None
+
+
+def _content_created_at(content_date):
+    return timezone.make_aware(
+        datetime.combine(content_date, time.min),
+        timezone.get_current_timezone(),
+    )
+
 @login_required
 @user_passes_test(superuser_required)
 def add_blog(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
+        posted_date = request.POST.get("date", "").strip()
         excerpt = request.POST.get("excerpt", "").strip()
         featured_image_filename = generate_filename(title)
         featured_image_url = request.POST.get("featured_image_url", "").strip()
@@ -1385,6 +1594,7 @@ def add_blog(request):
         highlights = request.POST.get("highlights", "").strip()
         gallery = request.POST.get("gallery", "").strip()
         sources = request.POST.get("sources", "").strip()
+        has_source_url = bool(sources)
 
         order = (
             BlogPost.objects.order_by("-order")
@@ -1396,9 +1606,38 @@ def add_blog(request):
 
         if not title:
             errors["title"] = "Title is required."
+        elif BlogPost.objects.filter(title__iexact=title).exists():
+            errors["title"] = "A blog with this title already exists."
+        _validate_text_not_number(title, "title", "Title", errors)
 
         if not excerpt:
             errors["excerpt"] = "Excerpt is required."
+        _validate_text_not_number(excerpt, "excerpt", "Excerpt", errors)
+
+        if not body_paragraphs:
+            errors["body_paragraphs"] = "Body paragraphs are required."
+        _validate_text_not_number(body_paragraphs, "body_paragraphs", "Body paragraphs", errors)
+
+        if not keywords:
+            errors["keywords"] = "Keywords are required."
+        _validate_keywords_format(keywords, "keywords", errors)
+
+        if not highlights:
+            errors["highlights"] = "Highlights are required."
+        _validate_blank_line_format(highlights, "highlights", "Highlight", errors)
+
+        if not gallery:
+            errors["gallery"] = "Gallery URLs are required."
+        _validate_gallery_urls(gallery, errors)
+
+        if sources:
+            _validate_sources_format(sources, errors)
+
+        parsed_date = _parse_optional_content_date(posted_date, has_source_url, errors)
+
+        if not featured_image_url:
+            errors["featured_image_url"] = "Featured image URL is required."
+        _validate_url(featured_image_url, "featured_image_url", "featured image", errors)
 
         if errors:
             return render(
@@ -1406,6 +1645,7 @@ def add_blog(request):
                 "econ/add_blog.html",
                 {
                     "date": datetime.now(),
+                    "date_value": posted_date or timezone.localdate().isoformat(),
                     "errors": errors,
                     "values": request.POST,
                 },
@@ -1519,6 +1759,7 @@ def add_blog(request):
             sources=source_list,
             order=order,
         )
+        BlogPost.objects.filter(pk=blog.pk).update(created_at=_content_created_at(parsed_date))
 
         messages.success(request, f"Blog '{blog.title}' created successfully.")
         return redirect("blog")
@@ -1528,6 +1769,7 @@ def add_blog(request):
         "econ/add_blog.html",
         {
             "date": datetime.now(),
+            "date_value": timezone.localdate().isoformat(),
         }
     )
 
@@ -1537,6 +1779,7 @@ def add_blog(request):
 def add_journal(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
+        posted_date = request.POST.get("date", "").strip()
         journal_url = request.POST.get("journal_url", "").strip()
         authors = request.POST.get("authors", "").strip()
         publication_year = request.POST.get("publication_year", "").strip()
@@ -1554,18 +1797,41 @@ def add_journal(request):
 
         if not title:
             errors["title"] = "Title is required."
+        elif JournalEntry.objects.filter(title__iexact=title).exists():
+            errors["title"] = "A journal with this title already exists."
+        _validate_text_not_number(title, "title", "Title", errors)
 
-        if not journal_url:
-            errors["journal_url"] = "Journal URL is required."
+        if journal_url:
+            _validate_url(journal_url, "journal_url", "journal", errors)
+
+        parsed_date = _parse_optional_content_date(posted_date, bool(journal_url), errors)
 
         if not authors:
             errors["authors"] = "Authors are required."
+        _validate_text_not_number(authors, "authors", "Authors", errors)
 
-        if not publication_year:
+        if journal_url and not publication_year:
             errors["publication_year"] = "Publication year is required."
+        elif not publication_year:
+            publication_year = str(timezone.localdate().year)
+        elif not publication_year.isdigit():
+            errors["publication_year"] = "Publication year must be a number."
 
         if not journal_name:
             errors["journal_name"] = "Journal name is required."
+        _validate_text_not_number(journal_name, "journal_name", "Journal name", errors)
+
+        if not citation_info:
+            errors["citation_info"] = "Citation info is required."
+        _validate_text_not_number(citation_info, "citation_info", "Citation info", errors)
+
+        if not snippet:
+            errors["snippet"] = "Snippet is required."
+        _validate_text_not_number(snippet, "snippet", "Snippet", errors)
+
+        if not keywords:
+            errors["keywords"] = "Keywords are required."
+        _validate_keywords_format(keywords, "keywords", errors)
 
         if errors:
             return render(
@@ -1573,6 +1839,7 @@ def add_journal(request):
                 "econ/add_journal.html",
                 {
                     "date": datetime.now(),
+                    "date_value": posted_date or timezone.localdate().isoformat(),
                     "errors": errors,
                     "values": request.POST,
                 },
@@ -1592,6 +1859,7 @@ def add_journal(request):
             ],
            order=order,
         )
+        JournalEntry.objects.filter(pk=journal.pk).update(created_at=_content_created_at(parsed_date))
 
         messages.success(request, f"Journal '{journal.title}' added successfully.")
         return redirect("journal")
@@ -1601,22 +1869,19 @@ def add_journal(request):
         "econ/add_journal.html",
         {
             "date": datetime.now(),
+            "date_value": timezone.localdate().isoformat(),
         }
     )
 
 
 @login_required
 @user_passes_test(superuser_required)
-def add_media(request):
+def add_image(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
         description = request.POST.get("description", "").strip()
-        media_type = request.POST.get("media_type", "").strip()
         date = request.POST.get("date", "").strip()
-
         image_url = request.POST.get("image_url", "").strip()
-        video_url = request.POST.get("video_url", "").strip()
-        thumbnail_url = request.POST.get("thumbnail_url", "").strip()
 
         order = (
             MediaGalleryEntry.objects.order_by("-order")
@@ -1627,9 +1892,16 @@ def add_media(request):
 
         if not title:
             errors["title"] = "Title is required."
+        elif MediaGalleryEntry.objects.filter(title__iexact=title).exists():
+            errors["title"] = "A gallery image with this title already exists."
+        _validate_text_not_number(title, "title", "Title", errors)
 
-        if media_type not in ["image", "video"]:
-            errors["media_type"] = "Invalid media type."
+        if not description:
+            errors["description"] = "Description is required."
+        _validate_text_not_number(description, "description", "Description", errors)
+
+        _validate_url(image_url, "image_url", "image", errors)
+        parsed_date = _parse_optional_content_date(date, bool(image_url), errors)
 
         if errors:
             return render(
@@ -1646,15 +1918,13 @@ def add_media(request):
         media = MediaGalleryEntry.objects.create(
             title=title,
             description=description,
-            media_type=media_type,
-            date=date if date else None,
+            media_type="image",
+            date=parsed_date,
             image_url=image_url,
-            video_url=video_url,
-            thumbnail_url=thumbnail_url,
             order=order,
         )
 
-        messages.success(request, f"Media '{media.title}' added successfully.")
+        messages.success(request, f"Image '{media.title}' added successfully.")
         return redirect("gallery")
 
     return render(
@@ -1667,21 +1937,38 @@ def add_media(request):
 
 @login_required
 @user_passes_test(superuser_required)
-def add_vlog(request):
+def add_video(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
+        channel_name = request.POST.get("channel_name", "").strip()
         description = request.POST.get("description", "").strip()
         video_url = request.POST.get("video_url", "").strip()
-        thumbnail_url = request.POST.get("thumbnail_url", "").strip()
         date = request.POST.get("date", "").strip()
 
         errors = {}
 
         if not title:
             errors["title"] = "Title is required."
+        elif VlogEntry.objects.filter(title__iexact=title).exists():
+            errors["title"] = "A video with this title already exists."
+        _validate_text_not_number(title, "title", "Title", errors)
+
+        if not channel_name:
+            errors["channel_name"] = "Channel is required."
+        _validate_text_not_number(channel_name, "channel_name", "Channel", errors)
+
+        if not description:
+            errors["description"] = "Description is required."
+        _validate_text_not_number(description, "description", "Description", errors)
 
         if not video_url:
-            errors["video_url"] = "Video URL is required."
+            errors["video_url"] = "Video URL is required so the video can be embedded."
+        _validate_url(video_url, "video_url", "video", errors)
+        if not date:
+            errors["date"] = "Date is required for videos."
+            parsed_date = None
+        else:
+            parsed_date = _parse_optional_content_date(date, True, errors)
 
         if errors:
             return render(
@@ -1706,14 +1993,14 @@ def add_vlog(request):
         new_vlog = VlogEntry.objects.create(
             title=title,
             filename=filename,
+            channel_name=channel_name,
             description=description,
             video_url=video_url,
-            thumbnail_url=thumbnail_url,
-            date=date if date else None,
+            date=parsed_date,
             order=order,
         )
 
-        messages.success(request, f"Vlog '{new_vlog.title}' added successfully.")
+        messages.success(request, f"Video '{new_vlog.title}' added successfully.")
         return redirect("vlog")
 
     return render(
@@ -1723,3 +2010,11 @@ def add_vlog(request):
             "date": datetime.now(),
         }
     )
+
+
+def add_media(request):
+    return redirect("add_image")
+
+
+def add_vlog(request):
+    return redirect("add_video")

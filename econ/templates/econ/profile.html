@@ -6,136 +6,187 @@
 {% endblock %}
 
 {% block content %}
-<main class="profile-page">
-    <section class="profile-hero">
-        <div class="container profile-hero-inner">
-            <div class="profile-avatar">
-                <i class="fas fa-circle-user"></i>
-            </div>
+<main class="blogs-page member-profile-page">
+    <section class="blogs-hero">
+        <div class="container blogs-hero-inner">
             <div>
-                <p class="dashboard-kicker">Account Profile</p>
-                <h2>{{ request.user.username }}</h2>
-                <p>Your account details from registration are collected here.</p>
+                <p class="blog-eyebrow">Account Center</p>
+                <h1 class="blogs-title">Member Profile</h1>
+                <p class="blogs-intro">Manage your account settings and preferences.</p>
             </div>
         </div>
     </section>
 
-    <section class="container profile-shell">
-        <article class="profile-card profile-details-card">
-            <div class="profile-card-title">
-                <i class="fas fa-id-card"></i>
-                <h3>Profile Details</h3>
+    <section class="member-profile-shell">
+        <div class="container member-profile-grid">
+            <div class="member-profile-left-column">
+                <article class="member-profile-identity-card">
+                    <div class="member-profile-avatar" aria-hidden="true">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="member-profile-identity-meta">
+                        <h2>{{ request.user.username }}</h2>
+                        <p>{{ profile_role_label }}</p>
+                    </div>
+                    {% if not edit_mode %}
+                        <a class="profile-primary-btn member-profile-action-btn" href="{% url 'profile' %}?edit=1">
+                            <i class="fas fa-pen"></i>
+                            Edit Profile
+                        </a>
+                    {% else %}
+                        <p class="member-profile-editing-note">Editing profile</p>
+                    {% endif %}
+                </article>
+
+                <article class="member-profile-status-card">
+                    <h2>Platform Status</h2>
+                    <ul class="member-profile-status-list">
+                        <li>
+                            <span class="member-profile-status-dot is-green" aria-hidden="true"></span>
+                            <span>Verified Member</span>
+                        </li>
+                        <li>
+                            <span class="member-profile-status-dot is-blue" aria-hidden="true"></span>
+                            <span>{{ profile_access_label }}</span>
+                        </li>
+                    </ul>
+                </article>
             </div>
 
-            {% if edit_mode %}
-                <form class="profile-edit-form" method="POST" novalidate>
-                    {% csrf_token %}
-                    {% if errors.form %}<p class="profile-form-error">{{ errors.form }}</p>{% endif %}
-
-                    <div class="profile-field-row">
-                        <label for="profile-username">
-                            <i class="fas fa-user"></i>
-                            <span>Username</span>
-                        </label>
-                        <div>
-                            <input type="text" id="profile-username" name="username" value="{{ values.username }}" class="{% if errors.username %}field-invalid{% endif %}" aria-invalid="{% if errors.username %}true{% else %}false{% endif %}">
-                            {% if errors.username %}<p class="field-error">{{ errors.username }}</p>{% endif %}
-                        </div>
+            <article class="member-profile-details-card">
+                <div class="member-profile-card-header">
+                    <div class="member-profile-card-header-icon" aria-hidden="true">
+                        <i class="fas fa-id-card"></i>
                     </div>
-
-                    <div class="profile-field-row">
-                        <label for="profile-email">
-                            <i class="fas fa-envelope"></i>
-                            <span>Email</span>
-                        </label>
-                        <div>
-                            <input type="email" id="profile-email" name="email" value="{{ values.email }}" class="{% if errors.email %}field-invalid{% endif %}" aria-invalid="{% if errors.email %}true{% else %}false{% endif %}">
-                            {% if errors.email %}<p class="field-error">{{ errors.email }}</p>{% endif %}
-                        </div>
-                    </div>
-
-                    <div class="profile-field-row">
-                        <label for="profile-bio">
-                            <i class="fas fa-circle-info"></i>
-                            <span>Bio</span>
-                        </label>
-                        <div>
-                            <textarea id="profile-bio" name="bio" maxlength="{{ bio_limit }}" class="{% if errors.bio %}field-invalid{% endif %}" aria-invalid="{% if errors.bio %}true{% else %}false{% endif %}">{{ values.bio }}</textarea>
-                            <p class="profile-help">Maximum {{ bio_limit }} characters.</p>
-                            {% if errors.bio %}<p class="field-error">{{ errors.bio }}</p>{% endif %}
-                        </div>
-                    </div>
-
-                    <div class="profile-password-tools {% if errors.new_password or errors.confirm_password %}is-visible{% endif %}">
-                        <button type="button" class="profile-secondary-btn" data-profile-password-toggle>
-                            <i class="fas fa-key"></i>
-                            Change password
-                        </button>
-                    </div>
-
-                    <div class="profile-password-fields {% if errors.new_password or errors.confirm_password %}is-visible{% endif %}" data-profile-password-fields>
-                        <div class="profile-field-row">
-                            <label for="profile-new-password">
-                                <i class="fas fa-lock"></i>
-                                <span>New Password</span>
-                            </label>
-                            <div>
-                                <input type="password" id="profile-new-password" name="new_password" class="{% if errors.new_password %}field-invalid{% endif %}" aria-invalid="{% if errors.new_password %}true{% else %}false{% endif %}">
-                                {% if errors.new_password %}<p class="field-error">{{ errors.new_password }}</p>{% endif %}
-                            </div>
-                        </div>
-
-                        <div class="profile-field-row">
-                            <label for="profile-confirm-password">
-                                <i class="fas fa-lock"></i>
-                                <span>Confirm Password</span>
-                            </label>
-                            <div>
-                                <input type="password" id="profile-confirm-password" name="confirm_password" class="{% if errors.confirm_password %}field-invalid{% endif %}" aria-invalid="{% if errors.confirm_password %}true{% else %}false{% endif %}">
-                                {% if errors.confirm_password %}<p class="field-error">{{ errors.confirm_password }}</p>{% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="profile-action-row">
-                        <button class="profile-primary-btn" type="submit">
-                            <i class="fas fa-floppy-disk"></i>
-                            Save Changes
-                        </button>
-                        <a class="profile-cancel-btn" href="{% url 'profile' %}">
-                            <i class="fas fa-xmark"></i>
-                            Cancel
-                        </a>
-                    </div>
-                </form>
-            {% else %}
-                <dl class="profile-details">
-                    <div>
-                        <dt><i class="fas fa-user"></i><span>Username</span></dt>
-                        <dd>{{ request.user.username }}</dd>
-                    </div>
-                    <div>
-                        <dt><i class="fas fa-envelope"></i><span>Email</span></dt>
-                        <dd>{{ request.user.email|default:"No email added" }}</dd>
-                    </div>
-                    <div>
-                        <dt><i class="fas fa-circle-info"></i><span>Bio</span></dt>
-                        <dd><em>{{ request.user.bio|default:"No bio added yet." }}</em></dd>
-                    </div>
-                    <div>
-                        <dt><i class="fas fa-calendar"></i><span>Date joined</span></dt>
-                        <dd>{{ request.user.date_joined|date:"M j, Y" }}</dd>
-                    </div>
-                </dl>
-
-                <div class="profile-action-row profile-action-row-centered">
-                    <a class="profile-primary-btn" href="{% url 'profile' %}?edit=1">
-                        <i class="fas fa-pen"></i>
-                        Edit Profile
-                    </a>
+                    <h2>Profile Details</h2>
                 </div>
-            {% endif %}
-        </article>
+
+                {% if edit_mode %}
+                    <form class="profile-edit-form member-profile-edit-form" method="POST" novalidate>
+                        {% csrf_token %}
+                        {% if errors.form %}<p class="profile-form-error">{{ errors.form }}</p>{% endif %}
+
+                        <div class="profile-field-row">
+                            <label for="profile-username">
+                                <i class="fas fa-user"></i>
+                                <span>Username</span>
+                            </label>
+                            <div>
+                                <input type="text" id="profile-username" name="username" value="{{ values.username }}" class="{% if errors.username %}field-invalid{% endif %}" aria-invalid="{% if errors.username %}true{% else %}false{% endif %}">
+                                {% if errors.username %}<p class="field-error">{{ errors.username }}</p>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="profile-field-row">
+                            <label for="profile-email">
+                                <i class="fas fa-envelope"></i>
+                                <span>Email</span>
+                            </label>
+                            <div>
+                                <input type="email" id="profile-email" name="email" value="{{ values.email }}" class="{% if errors.email %}field-invalid{% endif %}" aria-invalid="{% if errors.email %}true{% else %}false{% endif %}">
+                                {% if errors.email %}<p class="field-error">{{ errors.email }}</p>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="profile-field-row">
+                            <label for="profile-bio">
+                                <i class="fas fa-circle-info"></i>
+                                <span>Bio</span>
+                            </label>
+                            <div>
+                                <textarea id="profile-bio" name="bio" maxlength="{{ bio_limit }}" class="{% if errors.bio %}field-invalid{% endif %}" aria-invalid="{% if errors.bio %}true{% else %}false{% endif %}">{{ values.bio }}</textarea>
+                                <p class="profile-help">Maximum {{ bio_limit }} characters.</p>
+                                {% if errors.bio %}<p class="field-error">{{ errors.bio }}</p>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="profile-password-tools {% if errors.new_password or errors.confirm_password %}is-visible{% endif %}">
+                            <button type="button" class="profile-secondary-btn" data-profile-password-toggle>
+                                <i class="fas fa-key"></i>
+                                Change password
+                            </button>
+                        </div>
+
+                        <div class="profile-password-fields {% if errors.new_password or errors.confirm_password %}is-visible{% endif %}" data-profile-password-fields>
+                            <div class="profile-field-row">
+                                <label for="profile-new-password">
+                                    <i class="fas fa-lock"></i>
+                                    <span>New Password</span>
+                                </label>
+                                <div>
+                                    <input type="password" id="profile-new-password" name="new_password" class="{% if errors.new_password %}field-invalid{% endif %}" aria-invalid="{% if errors.new_password %}true{% else %}false{% endif %}">
+                                    {% if errors.new_password %}<p class="field-error">{{ errors.new_password }}</p>{% endif %}
+                                </div>
+                            </div>
+
+                            <div class="profile-field-row">
+                                <label for="profile-confirm-password">
+                                    <i class="fas fa-lock"></i>
+                                    <span>Confirm Password</span>
+                                </label>
+                                <div>
+                                    <input type="password" id="profile-confirm-password" name="confirm_password" class="{% if errors.confirm_password %}field-invalid{% endif %}" aria-invalid="{% if errors.confirm_password %}true{% else %}false{% endif %}">
+                                    {% if errors.confirm_password %}<p class="field-error">{{ errors.confirm_password }}</p>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="profile-action-row profile-action-row-centered member-profile-form-actions">
+                            <button class="profile-primary-btn" type="submit">
+                                <i class="fas fa-floppy-disk"></i>
+                                Save Changes
+                            </button>
+                            <a class="profile-cancel-btn" href="{% url 'profile' %}">
+                                <i class="fas fa-xmark"></i>
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="member-profile-details-list">
+                        <div class="member-profile-detail-row">
+                            <div class="member-profile-detail-icon">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="member-profile-detail-meta">
+                                <span class="member-profile-detail-label">Username</span>
+                                <strong class="member-profile-detail-value">{{ request.user.username }}</strong>
+                            </div>
+                        </div>
+
+                        <div class="member-profile-detail-row">
+                            <div class="member-profile-detail-icon">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                            <div class="member-profile-detail-meta">
+                                <span class="member-profile-detail-label">Email</span>
+                                <strong class="member-profile-detail-value member-profile-detail-value--placeholder">{{ request.user.email|default:"No email added" }}</strong>
+                            </div>
+                        </div>
+
+                        <div class="member-profile-detail-row">
+                            <div class="member-profile-detail-icon">
+                                <i class="fas fa-circle-info"></i>
+                            </div>
+                            <div class="member-profile-detail-meta">
+                                <span class="member-profile-detail-label">Bio</span>
+                                <strong class="member-profile-detail-value member-profile-detail-value--placeholder">{{ request.user.bio|default:"No bio added yet." }}</strong>
+                            </div>
+                        </div>
+
+                        <div class="member-profile-detail-row">
+                            <div class="member-profile-detail-icon">
+                                <i class="fas fa-calendar-days"></i>
+                            </div>
+                            <div class="member-profile-detail-meta">
+                                <span class="member-profile-detail-label">Date Joined</span>
+                                <strong class="member-profile-detail-value">{{ request.user.date_joined|date:"M j, Y" }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </article>
+        </div>
     </section>
 </main>
 {% endblock %}

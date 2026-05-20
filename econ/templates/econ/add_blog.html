@@ -1,79 +1,124 @@
 {% extends "econ/layout.html" %}
 
+{% block title %}
+Add Blog Post
+{% endblock %}
+
 {% block content %}
-
-<div class="container mt-4">
-    <h2>Add Blog Post</h2>
-
-    <form method="POST">
-        {% csrf_token %}
-
-        <div class="mb-3">
-            <label class="form-label">Title</label>
-            <input type="text" name="title" class="form-control"
-                   value="{{ values.title }}">
-            {% if errors.title %}
-                <div class="text-danger">{{ errors.title }}</div>
-            {% endif %}
+<main class="blogs-page admin-form-page">
+    <section class="admin-form-hero">
+        <div class="container admin-form-hero-inner">
+            <div>
+                <p class="admin-form-eyebrow">Admin tools</p>
+                <h1 class="admin-form-title">Add Blog Post</h1>
+                <p class="admin-form-intro">Create a blog entry with its excerpt, body paragraphs, featured image, and source list.</p>
+            </div>
+            <div class="admin-form-hero-card">
+                <strong>Blog</strong>
+                <span>content entry</span>
+            </div>
         </div>
+    </section>
 
-        <div class="mb-3">
-            <label class="form-label">Excerpt</label>
-            <textarea name="excerpt" class="form-control" rows="3">{{ values.excerpt }}</textarea>
-            {% if errors.excerpt %}
-                <div class="text-danger">{{ errors.excerpt }}</div>
-            {% endif %}
+    <section class="container admin-form-shell">
+        <div class="admin-form-card">
+            <h2>Blog Details</h2>
+            <p>Create a new learning blog with structured sections, sources, and gallery references.</p>
+
+            <form method="POST" class="admin-form-fields">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">Title <small class="text-muted">Text only; cannot be only numbers.</small></label>
+                    <input type="text" name="title" class="form-control" value="{{ values.title }}">
+                    {% if errors.title %}
+                        <div class="text-danger field-error" role="alert">{{ errors.title }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Date Created/Posted <small class="text-muted">Editable when source URLs are provided; otherwise recorded automatically.</small></label>
+                    <input type="date" name="date" class="form-control" value="{{ date_value }}" data-content-date-input {% if not values.sources %}disabled{% endif %}>
+                    {% if errors.date %}
+                        <div class="text-danger field-error" role="alert">{{ errors.date }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Excerpt <small class="text-muted">Text only; cannot be only numbers.</small></label>
+                    <textarea name="excerpt" class="form-control" rows="3">{{ values.excerpt }}</textarea>
+                    {% if errors.excerpt %}
+                        <div class="text-danger field-error" role="alert">{{ errors.excerpt }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Featured Image URL <small class="text-muted">Example: https://example.com/image.jpg</small></label>
+                    <input type="url" name="featured_image_url" class="form-control" value="{{ values.featured_image_url }}">
+                    {% if errors.featured_image_url %}
+                        <div class="text-danger field-error" role="alert">{{ errors.featured_image_url }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Body Paragraphs <small class="text-muted">Write paragraph text; cannot be only numbers.</small></label>
+                    <textarea name="body_paragraphs" class="form-control" rows="8">{{ values.body_paragraphs }}</textarea>
+                    {% if errors.body_paragraphs %}
+                        <div class="text-danger field-error" role="alert">{{ errors.body_paragraphs }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Keywords <small class="text-muted">Comma separated. Example: rail, mobility, economy.</small></label>
+                    <input type="text" name="keywords" class="form-control" value="{{ values.keywords }}">
+                    {% if errors.keywords %}
+                        <div class="text-danger field-error" role="alert">{{ errors.keywords }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Highlights <small class="text-muted">Separate each highlight with a blank line.</small></label>
+                    <textarea name="highlights" class="form-control" rows="4">{{ values.highlights }}</textarea>
+                    {% if errors.highlights %}
+                        <div class="text-danger field-error" role="alert">{{ errors.highlights }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Gallery URLs <small class="text-muted">One image URL per block, separated with a blank line.</small></label>
+                    <textarea name="gallery" class="form-control" rows="4">{{ values.gallery }}</textarea>
+                    {% if errors.gallery %}
+                        <div class="text-danger field-error" role="alert">{{ errors.gallery }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Sources <small class="text-muted">Two lines per source: label, then URL. Separate sources with a blank line.</small></label>
+                    <textarea name="sources" class="form-control" rows="4" data-content-url-source>{{ values.sources }}</textarea>
+                    {% if errors.sources %}
+                        <div class="text-danger field-error" role="alert">{{ errors.sources }}</div>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-primary admin-form-submit">Create Blog Post</button>
+            </form>
         </div>
+    </section>
+</main>
+<script>
+    (function () {
+        var sourceInput = document.querySelector('[data-content-url-source]');
+        var dateInput = document.querySelector('[data-content-date-input]');
+        if (!sourceInput || !dateInput) {
+            return;
+        }
 
-    
+        function syncDateState() {
+            dateInput.disabled = !sourceInput.value.trim();
+        }
 
-        <div class="mb-3">
-            <label class="form-label">Featured Image URL</label>
-            <input type="url" name="featured_image_url" class="form-control"
-                   value="{{ values.featured_image_url }}">
-        </div>
-
-    
-
-        <div class="mb-3">
-            <label class="form-label">Body Paragraphs</label>
-            <textarea name="body_paragraphs" class="form-control" rows="8">{{ values.body_paragraphs }}</textarea>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Keywords (comma separated)</label>
-            <input type="text" name="keywords" class="form-control"
-                   value="{{ values.keywords }}">
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Highlights (separate with a blank line) </label>
-            <textarea name="highlights" class="form-control" rows="4">{{ values.highlights }}</textarea>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Gallery URLs (separate with a blank line)</label>
-            <textarea name="gallery" class="form-control" rows="4">{{ values.gallery }}</textarea>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">
-                Sources
-            </label>
-
-            <small class="text-muted">
-                Enter the source label on the first line and the URL on the second line.
-                Separate sources with a blank line.
-            </small>
-            <textarea name="sources" class="form-control" rows="4">{{ values.sources }}</textarea>
-        </div>
-
-       
-
-        <button type="submit" class="btn btn-primary">
-            Create Blog Post
-        </button>
-    </form>
-</div>
-
+        sourceInput.addEventListener('input', syncDateState);
+        syncDateState();
+    })();
+</script>
 {% endblock %}
