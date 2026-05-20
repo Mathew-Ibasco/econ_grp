@@ -1,79 +1,86 @@
 {% extends "econ/layout.html" %}
 
+{% block title %}
+Add Blog Post
+{% endblock %}
+
 {% block content %}
-
-<div class="container mt-4">
-    <h2>Add Blog Post</h2>
-
-    <form method="POST">
-        {% csrf_token %}
-
-        <div class="mb-3">
-            <label class="form-label">Title</label>
-            <input type="text" name="title" class="form-control"
-                   value="{{ values.title }}">
-            {% if errors.title %}
-                <div class="text-danger">{{ errors.title }}</div>
-            {% endif %}
+<main class="blogs-page admin-form-page">
+    <section class="admin-form-hero">
+        <div class="container admin-form-hero-inner">
+            <div>
+                <p class="admin-form-eyebrow">Admin tools</p>
+                <h1 class="admin-form-title">Add Blog Post</h1>
+                <p class="admin-form-intro">Create a blog entry with its excerpt, body paragraphs, featured image, and source list.</p>
+            </div>
+            <div class="admin-form-hero-card">
+                <strong>Blog</strong>
+                <span>content entry</span>
+            </div>
         </div>
+    </section>
 
-        <div class="mb-3">
-            <label class="form-label">Excerpt</label>
-            <textarea name="excerpt" class="form-control" rows="3">{{ values.excerpt }}</textarea>
-            {% if errors.excerpt %}
-                <div class="text-danger">{{ errors.excerpt }}</div>
-            {% endif %}
+    <section class="container admin-form-shell">
+        <div class="admin-form-card">
+            <h2>Blog Details</h2>
+            <p>Fill in the fields below to publish a new blog post.</p>
+
+            <form method="POST" class="admin-form-fields">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">Title</label>
+                    <input type="text" name="title" class="form-control" value="{{ values.title }}">
+                    {% if errors.title %}
+                        <div class="text-danger">{{ errors.title }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Excerpt</label>
+                    <textarea name="excerpt" class="form-control" rows="3">{{ values.excerpt }}</textarea>
+                    {% if errors.excerpt %}
+                        <div class="text-danger">{{ errors.excerpt }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Featured Image URL</label>
+                    <input type="url" name="featured_image_url" class="form-control" value="{{ values.featured_image_url }}">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Body Paragraphs</label>
+                    <textarea name="body_paragraphs" class="form-control" rows="8">{{ values.body_paragraphs }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Keywords (comma separated)</label>
+                    <input type="text" name="keywords" class="form-control" value="{{ values.keywords }}">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Highlights (separate with a blank line)</label>
+                    <textarea name="highlights" class="form-control" rows="4">{{ values.highlights }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Gallery URLs (separate with a blank line)</label>
+                    <textarea name="gallery" class="form-control" rows="4">{{ values.gallery }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Sources</label>
+                    <small class="text-muted">
+                        Enter the source label on the first line and the URL on the second line.
+                        Separate sources with a blank line.
+                    </small>
+                    <textarea name="sources" class="form-control" rows="4">{{ values.sources }}</textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary admin-form-submit">Create Blog Post</button>
+            </form>
         </div>
-
-    
-
-        <div class="mb-3">
-            <label class="form-label">Featured Image URL</label>
-            <input type="url" name="featured_image_url" class="form-control"
-                   value="{{ values.featured_image_url }}">
-        </div>
-
-    
-
-        <div class="mb-3">
-            <label class="form-label">Body Paragraphs</label>
-            <textarea name="body_paragraphs" class="form-control" rows="8">{{ values.body_paragraphs }}</textarea>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Keywords (comma separated)</label>
-            <input type="text" name="keywords" class="form-control"
-                   value="{{ values.keywords }}">
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Highlights (separate with a blank line) </label>
-            <textarea name="highlights" class="form-control" rows="4">{{ values.highlights }}</textarea>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Gallery URLs (separate with a blank line)</label>
-            <textarea name="gallery" class="form-control" rows="4">{{ values.gallery }}</textarea>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">
-                Sources
-            </label>
-
-            <small class="text-muted">
-                Enter the source label on the first line and the URL on the second line.
-                Separate sources with a blank line.
-            </small>
-            <textarea name="sources" class="form-control" rows="4">{{ values.sources }}</textarea>
-        </div>
-
-       
-
-        <button type="submit" class="btn btn-primary">
-            Create Blog Post
-        </button>
-    </form>
-</div>
-
+    </section>
+</main>
 {% endblock %}
