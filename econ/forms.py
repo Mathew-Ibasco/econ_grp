@@ -19,12 +19,12 @@ class MultipleImageField(forms.ImageField):
 
 
 class ForumThreadCreateForm(forms.Form):
-    topics = forms.ModelMultipleChoiceField(
+    tags = forms.ModelMultipleChoiceField(
         queryset=Topic.objects.none(),
         required=True,
-        label="Topics",
+        label="Tags",
         widget=forms.CheckboxSelectMultiple(),
-        help_text="Select one or more topics that fit this thread.",
+        help_text="Select one or more tags that fit this thread.",
     )
     title = forms.CharField(
         max_length=220,
@@ -59,7 +59,7 @@ class ForumThreadCreateForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         topic_queryset = Topic.objects.order_by("order", "title")
-        self.fields["topics"].queryset = topic_queryset
+        self.fields["tags"].queryset = topic_queryset
 
 
 class ForumReplyForm(forms.Form):
@@ -69,6 +69,16 @@ class ForumReplyForm(forms.Form):
                 "class": "forum-textarea forum-reply-textarea",
                 "rows": 5,
                 "placeholder": "Write a thoughtful reply to keep the discussion going.",
+            }
+        ),
+    )
+    images = MultipleImageField(
+        required=False,
+        label="Pictures",
+        widget=MultipleImageInput(
+            attrs={
+                "class": "forum-file-input",
+                "accept": "image/*",
             }
         ),
     )

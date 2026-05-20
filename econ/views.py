@@ -9,6 +9,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout, updat
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
+from django.db import connection
 from django.db.models import Count, F, Prefetch, Q
 from django.http import JsonResponse, StreamingHttpResponse
 from django.template.loader import render_to_string
@@ -17,10 +18,10 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 
 
-import os, re, sys, html, calendar, json, subprocess, sqlite3
+import os, re, sys, html, calendar, json, subprocess
 
 from .forms import ForumReplyForm, ForumThreadCreateForm
-from .models import BlogPost, Bookmark, ForumReply, ForumThread, ForumThreadImage, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, StudyItemProgress, Topic, TopicNote, User, vlog as VlogEntry
+from .models import BlogPost, Bookmark, ForumReply, ForumReplyImage, ForumThread, ForumThreadImage, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, StudyItemProgress, Topic, TopicNote, User, vlog as VlogEntry
 
 
 DEFAULT_RECOMMENDATION_IMAGE = "https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg"
@@ -159,19 +160,6 @@ def _dashboard_recommendations(dashboard_topics, saved_item_keys, limit=6):
 
     return recommended_items
 
-
-def _forum_topic_queryset():
-    return Topic.objects.annotate(
-        primary_thread_count=Count("forum_threads", distinct=True),
-        additional_thread_count=Count("forum_additional_threads", distinct=True),
-        primary_reply_count=Count("forum_threads__replies", distinct=True),
-        additional_reply_count=Count("forum_additional_threads__replies", distinct=True),
-    ).annotate(
-        thread_count=F("primary_thread_count") + F("additional_thread_count"),
-        reply_count=F("primary_reply_count") + F("additional_reply_count"),
-    ).order_by("order", "title")
-
-
 def _forum_thread_queryset(topic=None):
     queryset = ForumThread.objects.select_related("topic", "author").annotate(
         reply_count=Count("replies", distinct=True),
@@ -181,45 +169,29 @@ def _forum_thread_queryset(topic=None):
     )
     if topic is not None:
         queryset = queryset.filter(Q(topic=topic) | Q(additional_topics=topic))
-    return queryset.distinct().order_by("-last_activity_at", "-created_at")
+    return queryset.distinct().order_by("-created_at", "-id")
 
 
-def _forum_page_context(active_topic=None, thread_form=None, thread_modal_open=False):
-    forum_topics = list(_forum_topic_queryset())
-    forum_threads = list(_forum_thread_queryset(active_topic))
+def _forum_page_context(thread_form=None, thread_modal_open=False):
+    forum_threads = list(_forum_thread_queryset())
     forum_stats = {
         "thread_count": ForumThread.objects.count(),
         "reply_count": ForumReply.objects.count(),
-        "active_topic_count": Topic.objects.filter(
-            Q(forum_threads__isnull=False) | Q(forum_additional_threads__isnull=False)
-        ).distinct().count(),
     }
-    visible_reply_count = sum(getattr(thread, "reply_count", 0) for thread in forum_threads)
-    if active_topic is not None:
-        forum_feed_title = f"{active_topic.title} discussions"
-        forum_feed_description = f"Showing conversations tagged with {active_topic.title}."
-        forum_feed_summary = f"{len(forum_threads)} discussions - {visible_reply_count} replies"
-    else:
-        forum_feed_title = "Latest discussions"
-        forum_feed_description = "Open threads across blogs, journals, media, and rail projects."
-        forum_feed_summary = f"{forum_stats['reply_count']} replies across {forum_stats['active_topic_count']} active topics"
+    forum_feed_title = "Latest Discussions"
+    forum_feed_description = "Open threads across blogs, journals, media, and rail projects."
+    forum_feed_summary = f"{forum_stats['reply_count']} replies across {forum_stats['thread_count']} discussions"
 
     if thread_form is None:
-        thread_form = ForumThreadCreateForm(
-            initial={
-                "topics": [active_topic.pk] if active_topic is not None else [],
-            }
-        )
+        thread_form = ForumThreadCreateForm()
 
-    thread_form.fields["topics"].queryset = Topic.objects.order_by("order", "title")
+    thread_form.fields["tags"].queryset = Topic.objects.order_by("order", "title")
 
     return {
         "date": datetime.now(),
-        "forum_topics": forum_topics,
         "forum_threads": forum_threads,
         "forum_stats": forum_stats,
         "thread_form": thread_form,
-        "active_topic": active_topic,
         "forum_feed_title": forum_feed_title,
         "forum_feed_description": forum_feed_description,
         "forum_feed_summary": forum_feed_summary,
@@ -233,14 +205,12 @@ def _forum_thread_panel_context(context):
     }
 
 
-def _forum_fragment_response(request, active_topic, thread_form=None, thread_modal_open=False):
+def _forum_fragment_response(request, thread_form=None, thread_modal_open=False):
     context = _forum_page_context(
-        active_topic=active_topic,
         thread_form=thread_form,
         thread_modal_open=thread_modal_open,
     )
     return JsonResponse({
-        "active_topic_key": active_topic.key if active_topic is not None else "",
         "forum_feed_title": context["forum_feed_title"],
         "forum_feed_description": context["forum_feed_description"],
         "forum_feed_summary": context["forum_feed_summary"],
@@ -252,10 +222,42 @@ def _forum_fragment_response(request, active_topic, thread_form=None, thread_mod
     })
 
 
-def _forum_thread_context(thread, reply_form=None):
-    context = _forum_page_context(active_topic=thread.topic)
+def _forum_thread_detail_queryset():
+    return ForumThread.objects.select_related("topic", "author").prefetch_related(
+        Prefetch("additional_topics", queryset=Topic.objects.order_by("order", "title")),
+        Prefetch("images", queryset=ForumThreadImage.objects.order_by("order", "id")),
+        "likes",
+        Prefetch(
+            "replies",
+            queryset=ForumReply.objects.select_related("author").prefetch_related(
+                Prefetch("images", queryset=ForumReplyImage.objects.order_by("order", "id")),
+                "likes",
+            ),
+        ),
+    )
+
+
+def _prepare_forum_like_state(thread, viewer):
+    viewer_id = viewer.id if getattr(viewer, "is_authenticated", False) else None
+
+    thread_likes = list(thread.likes.all())
+    thread.like_count = len(thread_likes)
+    thread.user_liked = viewer_id is not None and any(user.id == viewer_id for user in thread_likes)
+
+    replies = list(thread.replies.all())
+    for reply in replies:
+        reply_likes = list(reply.likes.all())
+        reply.like_count = len(reply_likes)
+        reply.user_liked = viewer_id is not None and any(user.id == viewer_id for user in reply_likes)
+
+    return replies
+
+
+def _forum_thread_context(thread, viewer=None, reply_form=None):
+    context = _forum_page_context()
     thread_topics = [thread.topic]
     thread_topics.extend(list(thread.additional_topics.all()))
+    replies = _prepare_forum_like_state(thread, viewer)
     context.update(
         {
             "thread": thread,
@@ -264,7 +266,7 @@ def _forum_thread_context(thread, reply_form=None):
                     Q(topic__in=thread_topics) | Q(additional_topics__in=thread_topics)
                 ).exclude(pk=thread.pk).distinct()[:4]
             ),
-            "replies": list(thread.replies.all()),
+            "replies": replies,
             "reply_form": reply_form or ForumReplyForm(),
         }
     )
@@ -623,8 +625,23 @@ def _dashboard_page_context(request):
 
     return context
 
+def _public_home_context():
+    homepage_topics = list(
+        Topic.objects.prefetch_related(
+            "blog_posts",
+            "journal_entries",
+            "vlog_entries",
+        ).order_by("order", "id")
+    )
+    return {
+        "date": datetime.now(),
+        "show_dashboard": False,
+        "recommended_items": _dashboard_recommendations(homepage_topics, set()),
+    }
+
+
 def home(request):
-    return render(request, "econ/index.html", {"date": datetime.now(), "show_dashboard": False})
+    return render(request, "econ/index.html", _public_home_context())
 
 # staff/admin only
 @login_required
@@ -737,7 +754,7 @@ def index(request):
         context = _dashboard_page_context(request)
         context["show_dashboard"] = True
         return render(request, "econ/index.html", context)
-    return render(request, "econ/index.html", {"date": datetime.now(), "show_dashboard": False})
+    return render(request, "econ/index.html", _public_home_context())
 
 @login_required
 def dashboard(request):
@@ -746,11 +763,9 @@ def dashboard(request):
     return render(request, "econ/index.html", context)
 
 def forum(request):
-    selected_topic_key = request.GET.get("topic", "").strip()
-    active_topic = Topic.objects.filter(key=selected_topic_key).first() if selected_topic_key else None
     if request.GET.get("fragment") == "1" or request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return _forum_fragment_response(request, active_topic)
-    context = _forum_page_context(active_topic=active_topic)
+        return _forum_fragment_response(request)
+    context = _forum_page_context()
     return render(request, "econ/forum.html", context)
 
 
@@ -761,16 +776,16 @@ def forum_create_thread(request):
 
     form = ForumThreadCreateForm(request.POST, request.FILES)
     if form.is_valid():
-        selected_topics = list(form.cleaned_data["topics"])
-        primary_topic = selected_topics[0]
-        secondary_topics = selected_topics[1:]
+        selected_tags = list(form.cleaned_data["tags"])
+        primary_tag = selected_tags[0]
+        secondary_tags = selected_tags[1:]
         thread = ForumThread.objects.create(
-            topic=primary_topic,
+            topic=primary_tag,
             author=request.user,
             title=form.cleaned_data["title"],
             body=form.cleaned_data["body"],
         )
-        thread.additional_topics.set(secondary_topics)
+        thread.additional_topics.set(secondary_tags)
         uploaded_images = form.cleaned_data.get("images") or []
         for order, image in enumerate(uploaded_images):
             ForumThreadImage.objects.create(thread=thread, image=image, order=order)
@@ -781,9 +796,7 @@ def forum_create_thread(request):
             messages.success(request, "Your discussion was posted.")
         return redirect("forum_thread", thread_id=thread.id)
 
-    selected_topic_ids = [value for value in request.POST.getlist("topics") if str(value).isdigit()]
-    active_topic = Topic.objects.filter(pk=selected_topic_ids[0]).first() if selected_topic_ids else None
-    context = _forum_page_context(active_topic=active_topic, thread_form=form, thread_modal_open=True)
+    context = _forum_page_context(thread_form=form, thread_modal_open=True)
     messages.error(request, "Please finish the thread details and try again.")
     return render(request, "econ/forum.html", context, status=400)
 
@@ -810,15 +823,8 @@ def _refresh_forum_thread_activity(thread):
 
 
 def forum_thread(request, thread_id):
-    thread = get_object_or_404(
-        ForumThread.objects.select_related("topic", "author").prefetch_related(
-            Prefetch("additional_topics", queryset=Topic.objects.order_by("order", "title")),
-            Prefetch("images", queryset=ForumThreadImage.objects.order_by("order", "id")),
-            Prefetch("replies", queryset=ForumReply.objects.select_related("author"))
-        ),
-        pk=thread_id,
-    )
-    context = _forum_thread_context(thread)
+    thread = get_object_or_404(_forum_thread_detail_queryset(), pk=thread_id)
+    context = _forum_thread_context(thread, request.user)
     return render(request, "econ/forum_thread.html", context)
 
 
@@ -827,28 +833,56 @@ def forum_reply(request, thread_id):
     if request.method != "POST":
         return redirect("forum_thread", thread_id=thread_id)
 
-    thread = get_object_or_404(
-        ForumThread.objects.select_related("topic", "author").prefetch_related(
-            Prefetch("additional_topics", queryset=Topic.objects.order_by("order", "title")),
-            Prefetch("replies", queryset=ForumReply.objects.select_related("author"))
-        ),
-        pk=thread_id,
-    )
-    form = ForumReplyForm(request.POST)
+    thread = get_object_or_404(_forum_thread_detail_queryset(), pk=thread_id)
+    form = ForumReplyForm(request.POST, request.FILES)
     if form.is_valid():
-        ForumReply.objects.create(
+        reply = ForumReply.objects.create(
             thread=thread,
             author=request.user,
             body=form.cleaned_data["body"],
         )
+        uploaded_images = form.cleaned_data.get("images") or []
+        for order, image in enumerate(uploaded_images):
+            ForumReplyImage.objects.create(reply=reply, image=image, order=order)
         thread.last_activity_at = timezone.now()
         thread.save(update_fields=["last_activity_at"])
-        messages.success(request, "Your reply was posted.")
+        if uploaded_images:
+            messages.success(request, "Your reply and pictures were posted.")
+        else:
+            messages.success(request, "Your reply was posted.")
         return redirect(f"{reverse('forum_thread', args=[thread.id])}#replies")
 
-    context = _forum_thread_context(thread, reply_form=form)
-    messages.error(request, "Please write a reply before posting.")
+    context = _forum_thread_context(thread, request.user, reply_form=form)
+    messages.error(request, "Please check the reply details and try again.")
     return render(request, "econ/forum_thread.html", context, status=400)
+
+
+@login_required
+def forum_toggle_thread_like(request, thread_id):
+    if request.method != "POST":
+        return redirect("forum_thread", thread_id=thread_id)
+
+    thread = get_object_or_404(ForumThread, pk=thread_id)
+    if thread.likes.filter(pk=request.user.pk).exists():
+        thread.likes.remove(request.user)
+    else:
+        thread.likes.add(request.user)
+
+    return redirect(f"{reverse('forum_thread', args=[thread.id])}#thread")
+
+
+@login_required
+def forum_toggle_reply_like(request, reply_id):
+    reply = get_object_or_404(ForumReply.objects.select_related("thread"), pk=reply_id)
+    if request.method != "POST":
+        return redirect(f"{reverse('forum_thread', args=[reply.thread_id])}#reply-{reply.id}")
+
+    if reply.likes.filter(pk=request.user.pk).exists():
+        reply.likes.remove(request.user)
+    else:
+        reply.likes.add(request.user)
+
+    return redirect(f"{reverse('forum_thread', args=[reply.thread_id])}#reply-{reply.id}")
 
 
 @login_required
@@ -1183,84 +1217,145 @@ def upload_sql(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def download_sql_dump(request):
-    db_path = settings.DATABASES['default']['NAME']
     filename = f"dump_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
 
     def stream():
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-
-        yield f"-- SQL Dump: {os.path.basename(db_path)}\n".encode()
+        yield f"-- SQL Dump: {connection.settings_dict['NAME']}\n".encode()
         yield f"-- Generated: {datetime.now()}\n\n".encode()
-        yield b"PRAGMA foreign_keys = OFF;\n\n"
+        yield b"SET FOREIGN_KEY_CHECKS = 0;\n\n"
 
-        # Get all user tables (exclude sqlite internal tables)
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-        tables = [row[0] for row in cursor.fetchall()]
+        with connection.cursor() as cursor:
+            tables = connection.introspection.table_names(cursor)
 
-        for table in tables:
-            # Table structure
-            cursor.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,))
-            create_table = cursor.fetchone()[0]
-            yield f"-- Table: {table}\n".encode()
-            yield f"DROP TABLE IF EXISTS \"{table}\";\n".encode()
-            yield f"{create_table};\n\n".encode()
+            for table in tables:
+                quoted_table = connection.ops.quote_name(table)
+                cursor.execute(f"SHOW CREATE TABLE {quoted_table}")
+                create_table = cursor.fetchone()[1]
+                yield f"-- Table: {table}\n".encode()
+                yield f"DROP TABLE IF EXISTS {quoted_table};\n".encode()
+                yield f"{create_table};\n\n".encode()
 
-            # Table data
-            cursor.execute(f'SELECT * FROM "{table}"')
-            rows = cursor.fetchall()
-            if rows:
-                for row in rows:
-                    values = ', '.join(
-                        'NULL' if val is None
-                        else f"'{str(val).replace(chr(39), chr(39)*2)}'"
-                        for val in row
-                    )
-                    yield f'INSERT INTO "{table}" VALUES ({values});\n'.encode()
-                yield b"\n"
+                cursor.execute(f"SELECT * FROM {quoted_table}")
+                rows = cursor.fetchall()
+                if rows:
+                    placeholders = ", ".join(["%s"] * len(rows[0]))
+                    insert_sql = f"INSERT INTO {quoted_table} VALUES ({placeholders})"
+                    for row in rows:
+                        statement = cursor.mogrify(insert_sql, row)
+                        if isinstance(statement, bytes):
+                            statement = statement.decode("utf-8")
+                        yield f"{statement};\n".encode()
+                    yield b"\n"
 
-        yield b"PRAGMA foreign_keys = ON;\n"
-        cursor.close()
-        conn.close()
+        yield b"SET FOREIGN_KEY_CHECKS = 1;\n"
 
     response = StreamingHttpResponse(stream(), content_type='application/sql')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
+
+def _split_sql_statements(sql_text):
+    statements = []
+    buffer = []
+    state = "code"
+    index = 0
+    length = len(sql_text)
+
+    while index < length:
+        ch = sql_text[index]
+        nxt = sql_text[index + 1] if index + 1 < length else ""
+        nxt2 = sql_text[index + 2] if index + 2 < length else ""
+
+        if state == "code":
+            if ch == "'":
+                buffer.append(ch)
+                state = "single"
+            elif ch == '"':
+                buffer.append(ch)
+                state = "double"
+            elif ch == "`":
+                buffer.append(ch)
+                state = "backtick"
+            elif ch == "-" and nxt == "-" and (not nxt2 or nxt2.isspace()):
+                state = "line_comment"
+                index += 1
+            elif ch == "#":
+                state = "line_comment"
+            elif ch == "/" and nxt == "*":
+                state = "block_comment"
+                index += 1
+            elif ch == ";":
+                statement = "".join(buffer).strip()
+                if statement:
+                    statements.append(statement)
+                buffer = []
+            else:
+                buffer.append(ch)
+        elif state == "single":
+            buffer.append(ch)
+            if ch == "\\" and nxt:
+                buffer.append(nxt)
+                index += 1
+            elif ch == "'":
+                if nxt == "'":
+                    buffer.append(nxt)
+                    index += 1
+                else:
+                    state = "code"
+        elif state == "double":
+            buffer.append(ch)
+            if ch == "\\" and nxt:
+                buffer.append(nxt)
+                index += 1
+            elif ch == '"':
+                if nxt == '"':
+                    buffer.append(nxt)
+                    index += 1
+                else:
+                    state = "code"
+        elif state == "backtick":
+            buffer.append(ch)
+            if ch == "`":
+                state = "code"
+        elif state == "line_comment":
+            if ch in "\r\n":
+                buffer.append(ch)
+                state = "code"
+        elif state == "block_comment":
+            if ch == "*" and nxt == "/":
+                index += 1
+                state = "code"
+        index += 1
+
+    trailing = "".join(buffer).strip()
+    if trailing:
+        statements.append(trailing)
+
+    return statements
+
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def upload_sql_process(request):
     if request.method == 'POST' and request.FILES.get('sql_file'):
-        db_path = settings.DATABASES['default']['NAME']
         sql_file = request.FILES['sql_file']
-
-        conn = sqlite3.connect(db_path)
+        sql = sql_file.read().decode('utf-8')
 
         try:
-            cursor = conn.cursor()
-            sql = sql_file.read().decode('utf-8')
+            with connection.cursor() as cursor:
+                cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
 
-            # Drop all existing user tables first
-            cursor.execute("PRAGMA foreign_keys = OFF;")
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-            existing_tables = [row[0] for row in cursor.fetchall()]
-            for table in existing_tables:
-                cursor.execute(f'DROP TABLE IF EXISTS "{table}"')
-            conn.commit()
+                existing_tables = connection.introspection.table_names(cursor)
+                for table in existing_tables:
+                    cursor.execute(f"DROP TABLE IF EXISTS {connection.ops.quote_name(table)}")
 
-            # executescript() is SQLite's native multi-statement parser —
-            # it handles semicolons inside string literals and quoted identifiers
-            # correctly, unlike a naive split(';').
-            # It also issues a COMMIT before running, so we commit the drops above first.
-            conn.executescript(sql)
+                for statement in _split_sql_statements(sql):
+                    cursor.execute(statement)
+
+                cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
 
             messages.success(request, "SQL dump applied successfully.")
         except Exception as e:
-            conn.rollback()
             messages.error(request, f"Failed to apply dump: {str(e)}")
-        finally:
-            cursor.close()
-            conn.close()
 
     return render(
         request,

@@ -20,7 +20,7 @@ TOPICS = [
         "key": "mobility-economy",
         "title": "Accessibility, Mobility & The Economy",
         "summary": "How rail systems reduce congestion, connect people to opportunity, and support productivity, equity, and urban growth.",
-        "icon": "fa-chart-simple",
+        "icon": "fa-chart-line",
         "order": 3,
     },
 ]

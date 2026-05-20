@@ -289,9 +289,102 @@
         var carouselWrapper = carousel.closest('.content-carousel');
         var prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         var autoplayEnabled = carouselWrapper && carouselWrapper.getAttribute('data-carousel-autoplay') === 'true';
+        var loopEnabled = carouselWrapper && carouselWrapper.getAttribute('data-carousel-loop') === 'true';
         var autoplayDelay = 5000;
         var autoplayTimer = null;
         var isPaused = false;
+        var isLoopAdjusting = false;
+        var loopWidth = 0;
+        var loopCardsCloned = false;
+        var originalCards = [];
+
+        var setScrollLeftInstantly = function (left) {
+          var previousScrollBehavior = carousel.style.scrollBehavior;
+          isLoopAdjusting = true;
+          carousel.style.scrollBehavior = 'auto';
+          carousel.scrollLeft = left;
+          carousel.style.scrollBehavior = previousScrollBehavior;
+          window.requestAnimationFrame(function () {
+            isLoopAdjusting = false;
+          });
+        };
+
+        var createCloneSet = function (position) {
+          var fragment = document.createDocumentFragment();
+
+          originalCards.forEach(function (card) {
+            var clone = card.cloneNode(true);
+            clone.setAttribute('data-carousel-clone', position);
+            clone.setAttribute('aria-hidden', 'true');
+            clone.setAttribute('tabindex', '-1');
+            fragment.appendChild(clone);
+          });
+
+          return fragment;
+        };
+
+        var appendCloneSet = function () {
+          if (!originalCards.length) {
+            return;
+          }
+
+          carousel.appendChild(createCloneSet('after'));
+        };
+
+        var prependCloneSet = function () {
+          if (!originalCards.length) {
+            return;
+          }
+
+          var previousScrollWidth = carousel.scrollWidth;
+          var previousScrollLeft = carousel.scrollLeft;
+          carousel.insertBefore(createCloneSet('before'), carousel.firstChild);
+          setScrollLeftInstantly(previousScrollLeft + (carousel.scrollWidth - previousScrollWidth));
+        };
+
+        var measureLoopWidth = function () {
+          if (!loopEnabled || !originalCards.length) {
+            return 0;
+          }
+
+          var firstOriginal = originalCards[0];
+          var firstAfterClone = carousel.querySelector('[data-carousel-clone="after"]');
+          loopWidth = firstAfterClone ? firstAfterClone.offsetLeft - firstOriginal.offsetLeft : firstOriginal.offsetLeft;
+          return loopWidth;
+        };
+
+        var cloneCarouselCards = function () {
+          if (!loopEnabled || loopCardsCloned) {
+            return;
+          }
+
+          originalCards = Array.prototype.slice.call(carousel.querySelectorAll('.content-carousel-card:not([data-carousel-clone])'));
+          if (originalCards.length < 2) {
+            return;
+          }
+
+          carousel.insertBefore(createCloneSet('before'), carousel.firstChild);
+          appendCloneSet();
+
+          loopCardsCloned = true;
+          measureLoopWidth();
+          setScrollLeftInstantly(loopWidth);
+        };
+
+        var extendLoopIfNeeded = function () {
+          if (!loopEnabled || !loopCardsCloned || isLoopAdjusting) {
+            return;
+          }
+
+          var edgeBuffer = Math.max(carousel.clientWidth, getStep() * 2);
+          if (getMaxScrollLeft() - carousel.scrollLeft < edgeBuffer) {
+            appendCloneSet();
+          }
+
+          if (carousel.scrollLeft < edgeBuffer) {
+            prependCloneSet();
+          }
+        };
 
         var getGap = function () {
           var computedStyle = window.getComputedStyle(carousel);
@@ -314,16 +407,16 @@
         };
 
         var updateButtons = function () {
-          var maxScrollLeft = Math.max(0, carousel.scrollWidth - carousel.clientWidth);
-          var atStart = carousel.scrollLeft <= 1;
-          var atEnd = carousel.scrollLeft >= maxScrollLeft - 1;
-
-          if (autoplayEnabled && hasOverflow()) {
+          if (loopEnabled && hasOverflow()) {
             buttons.forEach(function (navButton) {
               navButton.disabled = false;
             });
             return;
           }
+
+          var maxScrollLeft = Math.max(0, carousel.scrollWidth - carousel.clientWidth);
+          var atStart = carousel.scrollLeft <= 1;
+          var atEnd = carousel.scrollLeft >= maxScrollLeft - 1;
 
           buttons.forEach(function (navButton) {
             if (navButton.getAttribute('data-carousel-direction') === 'prev') {
@@ -341,7 +434,17 @@
           }
 
           var step = getStep();
+          if (loopEnabled) {
+            extendLoopIfNeeded();
+            carousel.scrollBy({
+              left: direction * step,
+              behavior: behavior,
+            });
+            return;
+          }
+
           var currentLeft = carousel.scrollLeft;
+
           var nextLeft = currentLeft + (direction * step);
 
           if (direction > 0 && nextLeft >= maxScrollLeft - 1) {
@@ -421,8 +524,20 @@
           isPaused = false;
         });
 
-        carousel.addEventListener('scroll', updateButtons, { passive: true });
+        cloneCarouselCards();
+        extendLoopIfNeeded();
+        carousel.addEventListener('scroll', function () {
+          if (loopEnabled && !isLoopAdjusting) {
+            extendLoopIfNeeded();
+          }
+
+          updateButtons();
+        }, { passive: true });
         window.addEventListener('resize', function () {
+          if (loopEnabled) {
+            measureLoopWidth();
+            extendLoopIfNeeded();
+          }
           updateButtons();
           if (autoplayEnabled) {
             refreshAutoplay();
@@ -487,15 +602,7 @@
             </div>
         </section>
 
-        <div class="container dashboard-shell combined-dashboard-shell">
-            <section class="dashboard-section dashboard-workspace-intro">
-                <div>
-                    <p class="dashboard-kicker">Study workspace</p>
-                    <h2 class="section-title">Your Rail Mobility Dashboard</h2>
-                    <p>Saved topics, progress, key concepts, and recommended readings are collected here so the dashboard still carries the full rail mobility context while you work.</p>
-                </div>
-            </section>
-
+        <div class="container">
             <section class="dashboard-section dashboard-context-section">
                 <div class="dashboard-section-heading">
                     <div>
@@ -510,36 +617,37 @@
                 </div>
             </section>
 
-            <section class="dashboard-section dashboard-context-section">
-                <div class="dashboard-section-heading">
-                    <div>
-                        <h2 class="section-title">Philippine Rail Systems</h2>
-                        <p>MRT, LRT, and PNR remain central to the country's urban mobility story, especially in Metro Manila and Luzon.</p>
-                    </div>
-                </div>
-                <div class="railway-flex dashboard-rail-overview">
+            <section class="rail-section dashboard-rail-section">
+                <h2 class="section-title">Railways in the Philippines</h2>
+                <div class="railway-flex">
                     <div class="definition-side">
-                        <p>Rail transport improves access to jobs, education, healthcare, and essential services. In the Philippines, expanding and modernizing rail systems can reduce road congestion, support regional growth, and make daily commutes more predictable.</p>
+                        <p>Currently, the Philippines has three major railway systems: the Manila Metro Rail Transit (MRT), the Light Rail Transit (LRT), and the Philippine National Railways (PNR). At present, active railway services are mainly located in Luzon, which means rail transport is not yet widely available across the entire country. These systems are concentrated in limited areas, particularly in and around Metro Manila and parts of Luzon, but they remain heavily used by many Filipino commuters.</p>
                     </div>
-                    <div class="map-side">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Manila_LRT-MRT_map.png/1280px-Manila_LRT-MRT_map.png" alt="Manila LRT-MRT network map">
-                        <div class="map-caption"><i class="fas fa-map-marked-alt"></i> Metro Manila Rail Network: LRT-1, LRT-2, and MRT-3.</div>
-                    </div>
+                <div class="map-side">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Manila_LRT-MRT_map.png/1280px-Manila_LRT-MRT_map.png" alt="Manila LRT-MRT network map">
+                    <div class="map-caption"><i class="fas fa-map-marked-alt"></i> Metro Manila Rail Network: LRT-1 (Yellow), LRT-2 (Purple), MRT-3 (Blue).</div>
                 </div>
-                <div class="rail-lineup dashboard-rail-cards">
-                    <div class="rail-card">
-                        <img src="https://ik.imagekit.io/tvlk/blog/2025/01/p2EtANCG-image.jpeg" alt="LRT Line 1 train">
-                        <div class="rail-card-content"><h4>LRT Line 1</h4><p>Southeast Asia's first LRT system, serving a major elevated corridor through Metro Manila.</p></div>
+            </div>
+            <hr class="dashboard-section-divider dashboard-rail-divider" aria-hidden="true">
+            <div class="rail-lineup">
+                <div class="rail-card">
+                    <img src="https://ik.imagekit.io/tvlk/blog/2025/01/p2EtANCG-image.jpeg" alt="LRT Line 1 train">
+                    <div class="rail-card-content"><h4>LRT Line 1 (Yellow)</h4><p>Southeast Asia's first LRT system (1984). 15-km elevated railway from Baclaran to Monumento, later extended via Rizal Line and North Extension (Balintawak, Roosevelt).</p></div>
                     </div>
                     <div class="rail-card">
-                        <img src="https://files01.pna.gov.ph/ograph/2025/04/14/lrt2-2025april-bbriones-2.jpg" alt="LRT Line 2 train">
-                        <div class="rail-card-content"><h4>LRT Line 2</h4><p>A modern east-west corridor connecting key urban districts and transfer points.</p></div>
+                        <img src="https://files01.pna.gov.ph/ograph/2025/04/14/lrt2-2025april-bbriones-2.jpg" alt="LRT Line 2 Megatren">
+                        <div class="rail-card-content"><h4>LRT Line 2 (Purple Line)</h4><p>13.8-km line through Pasig, Quezon City, Manila. Modern trains with CCTV, elevators, and accessibility features. Connects Santolan to Recto.</p></div>
                     </div>
                     <div class="rail-card">
                         <img src="https://media.philstar.com/images/articles/met2-mrt-3_2018-04-02_20-32-49.jpg" alt="MRT-3 along EDSA">
-                        <div class="rail-card-content"><h4>MRT-3</h4><p>A high-demand route along EDSA that helps move commuters through the capital region.</p></div>
+                        <div class="rail-card-content"><h4>MRT-3 (Blue Line)</h4><p>16.9 km along EDSA from North Avenue to Taft Avenue. Decongests the busiest route, serving Cubao, Ortigas, Ayala, and Taft.</p></div>
+                    </div>
+                    <div class="rail-card">
+                        <img src="https://www.rappler.com/tachyon/2023/06/pnr-commuters-philippine-national-railways-train-dotr-june-2-2023-003-scaled.jpg" alt="PNR train commuters">
+                        <div class="rail-card-content"><h4>Philippine National Railways</h4><p>Historic line since 1892, currently serving commuter routes. Vision to expand Manila-Legazpi and cargo movements, vital for inter-regional connectivity.</p></div>
                     </div>
                 </div>
+                <p class="caption-img"><i class="fas fa-camera"></i> Below: Key rail systems serving the Philippine capital region. Investments in modernisation are reshaping daily commutes.</p>
             </section>
 
             <section class="dashboard-section dashboard-context-section">
@@ -559,7 +667,7 @@
                     </div>
                     <div class="split-item">
                         <div>
-                            <i class="fas fa-chart-simple"></i>
+                            <i class="fas fa-chart-line"></i>
                             <h3>Economic Relations</h3>
                             <p>Infrastructure spending creates jobs, lowers travel costs, improves business access, and strengthens the circular flow of income across connected regions.</p>
                         </div>
@@ -700,7 +808,7 @@
                     </div>
 
                     {% if recommended_items %}
-                        <div class="content-carousel" aria-label="Recommended content carousel" data-carousel-autoplay="true">
+                        <div class="content-carousel" aria-label="Recommended content carousel" data-carousel-autoplay="true" data-carousel-loop="true">
                             <div class="content-carousel-track" id="dashboard-recommendation-carousel">
                                 {% for item in recommended_items %}
                                     <a
@@ -821,7 +929,7 @@
                         </div>
                         <div class="split-item">
                             <div>
-                                <i class="fas fa-chart-simple"></i>
+                                <i class="fas fa-chart-line"></i>
                                 <h3>Economic Relations</h3>
                                 <p>Government spending on rail infrastructure acts as an economic injection that creates jobs, supports firms, and improves productivity. Efficient railways lower travel costs, boost business access, and strengthen the circular flow of income. The Philippines' "Build Better More" program prioritises rail to unlock regional growth.</p>
                             </div>
@@ -830,6 +938,67 @@
                                 <div class="caption-img">Infrastructure investments fuel employment and urban competitiveness.</div>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                <section class="dashboard-section">
+                    <div class="recommended-carousel-shell">
+                        <div class="dashboard-section-heading recommended-carousel-head">
+                            <div>
+                                <h2 class="section-title">Recommended Next</h2>
+                                <p>Scroll through blog posts, journals, and videos matched to rail mobility topics.</p>
+                            </div>
+
+                            {% if recommended_items|length > 1 %}
+                                <div class="recommended-carousel-controls">
+                                    <button type="button" class="carousel-nav-btn" data-carousel-target="home-recommendation-carousel" data-carousel-direction="prev" aria-label="Scroll recommendations left">
+                                        <i class="fas fa-arrow-left"></i>
+                                    </button>
+                                    <button type="button" class="carousel-nav-btn" data-carousel-target="home-recommendation-carousel" data-carousel-direction="next" aria-label="Scroll recommendations right">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% if recommended_items %}
+                            <div class="content-carousel" aria-label="Recommended content carousel" data-carousel-autoplay="true" data-carousel-loop="true">
+                                <div class="content-carousel-track" id="home-recommendation-carousel">
+                                    {% for item in recommended_items %}
+                                        <a href="{{ item.url }}" class="content-carousel-card is-{{ item.kind_key }}" aria-label="Open {{ item.kind }} recommendation: {{ item.title }}">
+                                            <div class="content-carousel-media">
+                                                <img src="{{ item.preview_image }}" alt="{{ item.title }}">
+                                                <span class="content-carousel-chip">
+                                                    <i class="fas {{ item.icon }}"></i>
+                                                    {{ item.kind }}
+                                                </span>
+                                                <div class="content-carousel-overlay">
+                                                    <h3>{{ item.title }}</h3>
+                                                    <p>{{ item.topic.title }}</p>
+                                                </div>
+                                            </div>
+                                            <div class="content-carousel-body">
+                                                <div class="content-carousel-meta">
+                                                    <span>{{ item.topic.title }}</span>
+                                                    <span>{{ item.kind }}</span>
+                                                </div>
+                                                <p class="content-carousel-summary">{{ item.summary|truncatechars:170 }}</p>
+                                                <div class="content-carousel-foot">
+                                                    <span>Suggested for you</span>
+                                                    <strong>{{ item.cta_label }}</strong>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-book-open"></i>
+                                <h3>No recommendations yet</h3>
+                                <p>Browse the site to surface blog, journal, and video suggestions in this carousel.</p>
+                            </div>
+                        {% endif %}
                     </div>
                 </section>
 
@@ -849,6 +1018,7 @@
                         <div class="resource-note"><p><i class="fas fa-book-open"></i> <strong>Academic journals:</strong> ScienceDirect, MDPI, Taylor & Francis – full articles available via project resources (see Journals page).</p></div>
                     </div>
                 </section>
+
             </div>
         </div>
     {% endif %}

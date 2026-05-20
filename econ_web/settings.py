@@ -12,11 +12,37 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
-from django.core.exceptions import ImproperlyConfigured
 from django.contrib.messages import constants as messages
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _load_local_env(path):
+    if not path.exists():
+        return
+
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].strip()
+        if "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if (
+            len(value) >= 2
+            and ((value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")))
+        ):
+            value = value[1:-1]
+        os.environ.setdefault(key, value)
+
+
+_load_local_env(BASE_DIR / ".env.local")
 
 
 # Quick-start development settings - unsuitable for production
@@ -74,17 +100,6 @@ WSGI_APPLICATION = 'econ_web.wsgi.application'
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
-DB_ENGINE = os.environ.get("ECON_DB_ENGINE", "sqlite").strip().lower()
-
-
-def _sqlite_database():
-    return {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db_local.sqlite3",
-        }
-    }
-
 
 def _mysql_database():
     return {
@@ -92,7 +107,7 @@ def _mysql_database():
             "ENGINE": "django.db.backends.mysql",
             "NAME": os.environ.get("ECON_MYSQL_DB_NAME", "econdb"),
             "USER": os.environ.get("ECON_MYSQL_USER", "root"),
-            "PASSWORD": os.environ.get("ECON_MYSQL_PASSWORD", ""),
+            "PASSWORD": os.environ.get("ECON_MYSQL_PASSWORD", "password"),
             "HOST": os.environ.get("ECON_MYSQL_HOST", "127.0.0.1"),
             "PORT": os.environ.get("ECON_MYSQL_PORT", "3306"),
             "OPTIONS": {
@@ -102,14 +117,7 @@ def _mysql_database():
     }
 
 
-if DB_ENGINE == "mysql":
-    DATABASES = _mysql_database()
-elif DB_ENGINE == "sqlite":
-    DATABASES = _sqlite_database()
-else:
-    raise ImproperlyConfigured(
-        "ECON_DB_ENGINE must be either 'sqlite' or 'mysql'."
-    )
+DATABASES = _mysql_database()
 
 CACHES = {
     "default": {

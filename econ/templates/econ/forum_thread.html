@@ -9,100 +9,159 @@
 {% block script %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var modal = document.getElementById('forumDeleteModal');
-    if (!modal) {
-        return;
-    }
+    var deleteModal = document.getElementById('forumDeleteModal');
+    var imageModal = document.getElementById('forumImageModal');
+    var activeDeleteForm = null;
 
-    var modalTitle = modal.querySelector('[data-forum-delete-title]');
-    var modalMessage = modal.querySelector('[data-forum-delete-message]');
-    var modalWarning = modal.querySelector('[data-forum-delete-warning]');
-    var modalAction = modal.querySelector('[data-forum-delete-action]');
-    var modalConfirm = modal.querySelector('[data-forum-delete-confirm]');
-    var closeTargets = modal.querySelectorAll('[data-forum-delete-close]');
-    var activeForm = null;
-
-    var openModal = function (trigger) {
-        var form = trigger.closest('form');
-        if (!form) {
+    var closeDeleteModal = function () {
+        if (!deleteModal) {
             return;
         }
 
-        activeForm = form;
-        if (modalTitle) {
-            modalTitle.textContent = trigger.getAttribute('data-delete-title') || 'Delete item?';
-        }
-        if (modalMessage) {
-            modalMessage.textContent = trigger.getAttribute('data-delete-message') || 'Are you sure you want to delete this item?';
-        }
-        if (modalWarning) {
-            modalWarning.textContent = trigger.getAttribute('data-delete-warning') || 'This cannot be undone.';
-        }
-        if (modalAction) {
-            modalAction.textContent = trigger.getAttribute('data-delete-action') || 'Delete';
-        }
-
-        modal.classList.add('is-open');
-        modal.setAttribute('aria-hidden', 'false');
-        document.body.classList.add('forum-modal-open');
-
-        window.setTimeout(function () {
-            if (modalConfirm) {
-                modalConfirm.focus();
-            }
-        }, 0);
-    };
-
-    var closeModal = function () {
-        modal.classList.remove('is-open');
-        modal.setAttribute('aria-hidden', 'true');
+        deleteModal.classList.remove('is-open');
+        deleteModal.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('forum-modal-open');
-        activeForm = null;
+        activeDeleteForm = null;
     };
 
-    document.querySelectorAll('[data-forum-delete-trigger]').forEach(function (button) {
-        button.addEventListener('click', function (event) {
-            event.preventDefault();
-            openModal(button);
-        });
-    });
+    if (deleteModal) {
+        var deleteModalTitle = deleteModal.querySelector('[data-forum-delete-title]');
+        var deleteModalMessage = deleteModal.querySelector('[data-forum-delete-message]');
+        var deleteModalWarning = deleteModal.querySelector('[data-forum-delete-warning]');
+        var deleteModalAction = deleteModal.querySelector('[data-forum-delete-action]');
+        var deleteModalConfirm = deleteModal.querySelector('[data-forum-delete-confirm]');
+        var deleteCloseTargets = deleteModal.querySelectorAll('[data-forum-delete-close]');
 
-    closeTargets.forEach(function (button) {
-        button.addEventListener('click', closeModal);
-    });
-
-    if (modalConfirm) {
-        modalConfirm.addEventListener('click', function () {
-            if (!activeForm) {
+        var openDeleteModal = function (trigger) {
+            var form = trigger.closest('form');
+            if (!form) {
                 return;
             }
-            var form = activeForm;
-            closeModal();
-            if (typeof form.requestSubmit === 'function') {
-                form.requestSubmit();
-            } else {
-                form.submit();
+
+            activeDeleteForm = form;
+            if (deleteModalTitle) {
+                deleteModalTitle.textContent = trigger.getAttribute('data-delete-title') || 'Delete item?';
+            }
+            if (deleteModalMessage) {
+                deleteModalMessage.textContent = trigger.getAttribute('data-delete-message') || 'Are you sure you want to delete this item?';
+            }
+            if (deleteModalWarning) {
+                deleteModalWarning.textContent = trigger.getAttribute('data-delete-warning') || 'This cannot be undone.';
+            }
+            if (deleteModalAction) {
+                deleteModalAction.textContent = trigger.getAttribute('data-delete-action') || 'Delete';
+            }
+
+            deleteModal.classList.add('is-open');
+            deleteModal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('forum-modal-open');
+
+            window.setTimeout(function () {
+                if (deleteModalConfirm) {
+                    deleteModalConfirm.focus();
+                }
+            }, 0);
+        };
+
+        document.querySelectorAll('[data-forum-delete-trigger]').forEach(function (button) {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                openDeleteModal(button);
+            });
+        });
+
+        deleteCloseTargets.forEach(function (button) {
+            button.addEventListener('click', closeDeleteModal);
+        });
+
+        if (deleteModalConfirm) {
+            deleteModalConfirm.addEventListener('click', function () {
+                if (!activeDeleteForm) {
+                    return;
+                }
+                var form = activeDeleteForm;
+                closeDeleteModal();
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
+            });
+        }
+
+        deleteModal.addEventListener('click', function (event) {
+            if (event.target === deleteModal || event.target.hasAttribute('data-forum-delete-close')) {
+                closeDeleteModal();
             }
         });
     }
 
-    modal.addEventListener('click', function (event) {
-        if (event.target === modal || event.target.hasAttribute('data-forum-delete-close')) {
-            closeModal();
-        }
-    });
+    if (imageModal) {
+        var imageModalPreview = imageModal.querySelector('[data-forum-image-preview]');
 
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && modal.classList.contains('is-open')) {
-            closeModal();
-        }
-    });
+        var openImageModal = function (trigger) {
+            var imageUrl = trigger.getAttribute('href') || trigger.getAttribute('data-image-url');
+            if (!imageUrl || !imageModalPreview) {
+                return;
+            }
+
+            var imageAlt = trigger.getAttribute('data-image-alt') || trigger.getAttribute('aria-label') || 'Image preview';
+            imageModalPreview.src = imageUrl;
+            imageModalPreview.alt = imageAlt;
+
+            imageModal.classList.add('is-open');
+            imageModal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('forum-modal-open');
+        };
+
+        var closeImageModal = function () {
+            imageModal.classList.remove('is-open');
+            imageModal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('forum-modal-open');
+
+            if (imageModalPreview) {
+                imageModalPreview.removeAttribute('src');
+                imageModalPreview.removeAttribute('alt');
+            }
+        };
+
+        document.addEventListener('click', function (event) {
+            var trigger = event.target.closest('[data-forum-image-trigger]');
+            if (!trigger) {
+                return;
+            }
+
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button === 1) {
+                return;
+            }
+
+            var imageUrl = trigger.getAttribute('href') || trigger.getAttribute('data-image-url');
+            if (!imageUrl) {
+                return;
+            }
+
+            event.preventDefault();
+            openImageModal(trigger);
+        });
+
+        imageModal.addEventListener('click', function (event) {
+            if (event.target === imageModal) {
+                closeImageModal();
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && imageModal.classList.contains('is-open')) {
+                closeImageModal();
+            }
+        });
+    }
 });
 </script>
 {% endblock %}
 
 {% block content %}
-<main class="forum-page blogs-page forum-thread-page {% if not request.user.is_authenticated %}guest-detail-shell{% endif %}">
+<main class="forum-page blogs-page forum-thread-page">
     <section class="blogs-hero" {% if not request.user.is_authenticated %}aria-hidden="true" inert{% endif %}>
         <div class="container blogs-hero-inner">
             <div>
@@ -112,15 +171,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 </a>
                 <p class="blog-eyebrow">Forum thread</p>
                 <h1 class="blogs-title">{{ thread.title }}</h1>
-                <p class="blogs-intro">This discussion lives in {{ thread.topic_titles }}. Read the thread, add a reply, and keep the conversation focused on the topic.</p>
-                <div class="forum-thread-tags forum-thread-tags--hero">
-                    {% for topic in thread.all_topics %}
-                        <a href="{% url 'forum' %}?topic={{ topic.key }}" class="forum-thread-topic">
-                            <i class="fas {{ topic.icon }}"></i>
-                            {{ topic.title }}
-                        </a>
-                    {% endfor %}
-                </div>
+                <p class="blogs-intro">Read the thread below and add your reply when you're ready.</p>
             </div>
             <div class="blogs-hero-card">
                 <strong>{{ replies|length }}</strong>
@@ -129,31 +180,11 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
     </section>
 
-    <section class="container forum-detail-layout" {% if not request.user.is_authenticated %}aria-hidden="true" inert{% endif %}>
-        <div class="forum-feed">
-            <article class="forum-post-card forum-post-card--reddit">
-                <div class="forum-post-rail">
-                    <div class="forum-post-rail-icon">
-                        <i class="fas {{ thread.topic.icon }}"></i>
-                    </div>
-                    <strong>{{ replies|length }}</strong>
-                    <span>replies</span>
-                    {% with thread_images=thread.images.all %}
-                        {% if thread_images %}
-                            <span>{{ thread_images|length }} photos</span>
-                        {% endif %}
-                    {% endwith %}
-                </div>
+    <section class="container forum-detail-layout {% if not request.user.is_authenticated %}guest-detail-shell{% endif %}">
+        <div class="forum-feed" {% if not request.user.is_authenticated %}aria-hidden="true" inert{% endif %}>
+            <article class="forum-post-card forum-post-card--thread" id="thread">
                 <div class="forum-post-main">
                     <div class="forum-post-meta">
-                        <div class="forum-thread-tags">
-                            {% for topic in thread.all_topics %}
-                                <a href="{% url 'forum' %}?topic={{ topic.key }}" class="forum-thread-topic">
-                                    <i class="fas {{ topic.icon }}"></i>
-                                    {{ topic.title }}
-                                </a>
-                            {% endfor %}
-                        </div>
                         {% if request.user.is_authenticated %}
                             {% if request.user == thread.author or request.user.is_staff or request.user.is_superuser %}
                             <form class="forum-admin-action-form" method="post" action="{% url 'forum_delete_thread' thread.id %}">
@@ -173,11 +204,41 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <p class="forum-post-body">{{ thread.body|linebreaksbr }}</p>
                     {% with thread_images=thread.images.all %}
+                        <div class="forum-post-stats">
+                            <span>{% if replies|length == 1 %}1 reply{% else %}{{ replies|length }} replies{% endif %}</span>
+                            {% if thread_images %}
+                                <span>{% if thread_images|length == 1 %}1 photo{% else %}{{ thread_images|length }} photos{% endif %}</span>
+                            {% endif %}
+                        </div>
+                        <div class="forum-reaction-row forum-reaction-row--thread">
+                            {% if request.user.is_authenticated %}
+                                <form class="forum-like-form" method="post" action="{% url 'forum_toggle_thread_like' thread.id %}">
+                                    {% csrf_token %}
+                                    <button
+                                        type="submit"
+                                        class="forum-like-btn {% if thread.user_liked %}is-liked{% endif %}"
+                                        aria-pressed="{% if thread.user_liked %}true{% else %}false{% endif %}"
+                                        data-forum-thread-like-trigger
+                                    >
+                                        <i class="{% if thread.user_liked %}fas{% else %}far{% endif %} fa-heart" aria-hidden="true"></i>
+                                        <span>{% if thread.user_liked %}Unlike thread{% else %}Like thread{% endif %}</span>
+                                    </button>
+                                </form>
+                            {% endif %}
+                            <span class="forum-reaction-count">{{ thread.like_count }} like{{ thread.like_count|pluralize }}</span>
+                        </div>
                         {% if thread_images %}
                             <div class="forum-post-gallery">
                                 {% for attachment in thread_images %}
-                                    <a class="forum-post-gallery-item" href="{{ attachment.image.url }}" target="_blank" rel="noopener">
-                                        <img src="{{ attachment.image.url }}" alt="{{ thread.title }} picture {{ forloop.counter }}">
+                                    <a
+                                        class="forum-post-gallery-item"
+                                        href="{{ attachment.image.url }}"
+                                        data-forum-image-trigger
+                                        data-image-caption="{{ thread.title }} picture {{ forloop.counter }}"
+                                        data-image-alt="{{ thread.title }} picture {{ forloop.counter }}"
+                                        aria-label="Open {{ thread.title }} picture {{ forloop.counter }}"
+                                    >
+                                        <img src="{{ attachment.image.url }}" alt="{{ thread.title }} picture {{ forloop.counter }}" loading="lazy">
                                     </a>
                                 {% endfor %}
                             </div>
@@ -189,12 +250,12 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="forum-replies-card forum-comments-card" id="replies">
                 <div class="forum-comments-head">
                     <h2>Replies</h2>
-                    <p>{{ replies|length }} reply{{ replies|length|pluralize }}</p>
+                    <p>{% if replies|length == 1 %}1 reply{% else %}{{ replies|length }} replies{% endif %}</p>
                 </div>
                 {% if replies %}
                     <div class="forum-reply-list">
                         {% for reply in replies %}
-                            <article class="forum-reply-card forum-comment-card">
+                            <article class="forum-reply-card forum-comment-card" id="reply-{{ reply.id }}">
                                 <div class="forum-reply-avatar">
                                     {{ reply.author.username|first|upper }}
                                 </div>
@@ -203,20 +264,55 @@ document.addEventListener('DOMContentLoaded', function () {
                                         <div class="forum-comment-meta">
                                             <strong>{{ reply.author.username }}</strong>
                                             <time datetime="{{ reply.created_at|date:'c' }}">{{ reply.created_at|date:"M j, Y, g:i A" }}</time>
-                                        </div>
+                        </div>
+                        {% if request.user.is_authenticated %}
+                            {% if request.user == reply.author or request.user.is_staff or request.user.is_superuser %}
+                                <form class="forum-admin-action-form" method="post" action="{% url 'forum_delete_reply' reply.id %}">
+                                    {% csrf_token %}
+                                    <button type="button" class="forum-admin-delete-btn forum-admin-delete-btn--ghost" aria-label="Delete reply" title="Delete reply" data-forum-delete-trigger data-delete-title="Delete reply?" data-delete-message="Delete this reply?" data-delete-warning="This will permanently remove the reply from the thread." data-delete-action="Delete reply">
+                                        <i class="fas fa-trash" aria-hidden="true"></i>
+                                        <span class="sr-only">Delete reply</span>
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <p>{{ reply.body|linebreaksbr }}</p>
+                                    {% with reply_images=reply.images.all %}
+                                        {% if reply_images %}
+                                            <div class="forum-post-gallery forum-reply-gallery">
+                                                {% for attachment in reply_images %}
+                                                    <a
+                                                        class="forum-post-gallery-item"
+                                                        href="{{ attachment.image.url }}"
+                                                        data-forum-image-trigger
+                                                        data-image-caption="{{ reply.author.username }} reply picture {{ forloop.counter }}"
+                                                        data-image-alt="{{ reply.author.username }} reply picture {{ forloop.counter }}"
+                                                        aria-label="Open {{ reply.author.username }} reply picture {{ forloop.counter }}"
+                                                    >
+                                                        <img src="{{ attachment.image.url }}" alt="{{ reply.author.username }} reply picture {{ forloop.counter }}" loading="lazy">
+                                                    </a>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    {% endwith %}
+                                    <div class="forum-reaction-row forum-reaction-row--reply">
                                         {% if request.user.is_authenticated %}
-                                            {% if request.user == reply.author or request.user.is_staff or request.user.is_superuser %}
-                                            <form class="forum-admin-action-form" method="post" action="{% url 'forum_delete_reply' reply.id %}">
+                                            <form class="forum-like-form" method="post" action="{% url 'forum_toggle_reply_like' reply.id %}">
                                                 {% csrf_token %}
-                                                <button type="button" class="forum-admin-delete-btn forum-admin-delete-btn--ghost" aria-label="Delete reply" title="Delete reply" data-forum-delete-trigger data-delete-title="Delete reply?" data-delete-message="Delete this reply?" data-delete-warning="This will permanently remove the reply from the thread." data-delete-action="Delete reply">
-                                                    <i class="fas fa-trash" aria-hidden="true"></i>
-                                                    <span class="sr-only">Delete reply</span>
+                                                <button
+                                                    type="submit"
+                                                    class="forum-like-btn {% if reply.user_liked %}is-liked{% endif %}"
+                                                    aria-pressed="{% if reply.user_liked %}true{% else %}false{% endif %}"
+                                                    data-forum-reply-like-trigger
+                                                >
+                                                    <i class="{% if reply.user_liked %}fas{% else %}far{% endif %} fa-heart" aria-hidden="true"></i>
+                                                    <span>{% if reply.user_liked %}Unlike reply{% else %}Like reply{% endif %}</span>
                                                 </button>
                                             </form>
-                                            {% endif %}
                                         {% endif %}
+                                        <span class="forum-reaction-count">{{ reply.like_count }} like{{ reply.like_count|pluralize }}</span>
                                     </div>
-                                    <p>{{ reply.body|linebreaksbr }}</p>
                                 </div>
                             </article>
                         {% endfor %}
@@ -225,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="empty-state forum-empty-state">
                         <i class="fas fa-comment-dots"></i>
                         <h3>No replies yet</h3>
-                        <p>Be the first to reply and keep this topic moving.</p>
+                        <p>Be the first to reply and keep this thread moving.</p>
                     </div>
                 {% endif %}
             </div>
@@ -233,14 +329,19 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="forum-reply-form-card">
                 <h2>Join the conversation</h2>
                 {% if request.user.is_authenticated %}
-                    <form method="post" action="{% url 'forum_reply' thread.id %}" class="forum-composer-form">
+                    <form method="post" action="{% url 'forum_reply' thread.id %}" class="forum-composer-form" enctype="multipart/form-data">
                         {% csrf_token %}
                         <div class="forum-field">
                             <label for="{{ reply_form.body.id_for_label }}">Your reply</label>
                             {{ reply_form.body }}
                             {{ reply_form.body.errors }}
                         </div>
-                        <p class="forum-help">Be thoughtful, cite sources when possible, and keep the discussion tied to the topic.</p>
+                        <div class="forum-field">
+                            <label for="{{ reply_form.images.id_for_label }}">Pictures</label>
+                            {{ reply_form.images }}
+                            {{ reply_form.images.errors }}
+                            <p class="forum-help">Upload one or more pictures to support your reply.</p>
+                        </div>
                         <button type="submit" class="btn-soft">Post reply</button>
                     </form>
                 {% else %}
@@ -252,22 +353,22 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
         </div>
 
+        {% if not request.user.is_authenticated %}
+            <div class="guest-access-card forum-guest-access-card" role="dialog" aria-labelledby="guest-forum-thread-access-title">
+                <div class="guest-access-icon"><i class="fas fa-lock"></i></div>
+                <h2 id="guest-forum-thread-access-title">Want to read the full discussion?</h2>
+                <p>Create a free account or log in to read threads, join replies, and share your own perspective.</p>
+                <div class="guest-access-actions">
+                    <a href="{% url 'registration' %}" class="profile-primary-btn">Create Account</a>
+                    <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="profile-cancel-btn">Log In</a>
+                </div>
+            </div>
+        {% endif %}
     </section>
 
-    {% if not request.user.is_authenticated %}
-        <div class="guest-access-card forum-guest-access-card" role="dialog" aria-labelledby="guest-forum-thread-access-title">
-            <div class="guest-access-icon"><i class="fas fa-lock"></i></div>
-            <h2 id="guest-forum-thread-access-title">Want to read the full discussion?</h2>
-            <p>Create a free account or log in to read threads, join replies, and share your own perspective.</p>
-            <div class="guest-access-actions">
-                <a href="{% url 'registration' %}" class="profile-primary-btn">Create Account</a>
-                <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="profile-cancel-btn">Log In</a>
-            </div>
-        </div>
-    {% endif %}
 </main>
 
-{% if request.user.is_staff or request.user.is_superuser %}
+{% if request.user.is_authenticated %}
     <div class="forum-confirm-modal" id="forumDeleteModal" aria-hidden="true">
         <div class="forum-confirm-modal-backdrop" data-forum-delete-close></div>
         <div class="forum-confirm-modal-shell" role="dialog" aria-modal="true" aria-labelledby="forumDeleteModalTitle">
@@ -293,6 +394,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             </div>
         </div>
+    </div>
+{% endif %}
+
+{% if request.user.is_authenticated %}
+    <div class="forum-image-modal" id="forumImageModal" aria-hidden="true" role="dialog" aria-label="Image preview">
+        <img src="" alt="" class="forum-image-modal-preview" data-forum-image-preview>
     </div>
 {% endif %}
 {% endblock %}
