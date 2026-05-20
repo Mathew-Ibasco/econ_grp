@@ -55,7 +55,7 @@ SECRET_KEY = 'django-insecure-qjdw6k3i(7mwvdlue9#l0ay-lxfkd13_=tp%a*cfnw0b1#@6i!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['econ-grp.onrender.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -112,6 +112,7 @@ def _sqlite_database():
         }
     }
 
+CSRF_TRUSTED_ORIGINS = ['https://econ-grp.onrender.com']
 
 def _mysql_database():
     return {
@@ -124,10 +125,10 @@ def _mysql_database():
             "PORT": os.environ.get("ECON_MYSQL_PORT", "3306"),
             "OPTIONS": {
                 "charset": "utf8mb4",
+                "ssl": {"ca": None},
             },
         }
     }
-
 
 if DB_ENGINE == "sqlite":
     DATABASES = _sqlite_database()
