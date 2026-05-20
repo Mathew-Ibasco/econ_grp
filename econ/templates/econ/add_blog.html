@@ -11,7 +11,7 @@ Add Blog Post
             <div>
                 <p class="admin-form-eyebrow">Admin tools</p>
                 <h1 class="admin-form-title">Add Blog Post</h1>
-                <p class="admin-form-intro">Create a blog entry with its excerpt, body paragraphs, featured image, and source list.</p>
+                <p class="admin-form-intro">Create a blog entry with its excerpt, body paragraphs, optional featured image, and optional source list.</p>
             </div>
             <div class="admin-form-hero-card">
                 <strong>Blog</strong>
@@ -36,9 +36,17 @@ Add Blog Post
                     {% endif %}
                 </div>
 
+                {% include "econ/partials/topic_field.html" %}
+
                 <div class="mb-3">
-                    <label class="form-label">Date Created/Posted <small class="text-muted">Editable when source URLs are provided; otherwise recorded automatically.</small></label>
-                    <input type="date" name="date" class="form-control" value="{{ date_value }}" data-content-date-input {% if not values.sources %}disabled{% endif %}>
+                    <label class="form-label">Date Created/Posted <small class="text-muted">Editable when a featured image URL is provided; otherwise recorded automatically.</small></label>
+                    <div class="admin-date-option-row">
+                        <input type="date" name="date" class="form-control" value="{{ date_value }}" data-content-date-input {% if not values.featured_image_url or values.no_date %}disabled{% endif %}>
+                        <label class="admin-inline-check">
+                            <input type="checkbox" name="no_date" value="1" data-content-no-date {% if values.no_date %}checked{% endif %}>
+                            <span>No date</span>
+                        </label>
+                    </div>
                     {% if errors.date %}
                         <div class="text-danger field-error" role="alert">{{ errors.date }}</div>
                     {% endif %}
@@ -53,8 +61,8 @@ Add Blog Post
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Featured Image URL <small class="text-muted">Example: https://example.com/image.jpg</small></label>
-                    <input type="url" name="featured_image_url" class="form-control" value="{{ values.featured_image_url }}">
+                    <label class="form-label">Featured Image URL <small class="text-muted">Optional. Example: https://example.com/image.jpg</small></label>
+                    <input type="url" name="featured_image_url" class="form-control" value="{{ values.featured_image_url }}" data-content-url-source>
                     {% if errors.featured_image_url %}
                         <div class="text-danger field-error" role="alert">{{ errors.featured_image_url }}</div>
                     {% endif %}
@@ -93,8 +101,8 @@ Add Blog Post
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Sources <small class="text-muted">Two lines per source: label, then URL. Separate sources with a blank line.</small></label>
-                    <textarea name="sources" class="form-control" rows="4" data-content-url-source>{{ values.sources }}</textarea>
+                    <label class="form-label">Sources <small class="text-muted">Optional. Paste citations or URLs; URLs are saved as APA 7 references.</small></label>
+                    <textarea name="sources" class="form-control" rows="4">{{ values.sources }}</textarea>
                     {% if errors.sources %}
                         <div class="text-danger field-error" role="alert">{{ errors.sources }}</div>
                     {% endif %}
@@ -105,20 +113,6 @@ Add Blog Post
         </div>
     </section>
 </main>
-<script>
-    (function () {
-        var sourceInput = document.querySelector('[data-content-url-source]');
-        var dateInput = document.querySelector('[data-content-date-input]');
-        if (!sourceInput || !dateInput) {
-            return;
-        }
-
-        function syncDateState() {
-            dateInput.disabled = !sourceInput.value.trim();
-        }
-
-        sourceInput.addEventListener('input', syncDateState);
-        syncDateState();
-    })();
-</script>
+{% include "econ/partials/content_date_script.html" %}
+{% include "econ/partials/topic_field_script.html" %}
 {% endblock %}

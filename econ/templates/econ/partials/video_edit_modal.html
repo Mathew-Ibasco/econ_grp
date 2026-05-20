@@ -1,0 +1,56 @@
+<div class="content-edit-modal {% if video_edit_open %}is-open{% endif %}" id="videoEditModal" aria-hidden="{% if video_edit_open %}false{% else %}true{% endif %}">
+    <div class="content-edit-modal-backdrop" data-content-edit-close></div>
+    <div class="content-edit-modal-shell" role="dialog" aria-modal="true" aria-labelledby="videoEditModalTitle">
+        <div class="content-edit-modal-content">
+            <div class="content-edit-modal-header">
+                <div>
+                    <p class="content-edit-modal-eyebrow">Admin edit</p>
+                    <h2 id="videoEditModalTitle">Edit Media</h2>
+                </div>
+                <button type="button" class="content-edit-modal-close" data-content-edit-close aria-label="Close edit modal">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <form method="POST" action="{% url 'edit_vlog' video.vlogID %}" class="content-edit-form">
+                {% csrf_token %}
+                {% if video_edit_errors.global %}<div class="text-danger field-error" role="alert">{{ video_edit_errors.global }}</div>{% endif %}
+                <div class="content-edit-grid">
+                    <div class="content-edit-field">
+                        <label>Media Title</label>
+                        <input type="text" name="title" value="{{ video_edit_values.title }}">
+                        {% if video_edit_errors.title %}<div class="text-danger field-error" role="alert">{{ video_edit_errors.title }}</div>{% endif %}
+                    </div>
+                    <div class="content-edit-field">
+                        <label>Date Uploaded</label>
+                        <input type="date" name="date" value="{{ video_edit_values.date }}">
+                        {% if video_edit_errors.date %}<div class="text-danger field-error" role="alert">{{ video_edit_errors.date }}</div>{% endif %}
+                    </div>
+                </div>
+                <div class="content-edit-field">
+                    <label>Channel</label>
+                    <input type="text" name="channel_name" value="{{ video_edit_values.channel_name }}">
+                    {% if video_edit_errors.channel_name %}<div class="text-danger field-error" role="alert">{{ video_edit_errors.channel_name }}</div>{% endif %}
+                </div>
+                <div class="content-edit-field">
+                    <label>Description</label>
+                    <textarea name="description" rows="5">{{ video_edit_values.description }}</textarea>
+                    {% if video_edit_errors.description %}<div class="text-danger field-error" role="alert">{{ video_edit_errors.description }}</div>{% endif %}
+                </div>
+                <div class="content-edit-field">
+                    <label>Video URL</label>
+                    <input type="url" name="video_url" value="{{ video_edit_values.video_url }}">
+                    {% if video_edit_errors.video_url %}<div class="text-danger field-error" role="alert">{{ video_edit_errors.video_url }}</div>{% endif %}
+                </div>
+                <div class="content-edit-field">
+                    <label>Thumbnail URL</label>
+                    <input type="url" name="thumbnail_url" value="{{ video_edit_values.thumbnail_url }}">
+                    {% if video_edit_errors.thumbnail_url %}<div class="text-danger field-error" role="alert">{{ video_edit_errors.thumbnail_url }}</div>{% endif %}
+                </div>
+                <div class="content-edit-actions">
+                    <button type="button" class="profile-cancel-btn" data-content-edit-close>Cancel</button>
+                    <button type="submit" class="profile-primary-btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

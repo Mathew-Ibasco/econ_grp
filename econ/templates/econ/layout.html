@@ -65,6 +65,12 @@
                   <span>Upload SQL Dump</span>
                 </a>
 
+                <a href="{% url 'audit_logs' %}"
+                  class="{% if current_name == 'audit_logs' %}active{% endif %}">
+                  <i class="fas fa-clipboard-list"></i>
+                  <span>Audit Logs</span>
+                </a>
+
                 <a href="{% url 'add_blog' %}"
                   class="{% if current_name == 'add_blog' %}active{% endif %}">
                   <i class="fas fa-newspaper"></i>
@@ -313,6 +319,55 @@
       document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape' && modal.classList.contains('is-open')) {
           closeDeleteModal();
+        }
+      });
+    })();
+
+    (function () {
+      var closeEditModal = function (modal) {
+        if (!modal) {
+          return;
+        }
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('forum-modal-open');
+      };
+
+      document.querySelectorAll('[data-content-edit-target]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          var modal = document.getElementById(button.getAttribute('data-content-edit-target'));
+          if (!modal) {
+            return;
+          }
+          modal.classList.add('is-open');
+          modal.setAttribute('aria-hidden', 'false');
+          document.body.classList.add('forum-modal-open');
+          var firstField = modal.querySelector('input, textarea, select, button');
+          if (firstField) {
+            window.setTimeout(function () {
+              firstField.focus();
+            }, 0);
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-content-edit-close]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          closeEditModal(button.closest('.content-edit-modal'));
+        });
+      });
+
+      document.querySelectorAll('.content-edit-modal').forEach(function (modal) {
+        modal.addEventListener('click', function (event) {
+          if (event.target === modal || event.target.hasAttribute('data-content-edit-close')) {
+            closeEditModal(modal);
+          }
+        });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          document.querySelectorAll('.content-edit-modal.is-open').forEach(closeEditModal);
         }
       });
     })();

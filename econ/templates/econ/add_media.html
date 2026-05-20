@@ -36,6 +36,8 @@ Add Image
                     {% endif %}
                 </div>
 
+                {% include "econ/partials/topic_field.html" %}
+
                 <div class="mb-3">
                     <label class="form-label">Description <small class="text-muted">Text only; cannot be only numbers.</small></label>
                     <textarea name="description" class="form-control" rows="4">{{ values.description }}</textarea>
@@ -45,8 +47,8 @@ Add Image
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Date Taken <small class="text-muted">Required when the image comes from a URL.</small></label>
-                    <input type="date" name="date" class="form-control" value="{{ values.date }}">
+                    <label class="form-label">Date Uploaded <small class="text-muted">Editable when an image URL is provided; otherwise recorded automatically.</small></label>
+                    <input type="date" name="date" class="form-control" value="{{ values.date }}" data-content-date-input {% if not values.image_url %}disabled{% endif %}>
                     {% if errors.date %}
                         <div class="text-danger field-error" role="alert">{{ errors.date }}</div>
                     {% endif %}
@@ -54,7 +56,7 @@ Add Image
 
                 <div class="mb-3">
                     <label class="form-label">Image URL <small class="text-muted">Example: https://example.com/image.jpg</small></label>
-                    <input type="url" name="image_url" class="form-control" value="{{ values.image_url }}">
+                    <input type="url" name="image_url" class="form-control" value="{{ values.image_url }}" data-content-url-source>
                     {% if errors.image_url %}
                         <div class="text-danger field-error" role="alert">{{ errors.image_url }}</div>
                     {% endif %}
@@ -65,4 +67,6 @@ Add Image
         </div>
     </section>
 </main>
+{% include "econ/partials/content_date_script.html" %}
+{% include "econ/partials/topic_field_script.html" %}
 {% endblock %}

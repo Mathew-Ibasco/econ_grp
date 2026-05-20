@@ -14,7 +14,7 @@
                 <p class="blogs-intro">Browse the blog posts about how rail shapes economic growth, mobility, land use, tourism, and regional connectivity.</p>
             </div>
             <div class="blogs-hero-card">
-                <strong>{{ blog_posts|length }}</strong>
+                <strong>{{ blog_count }}</strong>
                 <span>published posts</span>
             </div>
         </div>
@@ -28,12 +28,23 @@
                         {% if request.user.is_authenticated and blog.learning.completed %}
                             <span class="blog-card-viewed-pill">Viewed</span>
                         {% endif %}
-                        <img src="{{ blog.featured_image_url }}" alt="{{ blog.title }}">
+                        {% if blog.featured_image_url %}
+                            <img src="{{ blog.featured_image_url }}" alt="{{ blog.title }}">
+                        {% else %}
+                            <div class="blog-card-image-fallback">
+                                <i class="fas fa-newspaper"></i>
+                            </div>
+                        {% endif %}
                     </div>
                     <div class="blog-card-body">
                         <div class="blog-card-meta">
                             <span class="saved-type">Blog {{ blog.order|default:forloop.counter }}</span>
                         </div>
+                        <ul class="blog-topic-list" aria-label="Topics for {{ blog.title }}">
+                            {% for topic in blog.topics.all %}
+                                <li>{{ topic.title }}</li>
+                            {% endfor %}
+                        </ul>
                         <h3><span class="blog-card-title">{{ blog.title }}</span></h3>
                         <p class="blog-card-excerpt">{{ blog.excerpt }}</p>
                         <ul class="blog-keywords">
@@ -45,6 +56,7 @@
                 </a>
             {% endfor %}
         </div>
+        {% include "econ/partials/pagination.html" %}
     </section>
 </main>
 {% endblock %}

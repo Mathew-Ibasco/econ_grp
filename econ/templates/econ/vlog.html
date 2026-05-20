@@ -14,7 +14,9 @@
 
   .vlog-page .video-gallery {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 380px));
+    justify-content: center;
+    align-items: start;
     gap: 1.75rem;
     margin-top: 2rem;
   }
@@ -160,7 +162,7 @@
         <p class="blogs-intro">Click a video to open a full detail page with the player on the left and the information on the right.</p>
       </div>
       <div class="blogs-hero-card">
-        <strong>{{ vlog_entries|length }}</strong>
+        <strong>{{ vlog_count }}</strong>
         <span>video stories</span>
       </div>
     </div>
@@ -198,6 +200,9 @@
     {% empty %}
       <p>No vlog entries have been added yet.</p>
     {% endfor %}
+  </section>
+  <section class="container">
+    {% include "econ/partials/pagination.html" %}
   </section>
 </main>
 {% endblock %}

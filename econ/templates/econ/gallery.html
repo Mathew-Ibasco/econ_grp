@@ -18,7 +18,9 @@
 
   .gallery-page .gallery {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 360px));
+    justify-content: center;
+    align-items: start;
     gap: 1.5rem;
     padding: 2rem 0 3rem;
   }
@@ -84,6 +86,8 @@
     padding: 0 1.35rem 1.35rem;
     display: flex;
     justify-content: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
   }
 
   .gallery-page .gallery-card-body h3 {
@@ -141,7 +145,7 @@
 
   @media (max-width: 900px) {
     .gallery-page .gallery {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .gallery-page .lightbox img {
@@ -168,7 +172,7 @@
 
   <section class="container gallery">
     {% for entry in gallery_entries %}
-      <article class="gallery-card">
+      <article class="gallery-card" id="gallery-item-{{ entry.id }}">
         {% if entry.media_type == "image" and entry.image_url %}
           <a class="gallery-card-link" href="{{ entry.image_url }}" data-gallery-image="{{ entry.image_url }}" aria-label="Open {{ entry.title }} image">
         {% elif entry.video_url %}
@@ -204,6 +208,14 @@
         {% endif %}
         {% if request.user.is_superuser %}
           <div class="gallery-admin-actions">
+            <button
+              type="button"
+              class="content-edit-btn content-edit-btn--compact"
+              data-content-edit-target="mediaEditModal{{ entry.id }}"
+            >
+              <i class="fas fa-pen"></i>
+              Edit
+            </button>
             <form method="POST" action="{% url 'delete_gallery_entry' entry.id %}">
               {% csrf_token %}
               <button
@@ -216,15 +228,19 @@
                 data-delete-action="Delete Image"
               >
                 <i class="fas fa-trash"></i>
-                Delete Image
+                Delete
               </button>
             </form>
           </div>
+          {% include "econ/partials/media_edit_modal.html" %}
         {% endif %}
       </article>
     {% empty %}
       <p class="gallery-empty">No gallery items have been added yet.</p>
     {% endfor %}
+  </section>
+  <section class="container">
+    {% include "econ/partials/pagination.html" %}
   </section>
 
   <div id="lightbox" class="lightbox" aria-hidden="true">

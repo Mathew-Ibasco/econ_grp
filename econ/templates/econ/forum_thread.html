@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         {% if request.user.is_authenticated %}
                             <form method="post" action="{% url 'forum_toggle_thread_like' thread.id %}" class="forum-like-form">
                                 {% csrf_token %}
-                                <button type="submit" class="forum-like-button {% if thread.user_liked %}is-liked{% endif %}">
+                                <button type="submit" class="forum-like-button {% if thread.user_liked %}is-liked{% endif %}" data-forum-thread-like-trigger aria-label="{{ thread.like_count }} likes">
                                     <i class="{% if thread.user_liked %}fas{% else %}far{% endif %} fa-heart"></i>
                                     <span>{{ thread.like_count }}</span>
                                 </button>
@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     {% if request.user.is_authenticated %}
                                         <form method="post" action="{% url 'forum_toggle_reply_like' reply.id %}" class="forum-like-form">
                                             {% csrf_token %}
-                                            <button type="submit" class="forum-like-button-small {% if reply.user_liked %}is-liked{% endif %}">
+                                            <button type="submit" class="forum-like-button-small {% if reply.user_liked %}is-liked{% endif %}" data-forum-reply-like-trigger>
                                                 <i class="{% if reply.user_liked %}fas{% else %}far{% endif %} fa-heart"></i>
                                                 <span>{{ reply.like_count }}</span>
                                             </button>
@@ -453,7 +453,11 @@ document.addEventListener('DOMContentLoaded', function () {
 }
 
 .forum-back-link {
-    color: #ffdd99;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
     text-decoration: none;
     font-size: 14px;
     display: inline-flex;
@@ -464,8 +468,10 @@ document.addEventListener('DOMContentLoaded', function () {
 }
 
 .forum-back-link:hover {
-    color: #ffb347;
+    color: #ffcf7a;
+    background: rgba(255, 255, 255, 0.22);
     transform: translateX(-4px);
+    text-decoration: none;
 }
 
 /* Thread Header */

@@ -36,8 +36,10 @@ Add Video
                     {% endif %}
                 </div>
 
+                {% include "econ/partials/topic_field.html" %}
+
                 <div class="mb-3">
-                    <label class="form-label">Channel <small class="text-muted">Text only; cannot be only numbers.</small></label>
+                    <label class="form-label">Channel <small class="text-muted">Cannot be only symbols.</small></label>
                     <input type="text" name="channel_name" class="form-control" value="{{ values.channel_name }}">
                     {% if errors.channel_name %}
                         <div class="text-danger field-error" role="alert">{{ errors.channel_name }}</div>
@@ -54,15 +56,15 @@ Add Video
 
                 <div class="mb-3">
                     <label class="form-label">Video URL <small class="text-muted">Required for the embedded video. Example: https://www.youtube.com/watch?v=...</small></label>
-                    <input type="url" name="video_url" class="form-control" value="{{ values.video_url }}">
+                    <input type="url" name="video_url" class="form-control" value="{{ values.video_url }}" data-content-url-source>
                     {% if errors.video_url %}
                         <div class="text-danger field-error" role="alert">{{ errors.video_url }}</div>
                     {% endif %}
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Date Uploaded <small class="text-muted">Required for all videos.</small></label>
-                    <input type="date" name="date" class="form-control" value="{{ values.date }}">
+                    <label class="form-label">Date Uploaded <small class="text-muted">Editable when a video URL is provided; otherwise recorded automatically.</small></label>
+                    <input type="date" name="date" class="form-control" value="{{ values.date }}" data-content-date-input {% if not values.video_url %}disabled{% endif %}>
                     {% if errors.date %}
                         <div class="text-danger field-error" role="alert">{{ errors.date }}</div>
                     {% endif %}
@@ -73,4 +75,6 @@ Add Video
         </div>
     </section>
 </main>
+{% include "econ/partials/content_date_script.html" %}
+{% include "econ/partials/topic_field_script.html" %}
 {% endblock %}

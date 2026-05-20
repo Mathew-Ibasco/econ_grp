@@ -1,0 +1,110 @@
+<script>
+    (function () {
+        var otherValue = "{{ topic_other_value|escapejs }}";
+        document.querySelectorAll('[data-topic-select]').forEach(function (select) {
+            var wrapper = select.closest('[data-topic-field]');
+            var field = wrapper ? wrapper.querySelector('[data-topic-other-field]') : null;
+            var resetButton = wrapper ? wrapper.querySelector('[data-topic-reset]') : null;
+            var selectedList = wrapper ? wrapper.querySelector('[data-topic-selected-list]') : null;
+            if (!field) {
+                return;
+            }
+
+            function selectedValues() {
+                return Array.prototype.map.call(
+                    selectedList.querySelectorAll('input[name="topic_choices"]'),
+                    function (input) {
+                        return input.value;
+                    }
+                );
+            }
+
+            function updateOptions() {
+                var selected = selectedValues();
+                Array.prototype.forEach.call(select.options, function (option) {
+                    if (!option.value || option.value === otherValue) {
+                        option.hidden = false;
+                        return;
+                    }
+                    option.hidden = selected.indexOf(option.value) !== -1;
+                });
+            }
+
+            function addTopicChip(value, label) {
+                if (!value || selectedValues().indexOf(value) !== -1 || !selectedList) {
+                    return;
+                }
+
+                var chip = document.createElement('span');
+                chip.className = 'admin-topic-chip';
+                chip.setAttribute('data-topic-chip', '');
+                chip.setAttribute('data-topic-id', value);
+
+                var text = document.createElement('span');
+                text.textContent = label;
+
+                var removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.setAttribute('data-topic-remove', '');
+                removeButton.setAttribute('aria-label', 'Remove topic');
+                removeButton.innerHTML = '&times;';
+
+                var hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'topic_choices';
+                hidden.value = value;
+
+                chip.appendChild(text);
+                chip.appendChild(removeButton);
+                chip.appendChild(hidden);
+                selectedList.appendChild(chip);
+                updateOptions();
+            }
+
+            function syncTopicField() {
+                var showOther = select.value === otherValue;
+                select.hidden = showOther;
+                field.hidden = !showOther;
+                field.disabled = !showOther;
+                if (resetButton) {
+                    resetButton.hidden = !showOther;
+                }
+                if (!showOther) {
+                    field.value = '';
+                }
+            }
+
+            select.addEventListener('change', function () {
+                if (select.value && select.value !== otherValue) {
+                    addTopicChip(select.value, select.options[select.selectedIndex].text);
+                    select.value = '';
+                }
+                syncTopicField();
+            });
+
+            if (selectedList) {
+                selectedList.addEventListener('click', function (event) {
+                    var removeButton = event.target.closest('[data-topic-remove]');
+                    if (!removeButton) {
+                        return;
+                    }
+                    var chip = removeButton.closest('[data-topic-chip]');
+                    if (chip) {
+                        chip.remove();
+                    }
+                    updateOptions();
+                });
+            }
+
+            if (resetButton) {
+                resetButton.addEventListener('click', function () {
+                    select.value = '';
+                    syncTopicField();
+                    select.focus();
+                });
+            }
+            updateOptions();
+            syncTopicField();
+        });
+    })();
+</script>

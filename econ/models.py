@@ -16,6 +16,47 @@ class User(AbstractUser):
     class Meta:
         db_table = "user"
 
+
+class AuditLog(models.Model):
+    ACTION_CHOICES = [
+        ("visit", "Page Visit"),
+        ("auth", "Authentication"),
+        ("create", "Create"),
+        ("update", "Update"),
+        ("delete", "Delete"),
+        ("submit", "Submit"),
+        ("toggle", "Toggle"),
+        ("system", "System"),
+    ]
+
+    user = models.ForeignKey(
+        "User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs",
+    )
+    username = models.CharField(max_length=150, blank=True, default="")
+    role = models.CharField(max_length=20, default="Guest")
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    label = models.CharField(max_length=160)
+    method = models.CharField(max_length=10, blank=True, default="")
+    path = models.CharField(max_length=500, blank=True, default="")
+    page_title = models.CharField(max_length=160, blank=True, default="")
+    details = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=300, blank=True, default="")
+    status_code = models.PositiveSmallIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "audit_log"
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        actor = self.username or self.role
+        return f"{actor} - {self.label}"
+
 class vlog (models.Model):
     vlogID = models.AutoField(primary_key=True)
     title = models.CharField(max_length=300)
@@ -182,7 +223,7 @@ class BlogPost(models.Model):
     slug = models.SlugField(max_length=320, unique=True)
     excerpt = models.TextField()
     featured_image_filename = models.CharField(max_length=300)
-    featured_image_url = models.URLField(max_length=500)
+    featured_image_url = models.URLField(max_length=500, blank=True)
     raw_text = models.TextField(blank=True)
     body_paragraphs = models.JSONField(default=list, blank=True)
     keywords = models.JSONField(default=list, blank=True)

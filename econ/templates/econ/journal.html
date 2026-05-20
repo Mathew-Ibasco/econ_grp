@@ -49,7 +49,7 @@
                 <p class="blogs-intro">Browse the journal entries stored in the database. Each card opens a full abstract page, and signed-in users can track progress with notes and quizzes.</p>
             </div>
             <div class="blogs-hero-card">
-                <strong>{{ journal_entries|length }}</strong>
+                <strong>{{ journal_count }}</strong>
                 <span>academic journals</span>
             </div>
         </div>
@@ -85,6 +85,7 @@
                 <p class="gallery-empty">No journal entries have been added yet.</p>
             {% endfor %}
         </div>
+        {% include "econ/partials/pagination.html" %}
     </section>
 </main>
 {% endblock %}

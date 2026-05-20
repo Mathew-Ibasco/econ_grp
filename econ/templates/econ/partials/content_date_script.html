@@ -1,0 +1,45 @@
+<script>
+    (function () {
+        var sourceInput = document.querySelector('[data-content-url-source]');
+        var dateInput = document.querySelector('[data-content-date-input]');
+        var noDateInput = document.querySelector('[data-content-no-date]');
+        if (!sourceInput || !dateInput) {
+            return;
+        }
+
+        function hasValidUrl(value) {
+            var trimmedValue = value.trim();
+            if (!trimmedValue) {
+                return false;
+            }
+
+            try {
+                var url = new URL(trimmedValue);
+                return url.protocol === 'http:' || url.protocol === 'https:';
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function todayValue() {
+            var today = new Date();
+            var offsetDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000);
+            return offsetDate.toISOString().slice(0, 10);
+        }
+
+        function syncDateState() {
+            var isValid = hasValidUrl(sourceInput.value);
+            var hasNoDate = noDateInput && noDateInput.checked;
+            dateInput.disabled = !isValid || hasNoDate;
+            if (!isValid || hasNoDate) {
+                dateInput.value = todayValue();
+            }
+        }
+
+        sourceInput.addEventListener('input', syncDateState);
+        if (noDateInput) {
+            noDateInput.addEventListener('change', syncDateState);
+        }
+        syncDateState();
+    })();
+</script>

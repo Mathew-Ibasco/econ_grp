@@ -9,16 +9,22 @@
         <div class="container blog-detail-hero-inner">
             <a class="back-link blog-detail-back-link" href="{% url 'blog' %}">
                 <i class="fas fa-arrow-left"></i>
-                Back to all blogs
+                Back to All Blogs
             </a>
             <div>
                 <p class="blog-eyebrow">Rail transport blog</p>
                 <h1>{{ blog_post.title }}</h1>
                 <p>{{ blog_post.excerpt }}</p>
             </div>
-            <div class="blog-hero-image">
-                <img src="{{ blog_post.featured_image_url }}" alt="{{ blog_post.featured_image_filename }}">
-            </div>
+            {% if blog_post.featured_image_url %}
+                <div class="blog-hero-image">
+                    <img src="{{ blog_post.featured_image_url }}" alt="{{ blog_post.featured_image_filename }}">
+                </div>
+            {% else %}
+                <div class="blog-hero-image blog-hero-image-fallback">
+                    <i class="fas fa-newspaper"></i>
+                </div>
+            {% endif %}
         </div>
     </section>
 
@@ -50,6 +56,14 @@
                 {% if request.user.is_superuser %}
                     <div class="detail-card admin-delete-card">
                         <h2>Admin actions</h2>
+                        <button
+                            type="button"
+                            class="content-edit-btn"
+                            data-content-edit-target="blogEditModal"
+                        >
+                            <i class="fas fa-pen"></i>
+                            Edit Blog
+                        </button>
                         <form method="POST" action="{% url 'delete_blog' blog_post.slug %}">
                             {% csrf_token %}
                             <button
@@ -66,6 +80,7 @@
                             </button>
                         </form>
                     </div>
+                    {% include "econ/partials/blog_edit_modal.html" %}
                 {% endif %}
                 {% if request.user.is_authenticated and learning %}
                     <div class="detail-card learning-card">
@@ -153,7 +168,11 @@
                                 </div>
                             </div>
                         {% else %}
-                            <p class="dashboard-muted">No quiz is available for this blog yet.</p>
+                            {% if learning.quiz_ready_at %}
+                                <p class="dashboard-muted">Quiz processing completes after {{ learning.quiz_ready_at|date:"M j, Y g:i A" }}.</p>
+                            {% else %}
+                                <p class="dashboard-muted">No quiz is available for this blog yet.</p>
+                            {% endif %}
                         {% endif %}
                         {% if learning.result_attempt %}
                             <div class="quiz-modal is-open" id="quiz-result-blog-{{ learning_item_id }}" aria-hidden="false">
@@ -202,13 +221,21 @@
                 </div>
                 <div class="detail-card">
                     <h2>Sources</h2>
-                    <ul class="detail-source-list">
-                        {% for source in blog_post.sources %}
-                            <li>
-                                <a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.label }}</a>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                    {% if blog_post.sources %}
+                        <ul class="detail-source-list">
+                            {% for source in blog_post.sources %}
+                                <li>
+                                    {% if source.url %}
+                                        <a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.label }}</a>
+                                    {% else %}
+                                        <span>{{ source.label }}</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="dashboard-muted">Original blog.</p>
+                    {% endif %}
                 </div>
             </aside>
         </div>

@@ -1,5 +1,6 @@
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from types import SimpleNamespace
+from urllib.parse import urlparse
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
@@ -8,6 +9,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.core.validators import URLValidator, validate_email
 from django.db.models import Count, F, Prefetch, Q
 from django.http import JsonResponse, StreamingHttpResponse
@@ -23,13 +25,26 @@ try:
 except ImportError:  # Optional dependency; only needed for MySQL support.
     pymysql = None
 
+from .audit import log_action
 from .forms import ForumReplyForm, ForumThreadCreateForm
-from .models import BlogPost, Bookmark, ForumReply, ForumReplyImage, ForumThread, ForumThreadImage, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, StudyItemProgress, Topic, TopicNote, User, vlog as VlogEntry
+from .models import AuditLog, BlogPost, Bookmark, ForumReply, ForumReplyImage, ForumThread, ForumThreadImage, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, StudyItemProgress, Topic, TopicNote, User, vlog as VlogEntry
 
 
 DEFAULT_RECOMMENDATION_IMAGE = "https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg"
 JOURNAL_RECOMMENDATION_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Manila_LRT-MRT_map.png/1280px-Manila_LRT-MRT_map.png"
 VIDEO_RECOMMENDATION_IMAGE = "https://media.philstar.com/images/articles/met2-mrt-3_2018-04-02_20-32-49.jpg"
+
+
+def _paginate(request, queryset_or_list, per_page):
+    paginator = Paginator(queryset_or_list, per_page)
+    page_number = request.GET.get("page") or 1
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+    return page_obj
 
 
 def _topic_study_items(topic):
@@ -290,9 +305,126 @@ def _item_topic(item_type, item_id):
     return item.topics.order_by("order", "id").first()
 
 
-def _item_learning_context(user, item_type, item_id):
+def _truncate_quiz_text(value, fallback, limit=180):
+    text = re.sub(r"\s+", " ", str(value or "").strip())
+    if not text:
+        text = fallback
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3].rstrip() + "..."
+
+
+def _first_sentence(value, fallback):
+    text = re.sub(r"\s+", " ", str(value or "").strip())
+    if not text:
+        return fallback
+    sentence = re.split(r"(?<=[.!?])\s+", text, maxsplit=1)[0]
+    return _truncate_quiz_text(sentence, fallback)
+
+
+def _quiz_ready_date(item):
+    created_at = getattr(item, "created_at", None)
+    if not created_at:
+        return timezone.now()
+    if timezone.is_naive(created_at):
+        created_at = timezone.make_aware(created_at, timezone.get_current_timezone())
+    return created_at + timedelta(days=1)
+
+
+def _item_quiz_is_ready(item):
+    return timezone.now() >= _quiz_ready_date(item)
+
+
+def _add_generated_item_question(item_type, item_id, round_number, order, question, correct, wrong_one, wrong_two):
+    correct_slots = ("A", "B", "C")
+    correct_option = correct_slots[(round_number + order - 2) % len(correct_slots)]
+    options = {
+        "A": _truncate_quiz_text(wrong_one, "A less relevant answer."),
+        "B": _truncate_quiz_text(wrong_two, "Another less relevant answer."),
+        "C": _truncate_quiz_text(wrong_one, "A less relevant answer."),
+    }
+    options[correct_option] = _truncate_quiz_text(correct, "The content's main idea.")
+    remaining = [slot for slot in correct_slots if slot != correct_option]
+    options[remaining[0]] = _truncate_quiz_text(wrong_one, "A less relevant answer.")
+    options[remaining[1]] = _truncate_quiz_text(wrong_two, "Another less relevant answer.")
+
+    ItemQuizQuestion.objects.create(
+        item_type=item_type,
+        item_id=item_id,
+        round_number=round_number,
+        order=order,
+        question=_truncate_quiz_text(question, "What does this content explain?", limit=280),
+        option_a=options["A"],
+        option_b=options["B"],
+        option_c=options["C"],
+        correct_option=correct_option,
+    )
+
+
+def _generate_blog_quiz_questions(blog_post):
+    topic = blog_post.topics.order_by("order", "id").first()
+    topic_title = topic.title if topic else "Rail transport and urban mobility"
+    keyword = (blog_post.keywords or ["rail transport"])[0]
+    highlight = (blog_post.highlights or blog_post.body_paragraphs or [blog_post.excerpt])[0]
+    body_point = _first_sentence(" ".join(blog_post.body_paragraphs or []), blog_post.excerpt)
+    source_label = "Original blog" if not blog_post.sources else _truncate_quiz_text(blog_post.sources[0].get("label"), "The listed source")
+
+    question_rows = [
+        (1, 1, "What is this blog mainly about?", blog_post.title, "Unrelated account security settings.", "Only private car parking."),
+        (1, 2, "Which topic is connected to this blog?", topic_title, "Food service management.", "Random image formatting."),
+        (1, 3, "Which idea appears in the blog excerpt or body?", body_point, "The post avoids transport issues.", "The post is only about user passwords."),
+        (2, 1, "Which keyword helps classify this blog?", keyword, "dessert", "login"),
+        (2, 2, "Which highlight belongs to this blog?", highlight, "Remove all public transport.", "Ignore city mobility."),
+        (2, 3, "Which source context fits this blog?", source_label, "A private chat message.", "A game score table."),
+        (3, 1, "What should readers connect this blog with?", topic_title, "Only website color choices.", "Only unrelated entertainment."),
+        (3, 2, "Which statement best matches the blog content?", body_point, "Rail has no effect on mobility.", "The blog is only a photo caption."),
+        (3, 3, "What is the strongest title-based takeaway?", blog_post.title, "The topic is unrelated to rail.", "The content is only about logging out."),
+    ]
+    for row in question_rows:
+        _add_generated_item_question("blog", blog_post.id, *row)
+
+
+def _generate_journal_quiz_questions(journal):
+    topic = journal.topics.order_by("order", "id").first()
+    topic_title = topic.title if topic else "Rail transport and urban mobility"
+    keyword = (journal.keywords or ["rail transport"])[0]
+    snippet_point = _first_sentence(journal.snippet, journal.title)
+    year_text = "n.a." if "n.a." in (journal.citation_info or "").lower() else str(journal.publication_year)
+
+    question_rows = [
+        (1, 1, "What is this journal entry mainly about?", journal.title, "A password reset process.", "A restaurant menu."),
+        (1, 2, "Who is listed as the author or author group?", journal.authors, "An anonymous site visitor.", "A browser extension."),
+        (1, 3, "Which journal or source name is connected to this entry?", journal.journal_name, "A shopping cart.", "A profile picture."),
+        (2, 1, "Which topic is connected to this journal entry?", topic_title, "Video game design.", "Unrelated account settings."),
+        (2, 2, "Which idea appears in the journal snippet?", snippet_point, "The entry avoids transport research.", "The entry is only a login record."),
+        (2, 3, "Which keyword helps classify this journal?", keyword, "dessert", "logout"),
+        (3, 1, "What publication date value is used for this journal?", year_text, "A random phone number.", "No visible citation detail."),
+        (3, 2, "Which statement best matches this journal entry?", snippet_point, "It is unrelated to the journal title.", "It only stores image thumbnails."),
+        (3, 3, "What should readers connect this journal with?", topic_title, "Only button styling.", "Only upload errors."),
+    ]
+    for row in question_rows:
+        _add_generated_item_question("journal", journal.id, *row)
+
+
+def _ensure_item_quiz_questions(item_type, item):
+    if item_type not in {"blog", "journal"} or item is None:
+        return False
+    item_id = item.id
+    if ItemQuizQuestion.objects.filter(item_type=item_type, item_id=item_id).exists():
+        return True
+    if not _item_quiz_is_ready(item):
+        return False
+    if item_type == "blog":
+        _generate_blog_quiz_questions(item)
+    else:
+        _generate_journal_quiz_questions(item)
+    return True
+
+
+def _item_learning_context(user, item_type, item_id, item=None):
     if not user.is_authenticated:
         return None
+    quiz_ready = _ensure_item_quiz_questions(item_type, item)
     notes = ItemNote.objects.filter(user=user, item_type=item_type, item_id=item_id)
     result_attempt = None
     result_questions = []
@@ -312,6 +444,8 @@ def _item_learning_context(user, item_type, item_id):
         "notes": notes,
         "notes_count": notes.count(),
         "questions": questions,
+        "quiz_ready": quiz_ready,
+        "quiz_ready_at": _quiz_ready_date(item) if item is not None else None,
         "latest_attempt": ItemQuizAttempt.objects.filter(user=user, item_type=item_type, item_id=item_id).first(),
         "result_attempt": result_attempt,
         "result_questions": result_questions,
@@ -452,6 +586,13 @@ def login_process(request):
         user = authenticate(request, username=account.username, password=password)
         if user is not None:
             auth_login(request, user)
+            log_action(
+                request,
+                "auth",
+                "Login",
+                {"Account": user.username, "Result": "Success"},
+                user=user,
+            )
             if next_url and url_has_allowed_host_and_scheme(
                 next_url,
                 allowed_hosts={request.get_host()},
@@ -465,6 +606,13 @@ def login_process(request):
     return render(request, "econ/login.html", _auth_context())
 
 def logout_process(request):
+    if request.user.is_authenticated:
+        log_action(
+            request,
+            "auth",
+            "Logout",
+            {"Account": request.user.username, "Result": "Success"},
+        )
     logout(request)
     return redirect("index")
 
@@ -550,6 +698,16 @@ def profile(request):
             if wants_password_change:
                 update_session_auth_hash(request, user)
             messages.success(request, "Profile updated successfully.")
+            log_action(
+                request,
+                "update",
+                "Edit Profile",
+                {
+                    "Changed username": username,
+                    "Changed email": email,
+                    "Password changed": "Yes" if wants_password_change else "No",
+                },
+            )
             return redirect("profile")
 
     return render(
@@ -671,6 +829,40 @@ def admin_dashboard(request):
         }
     )
 
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def audit_logs(request):
+    logs_queryset = AuditLog.objects.select_related("user").order_by("-created_at", "-id")
+    audit_page = _paginate(request, logs_queryset, 25)
+    logs = list(audit_page.object_list)
+    action_counts = {}
+    for action in AuditLog.objects.values_list("action", flat=True):
+        action_counts[action] = action_counts.get(action, 0) + 1
+    for log in logs:
+        detail_rows = []
+        for key, value in (log.details or {}).items():
+            if isinstance(value, (list, tuple)):
+                value = ", ".join(str(item) for item in value)
+            elif isinstance(value, dict):
+                value = "; ".join(f"{nested_key}: {nested_value}" for nested_key, nested_value in value.items())
+            detail_rows.append({"label": key, "value": value})
+        log.detail_rows = detail_rows
+
+    return render(
+        request,
+        "econ/audit_logs.html",
+        {
+            "date": datetime.now(),
+            "audit_logs": logs,
+            "page_obj": audit_page,
+            "pagination_label": "audit logs",
+            "audit_total": AuditLog.objects.count(),
+            "shown_total": len(logs),
+            "action_counts": action_counts,
+        },
+    )
+
 def login(request):
     return render(
         request,
@@ -732,6 +924,13 @@ def registration_process(request):
         user.save()
 
         messages.success(request, "Registration successful. Please log in.")
+        log_action(
+            request,
+            "auth",
+            "Create Account",
+            {"Account": user.username, "Email": user.email, "Result": "Success"},
+            user=user,
+        )
         return redirect("login")
 
     return redirect("registration")
@@ -751,6 +950,7 @@ def toggle_bookmark(request):
     if existing:
         existing.delete()
         messages.success(request, f"Removed {topic.title} from your saved topics.")
+        log_action(request, "toggle", "Remove Saved Topic", {"Topic": topic.title})
     else:
         Bookmark.objects.create(
             user=request.user,
@@ -762,6 +962,7 @@ def toggle_bookmark(request):
             url=topic.source_url,
         )
         messages.success(request, f"Saved {topic.title} to your dashboard.")
+        log_action(request, "toggle", "Save Topic", {"Topic": topic.title})
 
     return redirect("index")
 
@@ -810,6 +1011,16 @@ def forum_create_thread(request):
             messages.success(request, "Your discussion and pictures were posted.")
         else:
             messages.success(request, "Your discussion was posted.")
+        log_action(
+            request,
+            "create",
+            "Add Forum Thread",
+            {
+                "Thread": thread.title,
+                "Tags": ", ".join(tag.title for tag in selected_tags),
+                "Pictures": len(uploaded_images),
+            },
+        )
         return redirect("forum_thread", thread_id=thread.id)
 
     context = _forum_page_context(thread_form=form, thread_modal_open=True)
@@ -866,6 +1077,16 @@ def forum_reply(request, thread_id):
             messages.success(request, "Your reply and pictures were posted.")
         else:
             messages.success(request, "Your reply was posted.")
+        log_action(
+            request,
+            "create",
+            "Add Forum Reply",
+            {
+                "Thread": thread.title,
+                "Reply": reply.body[:120],
+                "Pictures": len(uploaded_images),
+            },
+        )
         return redirect(f"{reverse('forum_thread', args=[thread.id])}#replies")
 
     context = _forum_thread_context(thread, request.user, reply_form=form)
@@ -912,6 +1133,7 @@ def forum_delete_thread(request, thread_id):
     title = thread.title
     thread.delete()
     messages.success(request, f"Deleted thread: {title}")
+    log_action(request, "delete", "Delete Forum Thread", {"Thread": title})
     return redirect("forum")
 
 
@@ -924,13 +1146,28 @@ def forum_delete_reply(request, reply_id):
     if not _can_manage_forum_reply(request.user, reply):
         raise PermissionDenied
     thread = reply.thread
+    reply_body = reply.body
     reply.delete()
     _refresh_forum_thread_activity(thread)
     messages.success(request, "Deleted reply.")
+    log_action(request, "delete", "Delete Forum Reply", {"Thread": thread.title, "Reply": reply_body[:120]})
     return redirect(f"{reverse('forum_thread', args=[thread.id])}#replies")
 
 def blog(request):
-    blog_posts = list(BlogPost.objects.order_by("order", "id"))
+    unlinked_blog_ids = list(
+        BlogPost.objects.annotate(topic_count=Count("topics"))
+        .filter(topic_count=0)
+        .values_list("id", flat=True)
+    )
+    if unlinked_blog_ids:
+        fallback_topic = Topic.objects.order_by("order", "id").first()
+        if fallback_topic is not None:
+            for blog_post in BlogPost.objects.filter(id__in=unlinked_blog_ids):
+                blog_post.topics.add(fallback_topic)
+
+    all_blog_posts = list(BlogPost.objects.prefetch_related("topics").order_by("order", "id"))
+    blog_page = _paginate(request, all_blog_posts, 4)
+    blog_posts = list(blog_page.object_list)
     if request.user.is_authenticated and blog_posts:
         viewed_blog_ids = set(
             StudyItemProgress.objects.filter(
@@ -951,12 +1188,36 @@ def blog(request):
         {
             'date': datetime.now(),
             'blog_posts': blog_posts,
+            'blog_count': len(all_blog_posts),
+            'page_obj': blog_page,
+            'pagination_label': 'blogs',
         }
     )
 
-def blog_detail(request, slug):
-    blog_post = get_object_or_404(BlogPost, slug=slug)
-    learning = _item_learning_context(request.user, "blog", blog_post.id)
+
+def _blog_edit_values(blog_post):
+    return {
+        "title": blog_post.title,
+        "date": _content_date_value(blog_post.created_at),
+        "excerpt": blog_post.excerpt,
+        "featured_image_url": blog_post.featured_image_url,
+        "body_paragraphs": "\n\n".join(blog_post.body_paragraphs or []),
+        "keywords": ", ".join(blog_post.keywords or []),
+        "highlights": "\n\n".join(blog_post.highlights or []),
+        "gallery": "\n\n".join((item.get("src") or "") for item in (blog_post.gallery or [])),
+        "sources": "\n\n".join(
+            (
+                source.get("label", "")
+                if not source.get("url") or source.get("url") in source.get("label", "")
+                else f"{source.get('label', '')} {source.get('url', '')}"
+            ).strip()
+            for source in (blog_post.sources or [])
+        ),
+    }
+
+
+def _blog_detail_context(request, blog_post, extra=None):
+    learning = _item_learning_context(request.user, "blog", blog_post.id, blog_post)
     learning = _attach_quiz_result(
         learning,
         request.user,
@@ -964,18 +1225,121 @@ def blog_detail(request, slug):
         blog_post.id,
         request.GET.get("quiz_attempt"),
     )
+    context = {
+        "date": datetime.now(),
+        "blog_post": blog_post,
+        "blog_edit_values": _blog_edit_values(blog_post),
+        "learning": learning,
+        "learning_item_type": "blog",
+        "learning_item_id": blog_post.id,
+    }
+    if extra:
+        context.update(extra)
+    return context
 
-    return render(
-        request,
-        "econ/blog_detail.html",
-        {
-            "date": datetime.now(),
-            "blog_post": blog_post,
-            "learning": learning,
-            "learning_item_type": "blog",
-            "learning_item_id": blog_post.id,
-        }
-    )
+
+def blog_detail(request, slug):
+    blog_post = get_object_or_404(BlogPost, slug=slug)
+    return render(request, "econ/blog_detail.html", _blog_detail_context(request, blog_post))
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def edit_blog(request, slug):
+    blog_post = get_object_or_404(BlogPost, slug=slug)
+    if request.method != "POST":
+        return redirect("blog_detail", slug=blog_post.slug)
+
+    original_values = _blog_edit_values(blog_post)
+    values = {key: request.POST.get(key, "").strip() for key in original_values}
+    errors = {}
+
+    _validate_edit_text(values["title"], original_values, "title", "Title", errors)
+    if values["title"] and BlogPost.objects.filter(title__iexact=values["title"]).exclude(pk=blog_post.pk).exists():
+        errors["title"] = "A blog with this title already exists."
+
+    _validate_edit_text(values["excerpt"], original_values, "excerpt", "Excerpt", errors)
+    _validate_edit_text(values["body_paragraphs"], original_values, "body_paragraphs", "Body paragraphs", errors)
+    _validate_edit_text(values["highlights"], original_values, "highlights", "Highlights", errors)
+    _validate_edit_text(values["keywords"], original_values, "keywords", "Keywords", errors)
+    _validate_edit_text(values["gallery"], original_values, "gallery", "Gallery URLs", errors)
+    _validate_edit_text(values["sources"], original_values, "sources", "Sources", errors)
+
+    _validate_edit_url(values["featured_image_url"], original_values, "featured_image_url", "Featured image URL", errors)
+    _validate_keywords_format(values["keywords"], "keywords", errors)
+    _validate_gallery_urls(values["gallery"], errors)
+    _validate_sources_format(values["sources"], errors)
+    parsed_date = _parse_edit_date(values["date"], original_values, errors)
+
+    body_list = [p.strip() for p in re.split(r"\n\s*\n", values["body_paragraphs"]) if p.strip()]
+    keyword_list = [k.strip() for k in values["keywords"].split(",") if k.strip()]
+    highlight_list = [h.strip() for h in re.split(r"\n\s*\n", values["highlights"]) if h.strip()]
+    gallery_urls = [g.strip() for g in re.split(r"\n\s*\n", values["gallery"]) if g.strip()]
+    gallery_list = [
+        {"src": url, "alt": f"Gallery image {index + 1}", "caption": f"Gallery image {index + 1}"}
+        for index, url in enumerate(gallery_urls)
+    ]
+    source_list = _parse_blog_sources(values["sources"], values["title"], parsed_date)
+
+    comparable_current = {
+        "title": blog_post.title,
+        "date": _content_date_value(blog_post.created_at),
+        "excerpt": blog_post.excerpt,
+        "featured_image_url": blog_post.featured_image_url,
+        "body_paragraphs": blog_post.body_paragraphs or [],
+        "keywords": blog_post.keywords or [],
+        "highlights": blog_post.highlights or [],
+        "gallery": blog_post.gallery or [],
+        "sources": _parse_blog_sources(_blog_edit_values(blog_post)["sources"], values["title"], parsed_date),
+    }
+    comparable_new = {
+        "title": values["title"],
+        "date": values["date"],
+        "excerpt": values["excerpt"],
+        "featured_image_url": values["featured_image_url"],
+        "body_paragraphs": body_list,
+        "keywords": keyword_list,
+        "highlights": highlight_list,
+        "gallery": gallery_list,
+        "sources": source_list,
+    }
+    if not errors and comparable_current == comparable_new:
+        errors["global"] = "Change at least one field before saving."
+
+    if errors:
+        return render(
+            request,
+            "econ/blog_detail.html",
+            _blog_detail_context(
+                request,
+                blog_post,
+                {"blog_edit_values": values, "blog_edit_errors": errors, "blog_edit_open": True},
+            ),
+            status=400,
+        )
+
+    blog_post.title = values["title"]
+    blog_post.slug = slugify(values["title"])
+    original_slug = blog_post.slug
+    counter = 1
+    while BlogPost.objects.filter(slug=blog_post.slug).exclude(pk=blog_post.pk).exists():
+        blog_post.slug = f"{original_slug}-{counter}"
+        counter += 1
+    blog_post.excerpt = values["excerpt"]
+    blog_post.featured_image_filename = generate_filename(values["title"])
+    blog_post.featured_image_url = values["featured_image_url"]
+    blog_post.body_paragraphs = body_list
+    blog_post.keywords = keyword_list
+    blog_post.highlights = highlight_list
+    blog_post.gallery = gallery_list
+    blog_post.sources = source_list
+    blog_post.raw_text = "\n\n".join([f"BLOG: {blog_post.title}", values["excerpt"], *body_list])
+    blog_post.save()
+    if parsed_date is not None:
+        BlogPost.objects.filter(pk=blog_post.pk).update(created_at=_content_created_at(parsed_date))
+    messages.success(request, f"Updated blog: {blog_post.title}")
+    log_action(request, "update", "Edit Blog", {"Blog": blog_post.title, "Slug": blog_post.slug})
+    return redirect("blog_detail", slug=blog_post.slug)
 
 
 @login_required
@@ -990,6 +1354,7 @@ def delete_blog(request, slug):
     blog_post.delete()
     _delete_item_learning_data("blog", item_id)
     messages.success(request, f"Deleted blog: {title}")
+    log_action(request, "delete", "Delete Blog", {"Blog": title, "Item ID": item_id})
     return redirect("blog")
 
 
@@ -1018,9 +1383,11 @@ def toggle_study_progress(request):
     )
     if created:
         messages.success(request, "Marked as done.")
+        log_action(request, "toggle", "Mark Study Item Done", {"Item type": item_type, "Item ID": item_id, "Topic": topic.title})
     else:
         progress.delete()
         messages.success(request, "Marked as not done.")
+        log_action(request, "toggle", "Unmark Study Item Done", {"Item type": item_type, "Item ID": item_id, "Topic": topic.title})
 
     return redirect(request.POST.get("next") or "index")
 
@@ -1060,6 +1427,7 @@ def save_item_note(request):
         note=note_text,
     )
     messages.success(request, "Saved your note.")
+    log_action(request, "create", "Add Study Note", {"Item type": item_type, "Item ID": item_id, "Note": note_text})
     return redirect(request.POST.get("next") or "index")
 
 @login_required
@@ -1111,12 +1479,20 @@ def submit_item_quiz(request):
         quiz_progress.save(update_fields=["perfect_rounds", "mastered", "updated_at"])
 
     messages.success(request, f"Quiz submitted: {score}/{len(questions)}.")
+    log_action(
+        request,
+        "submit",
+        "Submit Quiz",
+        {"Item type": item_type, "Item ID": item_id, "Score": f"{score}/{len(questions)}", "Round": current_round},
+    )
     next_url = request.POST.get("next") or reverse("index")
     separator = "&" if "?" in next_url else "?"
     return redirect(f"{next_url}{separator}quiz_attempt={attempt.id}")
 
 def journal(request):
-    journal_entries = list(JournalEntry.objects.prefetch_related("topics").order_by("order", "id"))
+    all_journal_entries = list(JournalEntry.objects.prefetch_related("topics").order_by("order", "id"))
+    journal_page = _paginate(request, all_journal_entries, 6)
+    journal_entries = list(journal_page.object_list)
     if request.user.is_authenticated and journal_entries:
         viewed_journal_ids = set(
             StudyItemProgress.objects.filter(
@@ -1137,15 +1513,29 @@ def journal(request):
         {
             'date': datetime.now(),
             'journal_entries': journal_entries,
+            'journal_count': len(all_journal_entries),
+            'page_obj': journal_page,
+            'pagination_label': 'journals',
         }
     )
 
-def journal_detail(request, journal_id):
-    journal = get_object_or_404(
-        JournalEntry.objects.prefetch_related("topics"),
-        pk=journal_id,
-    )
-    learning = _item_learning_context(request.user, "journal", journal.id)
+
+def _journal_edit_values(journal):
+    return {
+        "title": journal.title,
+        "date": _content_date_value(journal.created_at),
+        "journal_url": journal.journal_url,
+        "authors": journal.authors,
+        "publication_year": str(journal.publication_year),
+        "journal_name": journal.journal_name,
+        "citation_info": journal.citation_info,
+        "snippet": journal.snippet,
+        "keywords": ", ".join(journal.keywords or []),
+    }
+
+
+def _journal_detail_context(request, journal, extra=None):
+    learning = _item_learning_context(request.user, "journal", journal.id, journal)
     learning = _attach_quiz_result(
         learning,
         request.user,
@@ -1153,18 +1543,92 @@ def journal_detail(request, journal_id):
         journal.id,
         request.GET.get("quiz_attempt"),
     )
+    context = {
+        "date": datetime.now(),
+        "journal": journal,
+        "journal_edit_values": _journal_edit_values(journal),
+        "learning": learning,
+        "learning_item_type": "journal",
+        "learning_item_id": journal.id,
+    }
+    if extra:
+        context.update(extra)
+    return context
 
-    return render(
-        request,
-        "econ/journal_detail.html",
-        {
-            "date": datetime.now(),
-            "journal": journal,
-            "learning": learning,
-            "learning_item_type": "journal",
-            "learning_item_id": journal.id,
-        }
+
+def journal_detail(request, journal_id):
+    journal = get_object_or_404(
+        JournalEntry.objects.prefetch_related("topics"),
+        pk=journal_id,
     )
+    return render(request, "econ/journal_detail.html", _journal_detail_context(request, journal))
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def edit_journal(request, journal_id):
+    journal = get_object_or_404(JournalEntry, pk=journal_id)
+    if request.method != "POST":
+        return redirect("journal_detail", journal_id=journal.id)
+
+    original_values = _journal_edit_values(journal)
+    values = {key: request.POST.get(key, "").strip() for key in original_values}
+    errors = {}
+    for field, label in (
+        ("title", "Title"),
+        ("journal_url", "Journal URL"),
+        ("authors", "Authors"),
+        ("journal_name", "Journal name"),
+        ("citation_info", "Citation info"),
+        ("snippet", "Snippet"),
+        ("keywords", "Keywords"),
+    ):
+        if field == "journal_url":
+            _validate_edit_url(values[field], original_values, field, label, errors)
+        else:
+            _validate_edit_text(values[field], original_values, field, label, errors)
+
+    if values["title"] and JournalEntry.objects.filter(title__iexact=values["title"]).exclude(pk=journal.pk).exists():
+        errors["title"] = "A journal with this title already exists."
+    if original_values["publication_year"] and not values["publication_year"]:
+        errors["publication_year"] = "Publication year cannot be left blank."
+    elif values["publication_year"] and not values["publication_year"].isdigit():
+        errors["publication_year"] = "Publication year must be a number."
+    _validate_keywords_format(values["keywords"], "keywords", errors)
+    parsed_date = _parse_edit_date(values["date"], original_values, errors)
+    keyword_list = [keyword.strip() for keyword in values["keywords"].split(",") if keyword.strip()]
+
+    comparable_current = _journal_edit_values(journal)
+    comparable_new = dict(values)
+    if not errors and comparable_current == comparable_new:
+        errors["global"] = "Change at least one field before saving."
+
+    if errors:
+        return render(
+            request,
+            "econ/journal_detail.html",
+            _journal_detail_context(
+                request,
+                journal,
+                {"journal_edit_values": values, "journal_edit_errors": errors, "journal_edit_open": True},
+            ),
+            status=400,
+        )
+
+    journal.title = values["title"]
+    journal.journal_url = values["journal_url"]
+    journal.authors = values["authors"]
+    journal.publication_year = int(values["publication_year"])
+    journal.journal_name = values["journal_name"]
+    journal.citation_info = values["citation_info"]
+    journal.snippet = values["snippet"]
+    journal.keywords = keyword_list
+    journal.save()
+    if parsed_date is not None:
+        JournalEntry.objects.filter(pk=journal.pk).update(created_at=_content_created_at(parsed_date))
+    messages.success(request, f"Updated journal: {journal.title}")
+    log_action(request, "update", "Edit Journal", {"Journal": journal.title, "Item ID": journal.id})
+    return redirect("journal_detail", journal_id=journal.id)
 
 
 @login_required
@@ -1179,13 +1643,17 @@ def delete_journal(request, journal_id):
     journal.delete()
     _delete_item_learning_data("journal", item_id)
     messages.success(request, f"Deleted journal: {title}")
+    log_action(request, "delete", "Delete Journal", {"Journal": title, "Item ID": item_id})
     return redirect("journal")
 
 
 def vlog(request):
-    vlog_entries = list(
+    all_vlog_entries = list(
         VlogEntry.objects.prefetch_related("topics").order_by("order", "vlogID")
     )
+
+    vlog_page = _paginate(request, all_vlog_entries, 6)
+    vlog_entries = list(vlog_page.object_list)
 
     for entry in vlog_entries:
         entry.embed_url = _youtube_embed_url(entry.video_url)
@@ -1211,6 +1679,9 @@ def vlog(request):
         {
             'date': datetime.now(),
             'vlog_entries': vlog_entries,
+            'vlog_count': len(all_vlog_entries),
+            'page_obj': vlog_page,
+            'pagination_label': 'media',
         }
     )
 
@@ -1218,7 +1689,24 @@ def vlog_detail(request, vlog_id):
     video = get_object_or_404(VlogEntry.objects.prefetch_related("topics"), pk=vlog_id)
     video.embed_url = _youtube_embed_url(video.video_url)
     video.preview_url = video.thumbnail_url or _youtube_thumbnail_url(video.video_url)
-    learning = _item_learning_context(request.user, "video", video.vlogID)
+    return render(request, "econ/vlog_detail.html", _video_detail_context(request, video))
+
+
+def _video_edit_values(video):
+    return {
+        "title": video.title,
+        "channel_name": video.channel_name,
+        "description": video.description,
+        "video_url": video.video_url,
+        "thumbnail_url": video.thumbnail_url,
+        "date": _content_date_value(video.date),
+    }
+
+
+def _video_detail_context(request, video, extra=None):
+    video.embed_url = _youtube_embed_url(video.video_url)
+    video.preview_url = video.thumbnail_url or _youtube_thumbnail_url(video.video_url)
+    learning = _item_learning_context(request.user, "video", video.vlogID, video)
     learning = _attach_quiz_result(
         learning,
         request.user,
@@ -1226,18 +1714,70 @@ def vlog_detail(request, vlog_id):
         video.vlogID,
         request.GET.get("quiz_attempt"),
     )
+    context = {
+        "date": datetime.now(),
+        "video": video,
+        "video_edit_values": _video_edit_values(video),
+        "learning": learning,
+        "learning_item_type": "video",
+        "learning_item_id": video.vlogID,
+    }
+    if extra:
+        context.update(extra)
+    return context
 
-    return render(
-        request,
-        "econ/vlog_detail.html",
-        {
-            "date": datetime.now(),
-            "video": video,
-            "learning": learning,
-            "learning_item_type": "video",
-            "learning_item_id": video.vlogID,
-        }
-    )
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def edit_vlog(request, vlog_id):
+    video = get_object_or_404(VlogEntry, pk=vlog_id)
+    if request.method != "POST":
+        return redirect("vlog_detail", vlog_id=video.vlogID)
+
+    original_values = _video_edit_values(video)
+    values = {key: request.POST.get(key, "").strip() for key in original_values}
+    errors = {}
+    for field, label in (
+        ("title", "Title"),
+        ("channel_name", "Channel"),
+        ("description", "Description"),
+    ):
+        _validate_edit_text(values[field], original_values, field, label, errors)
+
+    if values["title"] and VlogEntry.objects.filter(title__iexact=values["title"]).exclude(pk=video.pk).exists():
+        errors["title"] = "A video with this title already exists."
+    _validate_edit_url(values["video_url"], original_values, "video_url", "Video URL", errors)
+    _validate_edit_url(values["thumbnail_url"], original_values, "thumbnail_url", "Thumbnail URL", errors)
+    parsed_date = _parse_edit_date(values["date"], original_values, errors)
+
+    comparable_current = _video_edit_values(video)
+    comparable_new = dict(values)
+    if not errors and comparable_current == comparable_new:
+        errors["global"] = "Change at least one field before saving."
+
+    if errors:
+        return render(
+            request,
+            "econ/vlog_detail.html",
+            _video_detail_context(
+                request,
+                video,
+                {"video_edit_values": values, "video_edit_errors": errors, "video_edit_open": True},
+            ),
+            status=400,
+        )
+
+    video.title = values["title"]
+    video.filename = f"{slugify(values['title'])}.mp4"
+    video.channel_name = values["channel_name"]
+    video.description = values["description"]
+    video.video_url = values["video_url"]
+    video.thumbnail_url = values["thumbnail_url"]
+    video.date = parsed_date
+    video.save()
+    messages.success(request, f"Updated video: {video.title}")
+    log_action(request, "update", "Edit Video", {"Video": video.title, "Item ID": video.vlogID})
+    return redirect("vlog_detail", vlog_id=video.vlogID)
 
 
 @login_required
@@ -1252,20 +1792,141 @@ def delete_vlog(request, vlog_id):
     video.delete()
     _delete_item_learning_data("video", item_id)
     messages.success(request, f"Deleted media: {title}")
+    log_action(request, "delete", "Delete Video", {"Video": title, "Item ID": item_id})
     return redirect("vlog")
 
 
 def gallery(request):
-    gallery_entries = list(MediaGalleryEntry.objects.order_by("order", "id"))
+    all_gallery_entries = list(MediaGalleryEntry.objects.order_by("order", "id"))
+    gallery_page = _paginate(request, all_gallery_entries, 8)
+    gallery_entries = list(gallery_page.object_list)
+    for entry in gallery_entries:
+        entry.edit_values = _media_edit_values(entry)
     return render(
         request,
         'econ/gallery.html',
         {
             'date': datetime.now(),
             'gallery_entries': gallery_entries,
-            'gallery_count': len(gallery_entries),
+            'gallery_count': len(all_gallery_entries),
+            'page_obj': gallery_page,
+            'pagination_label': 'gallery items',
         }
     )
+
+
+def _gallery_item_page(media_id, per_page=8):
+    ordered_ids = list(MediaGalleryEntry.objects.order_by("order", "id").values_list("id", flat=True))
+    try:
+        position = ordered_ids.index(media_id)
+    except ValueError:
+        return 1
+    return (position // per_page) + 1
+
+
+def _media_edit_values(media):
+    return {
+        "title": media.title,
+        "description": media.description,
+        "date": _content_date_value(media.date),
+        "image_url": media.image_url,
+        "video_url": media.video_url,
+        "thumbnail_url": media.thumbnail_url,
+    }
+
+
+def _gallery_context(extra=None):
+    all_gallery_entries = list(MediaGalleryEntry.objects.order_by("order", "id"))
+    paginator = Paginator(all_gallery_entries, 8)
+    page_number = (extra or {}).get("page_number") or 1
+    try:
+        gallery_page = paginator.page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        gallery_page = paginator.page(1)
+    gallery_entries = list(gallery_page.object_list)
+    for entry in gallery_entries:
+        entry.edit_values = _media_edit_values(entry)
+    context = {
+        "date": datetime.now(),
+        "gallery_entries": gallery_entries,
+        "gallery_count": len(all_gallery_entries),
+        "page_obj": gallery_page,
+        "pagination_label": "gallery items",
+    }
+    if extra:
+        edit_item_id = extra.get("media_edit_item_id")
+        edit_values = extra.get("media_edit_values")
+        if edit_item_id and edit_values:
+            for entry in gallery_entries:
+                if entry.id == edit_item_id:
+                    entry.edit_values = edit_values
+                    break
+        context.update(extra)
+    return context
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def edit_gallery_entry(request, media_id):
+    media = get_object_or_404(MediaGalleryEntry, pk=media_id)
+    if request.method != "POST":
+        return redirect("gallery")
+
+    original_values = _media_edit_values(media)
+    values = {key: request.POST.get(key, "").strip() for key in original_values}
+    errors = {}
+    _validate_edit_text(values["title"], original_values, "title", "Title", errors)
+    _validate_edit_text(values["description"], original_values, "description", "Description", errors)
+    parsed_date = _parse_edit_date(values["date"], original_values, errors)
+
+    if values["title"] and MediaGalleryEntry.objects.filter(title__iexact=values["title"]).exclude(pk=media.pk).exists():
+        errors["title"] = "A gallery item with this title already exists."
+
+    if media.media_type == "image":
+        _validate_edit_url(values["image_url"], original_values, "image_url", "Image URL", errors)
+    else:
+        _validate_edit_url(values["video_url"], original_values, "video_url", "Video URL", errors)
+        _validate_edit_url(values["thumbnail_url"], original_values, "thumbnail_url", "Thumbnail URL", errors)
+
+    comparable_current = _media_edit_values(media)
+    comparable_new = dict(values)
+    if not errors and comparable_current == comparable_new:
+        errors["global"] = "Change at least one field before saving."
+
+    if errors:
+        return render(
+            request,
+            "econ/gallery.html",
+            _gallery_context(
+                {
+                    "media_edit_item_id": media.id,
+                    "media_edit_values": values,
+                    "media_edit_errors": errors,
+                    "media_edit_open": True,
+                    "page_number": request.GET.get("page") or 1,
+                }
+            ),
+            status=400,
+        )
+
+    media.title = values["title"]
+    media.description = values["description"]
+    media.date = parsed_date
+    if media.media_type == "image":
+        media.image_url = values["image_url"]
+        media.video_url = ""
+        media.thumbnail_url = ""
+    else:
+        media.video_url = values["video_url"]
+        media.thumbnail_url = values["thumbnail_url"]
+        media.image_url = ""
+    media.save()
+    messages.success(request, f"Updated gallery item: {media.title}")
+    log_action(request, "update", "Edit Gallery Item", {"Gallery item": media.title, "Item ID": media.id})
+    page_number = request.GET.get("page")
+    if page_number:
+        return redirect(f"{reverse('gallery')}?page={page_number}")
+    return redirect("gallery")
 
 
 @login_required
@@ -1280,6 +1941,7 @@ def delete_gallery_entry(request, media_id):
     media.delete()
     _delete_item_learning_data("media", item_id)
     messages.success(request, f"Deleted gallery item: {title}")
+    log_action(request, "delete", "Delete Gallery Item", {"Gallery item": title, "Item ID": item_id})
     return redirect("gallery")
 
 ############################################# SQL ##############################################################################
@@ -1415,8 +2077,20 @@ def upload_sql_process(request):
             else:
                 raise ValueError(f"Unsupported database engine: {get_db_engine()}")
             messages.success(request, "SQL dump applied successfully.")
+            log_action(
+                request,
+                "system",
+                "Upload SQL Dump",
+                {"File": request.FILES["sql_file"].name, "Result": "Applied successfully"},
+            )
         except Exception as e:
             messages.error(request, f"Failed to apply dump: {str(e)}")
+            log_action(
+                request,
+                "system",
+                "Upload SQL Dump Failed",
+                {"File": request.FILES["sql_file"].name, "Error": str(e)},
+            )
 
     return render(request, 'econ/upload_sql.html', {'date': datetime.now()})
 
@@ -1488,14 +2162,61 @@ def _validate_url(value, field_name, label, errors):
         errors[field_name] = f"Enter a valid {label} URL."
 
 
+def _is_valid_url(value):
+    if not value:
+        return False
+    validator = URLValidator()
+    try:
+        validator(value)
+    except ValidationError:
+        return False
+    return True
+
+
 def _is_number_only(value):
     clean_value = value.strip()
     return bool(re.search(r"\d", clean_value) and re.fullmatch(r"[\d\s.,+-]+", clean_value))
 
 
+def _is_symbol_only(value):
+    clean_value = value.strip()
+    return bool(clean_value and not re.search(r"[A-Za-z0-9]", clean_value))
+
+
 def _validate_text_not_number(value, field_name, label, errors):
     if value and field_name not in errors and _is_number_only(value):
         errors[field_name] = f"{label} cannot be only numbers."
+
+
+def _validate_text_not_symbol(value, field_name, label, errors):
+    if value and field_name not in errors and _is_symbol_only(value):
+        errors[field_name] = f"{label} cannot be only symbols."
+
+
+def _validate_required_text(value, field_name, label, errors):
+    if not value:
+        errors[field_name] = f"{label} is required."
+        return
+    _validate_text_not_number(value, field_name, label, errors)
+    _validate_text_not_symbol(value, field_name, label, errors)
+
+
+def _validate_edit_text(value, original_values, field_name, label, errors):
+    original_value = str(original_values.get(field_name, "") or "").strip()
+    if original_value and not value:
+        errors[field_name] = f"{label} cannot be left blank."
+        return
+    if value:
+        _validate_text_not_number(value, field_name, label, errors)
+        _validate_text_not_symbol(value, field_name, label, errors)
+
+
+def _validate_edit_url(value, original_values, field_name, label, errors):
+    original_value = str(original_values.get(field_name, "") or "").strip()
+    if original_value and not value:
+        errors[field_name] = f"{label} cannot be left blank."
+        return
+    _validate_url(value, field_name, label, errors)
 
 
 def _blank_line_blocks(value):
@@ -1543,24 +2264,77 @@ def _validate_gallery_urls(value, errors):
             return
 
 
+def _extract_urls(value):
+    return re.findall(r"https?://[^\s<>()]+", value or "")
+
+
+def _source_site_name(url):
+    host = urlparse(url).netloc.lower().removeprefix("www.")
+    if not host:
+        return "Source Website"
+    name = host.split(":")[0].split(".")[0]
+    return name.replace("-", " ").title()
+
+
+def _apa_date(content_date, no_date=False):
+    if no_date:
+        return "n.a."
+    if not content_date:
+        return "n.a."
+    return content_date.strftime("%Y, %B %-d") if os.name != "nt" else content_date.strftime("%Y, %B %#d")
+
+
+def _apa_web_source(title, url, content_date, no_date=False):
+    return f"{title}. ({_apa_date(content_date, no_date)}). {_source_site_name(url)}. {url}"
+
+
+def _apa_journal_source(authors, year, title, journal_name, url="", no_date=False):
+    authors_text = authors.strip().rstrip(".")
+    title_text = title.strip().rstrip(".")
+    journal_text = journal_name.strip().rstrip(".")
+    year_text = "n.a." if no_date else (str(year).strip() or "n.a.")
+    citation = f"{authors_text}. ({year_text}). {title_text}. {journal_text}."
+    if url:
+        citation = f"{citation} {url}"
+    return citation
+
+
 def _validate_sources_format(value, errors):
-    blocks = _validate_blank_line_format(value, "sources", "Source", errors)
-    if not blocks or "sources" in errors:
+    if not value or "sources" in errors:
         return
-    for block in blocks:
-        lines = [line.strip() for line in block.splitlines() if line.strip()]
-        if len(lines) != 2:
-            errors["sources"] = "Use two lines per source: label on line 1, URL on line 2. Separate sources with a blank line."
+    for source in _blank_line_blocks(value):
+        if _is_number_only(source):
+            errors["sources"] = "Sources cannot be only numbers."
             return
-        if _is_number_only(lines[0]):
-            errors["sources"] = "Source labels cannot be only numbers."
+        if _is_symbol_only(source):
+            errors["sources"] = "Sources cannot be only symbols."
             return
-        _validate_url(lines[1], "sources", "source", errors)
-        if "sources" in errors:
-            return
+        for url in _extract_urls(source):
+            _validate_url(url, "sources", "source", errors)
+            if "sources" in errors:
+                return
 
 
-def _parse_optional_content_date(value, has_url, errors):
+def _parse_blog_sources(value, blog_title, content_date, no_date=False):
+    sources = []
+    for source in _blank_line_blocks(value):
+        urls = _extract_urls(source)
+        if urls:
+            for url in urls:
+                title_part = source.replace(url, "").strip(" -\n\t.")
+                citation_title = title_part or blog_title
+                sources.append({
+                    "label": _apa_web_source(citation_title, url, content_date, no_date),
+                    "url": url,
+                })
+        else:
+            sources.append({"label": source, "url": ""})
+    return sources
+
+
+def _parse_optional_content_date(value, has_url, errors, no_date=False):
+    if no_date:
+        return timezone.localdate()
     if has_url and not value:
         errors["date"] = "Date is required when this content comes from a URL."
         return None
@@ -1579,6 +2353,153 @@ def _content_created_at(content_date):
         timezone.get_current_timezone(),
     )
 
+
+def _content_date_value(value):
+    if not value:
+        return ""
+    if hasattr(value, "date"):
+        return timezone.localtime(value).date().isoformat()
+    return value.isoformat()
+
+
+def _parse_required_edit_date(value, errors):
+    if not value:
+        errors["date"] = "Date is required."
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        errors["date"] = "Enter a valid date."
+        return None
+
+
+def _parse_edit_date(value, original_values, errors):
+    original_value = str(original_values.get("date", "") or "").strip()
+    if original_value and not value:
+        errors["date"] = "Date cannot be left blank."
+        return None
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        errors["date"] = "Enter a valid date."
+        return None
+
+
+TOPIC_OTHER_VALUE = "__other__"
+
+
+def _proper_case_topic_title(value):
+    normalized = re.sub(r"\s+", " ", value.strip())
+    return normalized.title()
+
+
+def _topic_form_context(extra=None):
+    values = (extra or {}).get("values")
+    selected_topic_ids = []
+    selected_topic_pairs = []
+    if values is not None and hasattr(values, "getlist"):
+        selected_topic_ids = [
+            topic_id
+            for topic_id in values.getlist("topic_choices")
+            if str(topic_id).isdigit()
+        ]
+        if selected_topic_ids:
+            selected_topic_labels = {
+                str(topic.id): topic.title
+                for topic in Topic.objects.filter(id__in=selected_topic_ids)
+            }
+            selected_topic_pairs = [
+                {
+                    "id": topic_id,
+                    "title": selected_topic_labels.get(topic_id, "Selected topic"),
+                }
+                for topic_id in selected_topic_ids
+                if topic_id in selected_topic_labels
+            ]
+
+    context = {
+        "topic_options": Topic.objects.order_by("order", "title"),
+        "topic_other_value": TOPIC_OTHER_VALUE,
+        "selected_topic_ids": selected_topic_ids,
+        "selected_topic_pairs": selected_topic_pairs,
+    }
+    if extra:
+        context.update(extra)
+    return context
+
+
+def _validate_topic_selections(post_data, errors, create=True):
+    topic_choices = []
+    if hasattr(post_data, "getlist"):
+        topic_choices = [
+            choice.strip()
+            for choice in post_data.getlist("topic_choices")
+            if choice.strip()
+        ]
+    topic_choice = post_data.get("topic_choice", "").strip()
+    topic_other = post_data.get("topic_other", "").strip()
+
+    if topic_choice and topic_choice != TOPIC_OTHER_VALUE:
+        topic_choices.append(topic_choice)
+
+    seen_topic_choices = set()
+    topic_ids = []
+    for choice in topic_choices:
+        if not choice.isdigit():
+            errors["topics"] = "Select valid topics."
+            return []
+        if choice in seen_topic_choices:
+            continue
+        seen_topic_choices.add(choice)
+        topic_ids.append(int(choice))
+
+    selected_topics = list(Topic.objects.filter(pk__in=topic_ids))
+    selected_by_id = {topic.pk: topic for topic in selected_topics}
+    if len(selected_by_id) != len(topic_ids):
+        errors["topics"] = "Select valid topics."
+        return []
+
+    if topic_choice == TOPIC_OTHER_VALUE:
+        if not topic_other:
+            errors["topic_other"] = "Topic is required."
+            return []
+
+        topic_title = _proper_case_topic_title(topic_other)
+        if _is_number_only(topic_title):
+            errors["topic_other"] = "Topic cannot be only numbers."
+            return []
+        if _is_symbol_only(topic_title):
+            errors["topic_other"] = "Topic cannot be only symbols."
+            return []
+        if Topic.objects.filter(title__iexact=topic_title).exists():
+            errors["topic_other"] = "Topic cannot match an existing topic."
+            return []
+
+        topic_key = slugify(topic_title)
+        if not topic_key:
+            errors["topic_other"] = "Enter a valid topic."
+            return []
+        if Topic.objects.filter(key__iexact=topic_key).exists():
+            errors["topic_other"] = "Topic cannot match an existing topic."
+            return []
+
+        if create:
+            selected_topics.append(
+                Topic.objects.create(
+                    key=topic_key,
+                    title=topic_title,
+                    summary="User-added topic.",
+                    order=(Topic.objects.order_by("-order").values_list("order", flat=True).first() or 0) + 1,
+                )
+            )
+
+    if not selected_topics and topic_choice != TOPIC_OTHER_VALUE:
+        errors["topics"] = "At least one topic is required."
+
+    return selected_topics
+
 @login_required
 @user_passes_test(superuser_required)
 def add_blog(request):
@@ -1588,13 +2509,14 @@ def add_blog(request):
         excerpt = request.POST.get("excerpt", "").strip()
         featured_image_filename = generate_filename(title)
         featured_image_url = request.POST.get("featured_image_url", "").strip()
+        no_date = request.POST.get("no_date") == "1"
 
         body_paragraphs = request.POST.get("body_paragraphs", "").strip()
         keywords = request.POST.get("keywords", "").strip()
         highlights = request.POST.get("highlights", "").strip()
         gallery = request.POST.get("gallery", "").strip()
         sources = request.POST.get("sources", "").strip()
-        has_source_url = bool(sources)
+        has_featured_image_url = _is_valid_url(featured_image_url)
 
         order = (
             BlogPost.objects.order_by("-order")
@@ -1618,8 +2540,6 @@ def add_blog(request):
             errors["body_paragraphs"] = "Body paragraphs are required."
         _validate_text_not_number(body_paragraphs, "body_paragraphs", "Body paragraphs", errors)
 
-        if not keywords:
-            errors["keywords"] = "Keywords are required."
         _validate_keywords_format(keywords, "keywords", errors)
 
         if not highlights:
@@ -1633,22 +2553,22 @@ def add_blog(request):
         if sources:
             _validate_sources_format(sources, errors)
 
-        parsed_date = _parse_optional_content_date(posted_date, has_source_url, errors)
+        parsed_date = _parse_optional_content_date(posted_date, has_featured_image_url, errors, no_date=no_date)
 
-        if not featured_image_url:
-            errors["featured_image_url"] = "Featured image URL is required."
         _validate_url(featured_image_url, "featured_image_url", "featured image", errors)
+
+        selected_topics = _validate_topic_selections(request.POST, errors, create=not errors)
 
         if errors:
             return render(
                 request,
                 "econ/add_blog.html",
-                {
+                _topic_form_context({
                     "date": datetime.now(),
                     "date_value": posted_date or timezone.localdate().isoformat(),
                     "errors": errors,
                     "values": request.POST,
-                },
+                }),
                 status=400
             )
 
@@ -1691,26 +2611,7 @@ def add_blog(request):
             if g.strip()
         ]
 
-        source_list = []
-
-        source_blocks = [
-            block.strip()
-            for block in re.split(r"\n\s*\n", sources)
-            if block.strip()
-        ]
-
-        for block in source_blocks:
-            lines = [
-                line.strip()
-                for line in block.splitlines()
-                if line.strip()
-            ]
-
-            if len(lines) >= 2:
-                source_list.append({
-                    "label": lines[0],
-                    "url": lines[1],
-                })
+        source_list = _parse_blog_sources(sources, title, parsed_date, no_date=no_date)
 
         raw_text_parts = [
             f"BLOG: {title}",
@@ -1759,18 +2660,25 @@ def add_blog(request):
             sources=source_list,
             order=order,
         )
+        blog.topics.set(selected_topics)
         BlogPost.objects.filter(pk=blog.pk).update(created_at=_content_created_at(parsed_date))
 
         messages.success(request, f"Blog '{blog.title}' created successfully.")
-        return redirect("blog")
+        log_action(
+            request,
+            "create",
+            "Add Blog",
+            {"Blog": blog.title, "Topics": ", ".join(topic.title for topic in selected_topics), "Slug": blog.slug},
+        )
+        return redirect("blog_detail", slug=blog.slug)
 
     return render(
         request,
         "econ/add_blog.html",
-        {
+        _topic_form_context({
             "date": datetime.now(),
             "date_value": timezone.localdate().isoformat(),
-        }
+        })
     )
 
 
@@ -1781,6 +2689,7 @@ def add_journal(request):
         title = request.POST.get("title", "").strip()
         posted_date = request.POST.get("date", "").strip()
         journal_url = request.POST.get("journal_url", "").strip()
+        no_date = request.POST.get("no_date") == "1"
         authors = request.POST.get("authors", "").strip()
         publication_year = request.POST.get("publication_year", "").strip()
         journal_name = request.POST.get("journal_name", "").strip()
@@ -1804,13 +2713,13 @@ def add_journal(request):
         if journal_url:
             _validate_url(journal_url, "journal_url", "journal", errors)
 
-        parsed_date = _parse_optional_content_date(posted_date, bool(journal_url), errors)
+        parsed_date = _parse_optional_content_date(posted_date, _is_valid_url(journal_url), errors, no_date=no_date)
 
         if not authors:
             errors["authors"] = "Authors are required."
         _validate_text_not_number(authors, "authors", "Authors", errors)
 
-        if journal_url and not publication_year:
+        if journal_url and not publication_year and not no_date:
             errors["publication_year"] = "Publication year is required."
         elif not publication_year:
             publication_year = str(timezone.localdate().year)
@@ -1821,28 +2730,26 @@ def add_journal(request):
             errors["journal_name"] = "Journal name is required."
         _validate_text_not_number(journal_name, "journal_name", "Journal name", errors)
 
-        if not citation_info:
-            errors["citation_info"] = "Citation info is required."
         _validate_text_not_number(citation_info, "citation_info", "Citation info", errors)
 
         if not snippet:
             errors["snippet"] = "Snippet is required."
         _validate_text_not_number(snippet, "snippet", "Snippet", errors)
 
-        if not keywords:
-            errors["keywords"] = "Keywords are required."
         _validate_keywords_format(keywords, "keywords", errors)
+
+        selected_topics = _validate_topic_selections(request.POST, errors, create=not errors)
 
         if errors:
             return render(
                 request,
                 "econ/add_journal.html",
-                {
+                _topic_form_context({
                     "date": datetime.now(),
                     "date_value": posted_date or timezone.localdate().isoformat(),
                     "errors": errors,
                     "values": request.POST,
-                },
+                }),
                 status=400
             )
 
@@ -1852,25 +2759,32 @@ def add_journal(request):
             authors=authors,
             publication_year=int(publication_year),
             journal_name=journal_name,
-            citation_info=citation_info,
+            citation_info=citation_info or _apa_journal_source(authors, publication_year, title, journal_name, journal_url, no_date=no_date),
             snippet=snippet,
             keywords=[
                 k.strip() for k in keywords.split(",") if k.strip()
             ],
            order=order,
         )
+        journal.topics.set(selected_topics)
         JournalEntry.objects.filter(pk=journal.pk).update(created_at=_content_created_at(parsed_date))
 
         messages.success(request, f"Journal '{journal.title}' added successfully.")
-        return redirect("journal")
+        log_action(
+            request,
+            "create",
+            "Add Journal",
+            {"Journal": journal.title, "Topics": ", ".join(topic.title for topic in selected_topics), "URL": journal.journal_url},
+        )
+        return redirect("journal_detail", journal_id=journal.id)
 
     return render(
         request,
         "econ/add_journal.html",
-        {
+        _topic_form_context({
             "date": datetime.now(),
             "date_value": timezone.localdate().isoformat(),
-        }
+        })
     )
 
 
@@ -1901,17 +2815,18 @@ def add_image(request):
         _validate_text_not_number(description, "description", "Description", errors)
 
         _validate_url(image_url, "image_url", "image", errors)
-        parsed_date = _parse_optional_content_date(date, bool(image_url), errors)
+        parsed_date = _parse_optional_content_date(date, _is_valid_url(image_url), errors)
+        selected_topics = _validate_topic_selections(request.POST, errors, create=not errors)
 
         if errors:
             return render(
                 request,
                 "econ/add_media.html",
-                {
+                _topic_form_context({
                     "date": datetime.now(),
                     "errors": errors,
                     "values": request.POST,
-                },
+                }),
                 status=400
             )
 
@@ -1923,16 +2838,24 @@ def add_image(request):
             image_url=image_url,
             order=order,
         )
+        media.topics.set(selected_topics)
 
         messages.success(request, f"Image '{media.title}' added successfully.")
-        return redirect("gallery")
+        log_action(
+            request,
+            "create",
+            "Add Image",
+            {"Image": media.title, "Topics": ", ".join(topic.title for topic in selected_topics), "URL": media.image_url},
+        )
+        gallery_page = _gallery_item_page(media.id)
+        return redirect(f"{reverse('gallery')}?page={gallery_page}#gallery-item-{media.id}")
 
     return render(
         request,
         "econ/add_media.html",
-        {
+        _topic_form_context({
             "date": datetime.now(),
-        }
+        })
     )
 
 @login_required
@@ -1955,7 +2878,7 @@ def add_video(request):
 
         if not channel_name:
             errors["channel_name"] = "Channel is required."
-        _validate_text_not_number(channel_name, "channel_name", "Channel", errors)
+        _validate_text_not_symbol(channel_name, "channel_name", "Channel", errors)
 
         if not description:
             errors["description"] = "Description is required."
@@ -1964,21 +2887,19 @@ def add_video(request):
         if not video_url:
             errors["video_url"] = "Video URL is required so the video can be embedded."
         _validate_url(video_url, "video_url", "video", errors)
-        if not date:
-            errors["date"] = "Date is required for videos."
-            parsed_date = None
-        else:
-            parsed_date = _parse_optional_content_date(date, True, errors)
+        parsed_date = _parse_optional_content_date(date, _is_valid_url(video_url), errors)
+
+        selected_topics = _validate_topic_selections(request.POST, errors, create=not errors)
 
         if errors:
             return render(
                 request,
                 "econ/add_vlog.html",
-                {
+                _topic_form_context({
                     "date": datetime.now(),
                     "errors": errors,
                     "values": request.POST,
-                },
+                }),
                 status=400
             )
 
@@ -1999,16 +2920,23 @@ def add_video(request):
             date=parsed_date,
             order=order,
         )
+        new_vlog.topics.set(selected_topics)
 
         messages.success(request, f"Video '{new_vlog.title}' added successfully.")
-        return redirect("vlog")
+        log_action(
+            request,
+            "create",
+            "Add Video",
+            {"Video": new_vlog.title, "Topics": ", ".join(topic.title for topic in selected_topics), "URL": new_vlog.video_url},
+        )
+        return redirect("vlog_detail", vlog_id=new_vlog.vlogID)
 
     return render(
         request,
         "econ/add_vlog.html",
-        {
+        _topic_form_context({
             "date": datetime.now(),
-        }
+        })
     )
 
 

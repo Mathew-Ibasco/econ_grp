@@ -320,7 +320,7 @@
     <div class="container vlog-detail-hero-inner">
       <a class="back-link blog-detail-back-link" href="{% url 'vlog' %}">
         <i class="fas fa-arrow-left"></i>
-        Back to media
+        Back to Media
       </a>
       <div>
         <p class="vlog-eyebrow">Media detail</p>
@@ -372,6 +372,14 @@
         {% if request.user.is_superuser %}
           <div class="detail-card admin-delete-card">
             <h3>Admin actions</h3>
+            <button
+              type="button"
+              class="content-edit-btn"
+              data-content-edit-target="videoEditModal"
+            >
+              <i class="fas fa-pen"></i>
+              Edit Media
+            </button>
             <form method="POST" action="{% url 'delete_vlog' video.vlogID %}">
               {% csrf_token %}
               <button
@@ -388,6 +396,7 @@
               </button>
             </form>
           </div>
+          {% include "econ/partials/video_edit_modal.html" %}
         {% endif %}
         <div class="detail-card">
           <h3>Uploaded by</h3>

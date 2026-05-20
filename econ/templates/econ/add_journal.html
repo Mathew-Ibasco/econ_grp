@@ -36,9 +36,17 @@ Add Journal Entry
                     {% endif %}
                 </div>
 
+                {% include "econ/partials/topic_field.html" %}
+
                 <div class="mb-3">
                     <label class="form-label">Date Created/Posted <small class="text-muted">Editable when a journal URL is provided; otherwise recorded automatically.</small></label>
-                    <input type="date" name="date" class="form-control" value="{{ date_value }}" data-content-date-input {% if not values.journal_url %}disabled{% endif %}>
+                    <div class="admin-date-option-row">
+                        <input type="date" name="date" class="form-control" value="{{ date_value }}" data-content-date-input {% if not values.journal_url or values.no_date %}disabled{% endif %}>
+                        <label class="admin-inline-check">
+                            <input type="checkbox" name="no_date" value="1" data-content-no-date {% if values.no_date %}checked{% endif %}>
+                            <span>No date</span>
+                        </label>
+                    </div>
                     {% if errors.date %}
                         <div class="text-danger field-error" role="alert">{{ errors.date }}</div>
                     {% endif %}
@@ -77,7 +85,7 @@ Add Journal Entry
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Citation Info <small class="text-muted">Text only; cannot be only numbers.</small></label>
+                    <label class="form-label">APA Citation <small class="text-muted">Optional. Leave blank to generate from the journal details and URL.</small></label>
                     <input type="text" name="citation_info" class="form-control" value="{{ values.citation_info }}">
                     {% if errors.citation_info %}
                         <div class="text-danger field-error" role="alert">{{ errors.citation_info }}</div>
@@ -105,20 +113,6 @@ Add Journal Entry
         </div>
     </section>
 </main>
-<script>
-    (function () {
-        var sourceInput = document.querySelector('[data-content-url-source]');
-        var dateInput = document.querySelector('[data-content-date-input]');
-        if (!sourceInput || !dateInput) {
-            return;
-        }
-
-        function syncDateState() {
-            dateInput.disabled = !sourceInput.value.trim();
-        }
-
-        sourceInput.addEventListener('input', syncDateState);
-        syncDateState();
-    })();
-</script>
+{% include "econ/partials/content_date_script.html" %}
+{% include "econ/partials/topic_field_script.html" %}
 {% endblock %}

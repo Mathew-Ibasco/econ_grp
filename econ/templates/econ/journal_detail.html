@@ -96,7 +96,7 @@
         <div class="container blog-detail-hero-inner">
             <a class="back-link blog-detail-back-link" href="{% url 'journal' %}">
                 <i class="fas fa-arrow-left"></i>
-                Back to all journals
+                Back to All Journals
             </a>
             <div>
                 <p class="blog-eyebrow">Journal article</p>
@@ -136,6 +136,14 @@
                 {% if request.user.is_superuser %}
                     <div class="detail-card admin-delete-card">
                         <h2>Admin actions</h2>
+                        <button
+                            type="button"
+                            class="content-edit-btn"
+                            data-content-edit-target="journalEditModal"
+                        >
+                            <i class="fas fa-pen"></i>
+                            Edit Journal
+                        </button>
                         <form method="POST" action="{% url 'delete_journal' journal.id %}">
                             {% csrf_token %}
                             <button
@@ -152,6 +160,7 @@
                             </button>
                         </form>
                     </div>
+                    {% include "econ/partials/journal_edit_modal.html" %}
                 {% endif %}
                 {% if request.user.is_authenticated and learning %}
                     <div class="detail-card learning-card">
@@ -241,7 +250,11 @@
                                 </div>
                             </div>
                         {% else %}
-                            <p class="dashboard-muted">No quiz is available for this journal yet.</p>
+                            {% if learning.quiz_ready_at %}
+                                <p class="dashboard-muted">Quiz processing completes after {{ learning.quiz_ready_at|date:"M j, Y g:i A" }}.</p>
+                            {% else %}
+                                <p class="dashboard-muted">No quiz is available for this journal yet.</p>
+                            {% endif %}
                         {% endif %}
                         {% if learning.result_attempt %}
                             <div class="quiz-modal is-open" id="quiz-result-journal-{{ learning_item_id }}" aria-hidden="false">
@@ -298,7 +311,7 @@
                         </li>
                         {% if journal.citation_info %}
                             <li>
-                                <span class="journal-metadata-label">Citation</span>
+                                <span class="journal-metadata-label">APA Citation</span>
                                 <span class="journal-metadata-value">{{ journal.citation_info }}</span>
                             </li>
                         {% endif %}
@@ -318,7 +331,7 @@
 
                 {% if journal.journal_url %}
                     <div class="detail-card">
-                        <h2>Source</h2>
+                        <h2>Source URL</h2>
                         <ul class="detail-source-list">
                             <li>
                                 <a href="{{ journal.journal_url }}" target="_blank" rel="noopener noreferrer">Read the source journal</a>

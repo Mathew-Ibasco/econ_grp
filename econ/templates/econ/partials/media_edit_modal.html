@@ -1,0 +1,57 @@
+<div class="content-edit-modal {% if media_edit_open and media_edit_item_id == entry.id %}is-open{% endif %}" id="mediaEditModal{{ entry.id }}" aria-hidden="{% if media_edit_open and media_edit_item_id == entry.id %}false{% else %}true{% endif %}">
+    <div class="content-edit-modal-backdrop" data-content-edit-close></div>
+    <div class="content-edit-modal-shell" role="dialog" aria-modal="true" aria-labelledby="mediaEditModalTitle{{ entry.id }}">
+        <div class="content-edit-modal-content">
+            <div class="content-edit-modal-header">
+                <div>
+                    <p class="content-edit-modal-eyebrow">Admin edit</p>
+                    <h2 id="mediaEditModalTitle{{ entry.id }}">Edit {{ entry.get_media_type_display }}</h2>
+                </div>
+                <button type="button" class="content-edit-modal-close" data-content-edit-close aria-label="Close edit modal">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <form method="POST" action="{% url 'edit_gallery_entry' entry.id %}?page={{ page_obj.number }}" class="content-edit-form">
+                {% csrf_token %}
+                {% if media_edit_open and media_edit_item_id == entry.id and media_edit_errors.global %}<div class="text-danger field-error" role="alert">{{ media_edit_errors.global }}</div>{% endif %}
+                <div class="content-edit-field">
+                    <label>Title</label>
+                    <input type="text" name="title" value="{{ entry.edit_values.title }}">
+                    {% if media_edit_open and media_edit_item_id == entry.id and media_edit_errors.title %}<div class="text-danger field-error" role="alert">{{ media_edit_errors.title }}</div>{% endif %}
+                </div>
+                <div class="content-edit-field">
+                    <label>Description</label>
+                    <textarea name="description" rows="4">{{ entry.edit_values.description }}</textarea>
+                    {% if media_edit_open and media_edit_item_id == entry.id and media_edit_errors.description %}<div class="text-danger field-error" role="alert">{{ media_edit_errors.description }}</div>{% endif %}
+                </div>
+                <div class="content-edit-field">
+                    <label>Date Uploaded</label>
+                    <input type="date" name="date" value="{{ entry.edit_values.date }}">
+                    {% if media_edit_open and media_edit_item_id == entry.id and media_edit_errors.date %}<div class="text-danger field-error" role="alert">{{ media_edit_errors.date }}</div>{% endif %}
+                </div>
+                {% if entry.media_type == "image" %}
+                    <div class="content-edit-field">
+                        <label>Image URL</label>
+                        <input type="url" name="image_url" value="{{ entry.edit_values.image_url }}">
+                        {% if media_edit_open and media_edit_item_id == entry.id and media_edit_errors.image_url %}<div class="text-danger field-error" role="alert">{{ media_edit_errors.image_url }}</div>{% endif %}
+                    </div>
+                {% else %}
+                    <div class="content-edit-field">
+                        <label>Video URL</label>
+                        <input type="url" name="video_url" value="{{ entry.edit_values.video_url }}">
+                        {% if media_edit_open and media_edit_item_id == entry.id and media_edit_errors.video_url %}<div class="text-danger field-error" role="alert">{{ media_edit_errors.video_url }}</div>{% endif %}
+                    </div>
+                    <div class="content-edit-field">
+                        <label>Thumbnail URL</label>
+                        <input type="url" name="thumbnail_url" value="{{ entry.edit_values.thumbnail_url }}">
+                        {% if media_edit_open and media_edit_item_id == entry.id and media_edit_errors.thumbnail_url %}<div class="text-danger field-error" role="alert">{{ media_edit_errors.thumbnail_url }}</div>{% endif %}
+                    </div>
+                {% endif %}
+                <div class="content-edit-actions">
+                    <button type="button" class="profile-cancel-btn" data-content-edit-close>Cancel</button>
+                    <button type="submit" class="profile-primary-btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

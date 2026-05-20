@@ -1,0 +1,111 @@
+{% extends "econ/layout.html" %}
+
+{% block title %}
+Audit Logs
+{% endblock %}
+
+{% block content %}
+<main class="audit-page">
+    <section class="admin-form-hero audit-hero">
+        <div class="container admin-form-hero-inner">
+            <div>
+                <p class="admin-form-eyebrow">Admin tools</p>
+                <h1 class="admin-form-title">Audit Logs</h1>
+                <p class="admin-form-intro">Review page visits, account events, content changes, and member actions across the site.</p>
+            </div>
+            <div class="admin-form-hero-card">
+                <strong>{{ audit_total }}</strong>
+                <span>tracked actions</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="container audit-shell">
+        <div class="audit-summary-grid">
+            <div class="audit-summary-card">
+                <span>Showing</span>
+                <strong>{{ shown_total }}</strong>
+                <small>latest entries</small>
+            </div>
+            <div class="audit-summary-card">
+                <span>Visits</span>
+                <strong>{{ action_counts.visit|default:0 }}</strong>
+                <small>page views</small>
+            </div>
+            <div class="audit-summary-card">
+                <span>Creates</span>
+                <strong>{{ action_counts.create|default:0 }}</strong>
+                <small>new records</small>
+            </div>
+            <div class="audit-summary-card">
+                <span>Auth</span>
+                <strong>{{ action_counts.auth|default:0 }}</strong>
+                <small>login/account events</small>
+            </div>
+        </div>
+
+        <div class="audit-log-panel">
+            <div class="audit-log-head">
+                <div>
+                    <h2>Activity Timeline</h2>
+                    <p>Newest actions are listed first. Dates use Manila time.</p>
+                </div>
+            </div>
+
+            {% if audit_logs %}
+                <div class="audit-log-list">
+                    {% for log in audit_logs %}
+                        <article class="audit-log-item">
+                            <div class="audit-log-actor-column">
+                                <div class="audit-log-identity">
+                                    <span class="audit-role audit-role-{{ log.role|lower }}">{{ log.role }}</span>
+                                    <strong>{{ log.username|default:log.role }}</strong>
+                                    <small>{{ log.ip_address|default:"Unknown IP" }}</small>
+                                </div>
+
+                                <div class="audit-log-main">
+                                    <div class="audit-log-topline">
+                                        <span class="audit-action audit-action-{{ log.action }}">{{ log.get_action_display }}</span>
+                                        <time>{{ log.created_at|date:"F d, Y g:iA" }}</time>
+                                    </div>
+                                    <h3>{{ log.label }}</h3>
+                                    <div class="audit-actor-line">
+                                        <span><i class="fas fa-code"></i> {{ log.method|default:"GET" }} {{ log.status_code|default:"" }}</span>
+                                    </div>
+                                    <div class="audit-path-line">
+                                        <i class="fas fa-link"></i>
+                                        <span>{{ log.path|default:"No path recorded" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="audit-detail-card">
+                                <h4>Details</h4>
+                                {% if log.detail_rows %}
+                                    <dl>
+                                        {% for row in log.detail_rows %}
+                                            <div>
+                                                <dt>{{ row.label }}</dt>
+                                                <dd>{{ row.value|default:"-" }}</dd>
+                                            </div>
+                                        {% endfor %}
+                                    </dl>
+                                {% else %}
+                                    <p>No extra details recorded.</p>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+                {% include "econ/partials/pagination.html" %}
+            {% else %}
+                <div class="audit-empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h2>No audit logs yet</h2>
+                    <p>Activity will appear here as users visit pages and perform actions.</p>
+                </div>
+            {% endif %}
+        </div>
+    </section>
+</main>
+{% endblock %}

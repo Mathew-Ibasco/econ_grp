@@ -1,0 +1,71 @@
+<div class="content-edit-modal {% if journal_edit_open %}is-open{% endif %}" id="journalEditModal" aria-hidden="{% if journal_edit_open %}false{% else %}true{% endif %}">
+    <div class="content-edit-modal-backdrop" data-content-edit-close></div>
+    <div class="content-edit-modal-shell" role="dialog" aria-modal="true" aria-labelledby="journalEditModalTitle">
+        <div class="content-edit-modal-content">
+            <div class="content-edit-modal-header">
+                <div>
+                    <p class="content-edit-modal-eyebrow">Admin edit</p>
+                    <h2 id="journalEditModalTitle">Edit Journal</h2>
+                </div>
+                <button type="button" class="content-edit-modal-close" data-content-edit-close aria-label="Close edit modal">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <form method="POST" action="{% url 'edit_journal' journal.id %}" class="content-edit-form">
+                {% csrf_token %}
+                {% if journal_edit_errors.global %}<div class="text-danger field-error" role="alert">{{ journal_edit_errors.global }}</div>{% endif %}
+                <div class="content-edit-field">
+                    <label>Journal Name</label>
+                    <input type="text" name="title" value="{{ journal_edit_values.title }}">
+                    {% if journal_edit_errors.title %}<div class="text-danger field-error" role="alert">{{ journal_edit_errors.title }}</div>{% endif %}
+                </div>
+                <div class="content-edit-grid">
+                    <div class="content-edit-field">
+                        <label>Date Created/Posted</label>
+                        <input type="date" name="date" value="{{ journal_edit_values.date }}">
+                        {% if journal_edit_errors.date %}<div class="text-danger field-error" role="alert">{{ journal_edit_errors.date }}</div>{% endif %}
+                    </div>
+                    <div class="content-edit-field">
+                        <label>Publication Year</label>
+                        <input type="number" name="publication_year" value="{{ journal_edit_values.publication_year }}">
+                        {% if journal_edit_errors.publication_year %}<div class="text-danger field-error" role="alert">{{ journal_edit_errors.publication_year }}</div>{% endif %}
+                    </div>
+                </div>
+                <div class="content-edit-field">
+                    <label>Journal URL</label>
+                    <input type="url" name="journal_url" value="{{ journal_edit_values.journal_url }}">
+                    {% if journal_edit_errors.journal_url %}<div class="text-danger field-error" role="alert">{{ journal_edit_errors.journal_url }}</div>{% endif %}
+                </div>
+                <div class="content-edit-field">
+                    <label>Authors</label>
+                    <input type="text" name="authors" value="{{ journal_edit_values.authors }}">
+                    {% if journal_edit_errors.authors %}<div class="text-danger field-error" role="alert">{{ journal_edit_errors.authors }}</div>{% endif %}
+                </div>
+                <div class="content-edit-field">
+                    <label>Publication</label>
+                    <input type="text" name="journal_name" value="{{ journal_edit_values.journal_name }}">
+                    {% if journal_edit_errors.journal_name %}<div class="text-danger field-error" role="alert">{{ journal_edit_errors.journal_name }}</div>{% endif %}
+                </div>
+                <div class="content-edit-field">
+                    <label>APA Citation</label>
+                    <input type="text" name="citation_info" value="{{ journal_edit_values.citation_info }}">
+                    {% if journal_edit_errors.citation_info %}<div class="text-danger field-error" role="alert">{{ journal_edit_errors.citation_info }}</div>{% endif %}
+                </div>
+                <div class="content-edit-field">
+                    <label>Snippet</label>
+                    <textarea name="snippet" rows="5">{{ journal_edit_values.snippet }}</textarea>
+                    {% if journal_edit_errors.snippet %}<div class="text-danger field-error" role="alert">{{ journal_edit_errors.snippet }}</div>{% endif %}
+                </div>
+                <div class="content-edit-field">
+                    <label>Keywords</label>
+                    <input type="text" name="keywords" value="{{ journal_edit_values.keywords }}">
+                    {% if journal_edit_errors.keywords %}<div class="text-danger field-error" role="alert">{{ journal_edit_errors.keywords }}</div>{% endif %}
+                </div>
+                <div class="content-edit-actions">
+                    <button type="button" class="profile-cancel-btn" data-content-edit-close>Cancel</button>
+                    <button type="submit" class="profile-primary-btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

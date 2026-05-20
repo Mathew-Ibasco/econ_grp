@@ -1,0 +1,46 @@
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <nav class="site-pagination" aria-label="{{ pagination_label|default:'items' }} pagination">
+        <div class="site-pagination-summary">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </div>
+        <div class="site-pagination-controls">
+            {% if page_obj.has_previous %}
+                <a class="site-page-link" href="?page=1" aria-label="First page">
+                    <i class="fas fa-angles-left"></i>
+                </a>
+                <a class="site-page-link site-page-link-text" href="?page={{ page_obj.previous_page_number }}">
+                    <i class="fas fa-chevron-left"></i>
+                    Previous
+                </a>
+            {% else %}
+                <span class="site-page-link is-disabled" aria-disabled="true">
+                    <i class="fas fa-angles-left"></i>
+                </span>
+                <span class="site-page-link site-page-link-text is-disabled" aria-disabled="true">
+                    <i class="fas fa-chevron-left"></i>
+                    Previous
+                </span>
+            {% endif %}
+
+            <span class="site-page-current">{{ page_obj.number }}</span>
+
+            {% if page_obj.has_next %}
+                <a class="site-page-link site-page-link-text" href="?page={{ page_obj.next_page_number }}">
+                    Next
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                <a class="site-page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last page">
+                    <i class="fas fa-angles-right"></i>
+                </a>
+            {% else %}
+                <span class="site-page-link site-page-link-text is-disabled" aria-disabled="true">
+                    Next
+                    <i class="fas fa-chevron-right"></i>
+                </span>
+                <span class="site-page-link is-disabled" aria-disabled="true">
+                    <i class="fas fa-angles-right"></i>
+                </span>
+            {% endif %}
+        </div>
+    </nav>
+{% endif %}
