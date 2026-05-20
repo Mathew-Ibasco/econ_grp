@@ -111,8 +111,8 @@ document.addEventListener('DOMContentLoaded', function () {
 {% block content %}
 <main class="forum-page blogs-page">
     <section class="blogs-hero" {% if not request.user.is_authenticated %}aria-hidden="true" inert{% endif %}>
-            <div class="container blogs-hero-inner">
-                <div>
+        <div class="container blogs-hero-inner">
+            <div>
                 <p class="blog-eyebrow">Community forum</p>
                 <h1 class="blogs-title">Talk with other learners</h1>
                 <p class="blogs-intro">Browse conversations, ask questions, and share articles, routes, and project updates. Anyone can read, and signed-in users can start new discussions or reply.</p>
@@ -158,20 +158,21 @@ document.addEventListener('DOMContentLoaded', function () {
     </section>
 
     {% if request.user.is_authenticated %}
-        <div class="forum-modal" id="forumThreadModal" aria-hidden="true">
-            <div class="forum-modal-backdrop" data-forum-modal-close></div>
-            <div class="forum-modal-shell" role="dialog" aria-modal="true" aria-labelledby="forumThreadModalLabel">
-                <div class="forum-modal-content">
-                    <div class="forum-modal-header">
-                        <div>
-                            <p class="forum-modal-eyebrow">Community forum</p>
-                            <h2 class="forum-modal-title" id="forumThreadModalLabel">Start a new thread</h2>
-                        </div>
-                        <button type="button" class="forum-modal-close" data-forum-modal-close aria-label="Close modal">
-                            <i class="fas fa-xmark"></i>
-                        </button>
+    <div class="forum-modal" id="forumThreadModal" aria-hidden="true">
+        <div class="forum-modal-backdrop" data-forum-modal-close></div>
+        <div class="forum-modal-shell" role="dialog" aria-modal="true" aria-labelledby="forumThreadModalLabel">
+            <div class="forum-modal-content">
+                <div class="forum-modal-header">
+                    <div>
+                        <p class="forum-modal-eyebrow">Community forum</p>
+                        <h2 class="forum-modal-title" id="forumThreadModalLabel">Start a new thread</h2>
                     </div>
-                    <div class="forum-modal-body">
+                    <button type="button" class="forum-modal-close" data-forum-modal-close aria-label="Close modal">
+                        <i class="fas fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="forum-modal-body" style="height: 350px; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="overflow-y: auto; flex: 1; padding-right: 12px;">
                         <form class="forum-composer-form forum-modal-form" method="post" action="{% url 'forum_create_thread' %}" enctype="multipart/form-data">
                             {% csrf_token %}
                             <div class="forum-field">
@@ -206,6 +207,65 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             </div>
         </div>
-    {% endif %}
+    </div>
+{% endif %}
 </main>
+
+<style>
+.forum-thread-panel,
+.forum-thread-panel--list,
+.forum-thread-list {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+}
+
+.forum-feed {
+    height: 500px !important;
+    max-height: 500px !important;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+}
+
+.forum-feed .forum-thread-panel {
+    overflow-y: scroll !important;
+    flex: 1 !important;
+}
+
+.forum-layout {
+    overflow: visible !important;
+}
+
+.container {
+    overflow: visible !important;
+}
+
+body {
+    overflow-y: auto !important;
+    height: auto !important;
+}
+
+.forum-feed {
+    height: calc(100vh - 200px) !important;
+    overflow-y: auto !important;
+    padding-right: 8px;
+}
+
+html {
+    overflow-y: auto !important;
+}
+
+.forum-feed {
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+.forum-feed::-webkit-scrollbar {
+    display: none; /* Chrome/Safari/Opera */
+}
+</style>
 {% endblock %}
