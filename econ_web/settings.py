@@ -124,10 +124,10 @@ def _mysql_database():
             "PORT": os.environ.get("ECON_MYSQL_PORT", "3306"),
             "OPTIONS": {
                 "charset": "utf8mb4",
+                "ssl": {"ca": None},
             },
         }
     }
-
 
 if DB_ENGINE == "sqlite":
     DATABASES = _sqlite_database()
