@@ -467,6 +467,8 @@ def logout_process(request):
 def profile(request):
     user = request.user
     edit_mode = request.GET.get("edit") == "1"
+    role_label = "ADMINISTRATOR" if user.is_superuser else "STAFF MEMBER" if user.is_staff else "MEMBER"
+    access_label = "System Admin Access" if user.is_superuser or user.is_staff else "Standard Member Access"
     values = {
         "username": user.username,
         "email": user.email,
@@ -551,6 +553,8 @@ def profile(request):
         {
             "date": datetime.now(),
             "edit_mode": edit_mode,
+            "profile_role_label": role_label,
+            "profile_access_label": access_label,
             "values": values,
             "errors": errors,
             "bio_limit": bio_limit,
