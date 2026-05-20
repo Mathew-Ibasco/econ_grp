@@ -5,22 +5,22 @@
                 <a class="forum-thread-card" href="{% url 'forum_thread' thread.id %}">
                     <div class="forum-thread-content">
                         <div class="forum-thread-top">
-                            <div class="forum-thread-tags">
-                                {% for topic in thread.all_topics %}
-                                    <span class="forum-thread-topic">
-                                        <i class="fas {{ topic.icon }}"></i>
-                                        {{ topic.title }}
+                            <div class="forum-thread-tags" data-forum-thread-tags>
+                                {% for tag in thread.all_tags %}
+                                    <span class="forum-thread-tag">
+                                        <i class="fas {{ tag.icon }}"></i>
+                                        {{ tag.title }}
                                     </span>
                                 {% endfor %}
+                                <span class="forum-thread-tag forum-thread-tag--ellipsis" hidden aria-hidden="true" data-forum-thread-tags-ellipsis>...</span>
                             </div>
                             <span class="forum-thread-stats">{{ thread.reply_count }} replies</span>
                         </div>
                         <h3>{{ thread.title }}</h3>
-                        <p class="forum-thread-preview">{{ thread.body|truncatechars:220 }}</p>
-                        <div class="forum-thread-foot">
+                        <div class="forum-thread-meta">
                             <div class="forum-thread-author">
                                 <strong>{{ thread.author.username }}</strong>
-                                <span>{{ thread.created_at|date:"M j, Y" }}</span>
+                                <span>Posted {{ thread.created_at|date:"M j, Y" }}</span>
                             </div>
                             <span class="forum-thread-cta">Open discussion</span>
                         </div>
@@ -32,7 +32,7 @@
         <div class="empty-state forum-empty-state">
             <i class="fas fa-comments"></i>
             <h3>No discussions yet</h3>
-            <p>Be the first to start the conversation for this topic.</p>
+            <p>Be the first to start the conversation in this forum.</p>
         </div>
     {% endif %}
 </div>

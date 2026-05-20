@@ -3,6 +3,42 @@
 from django.db import migrations, models
 
 
+def ensure_itemnote_user_index(apps, schema_editor):
+    ItemNote = apps.get_model("econ", "ItemNote")
+    table_name = ItemNote._meta.db_table
+    index_name = "item_note_user_idx"
+    user_column = ItemNote._meta.get_field("user").column
+
+    with schema_editor.connection.cursor() as cursor:
+        constraints = schema_editor.connection.introspection.get_constraints(cursor, table_name)
+
+    for constraint in constraints.values():
+        if constraint.get("index") and constraint.get("columns") == [user_column]:
+            return
+
+    schema_editor.add_index(
+        ItemNote,
+        models.Index(fields=["user"], name=index_name),
+    )
+
+
+def drop_itemnote_user_index(apps, schema_editor):
+    ItemNote = apps.get_model("econ", "ItemNote")
+    table_name = ItemNote._meta.db_table
+    index_name = "item_note_user_idx"
+
+    with schema_editor.connection.cursor() as cursor:
+        constraints = schema_editor.connection.introspection.get_constraints(cursor, table_name)
+
+    if index_name not in constraints:
+        return
+
+    schema_editor.remove_index(
+        ItemNote,
+        models.Index(fields=["user"], name=index_name),
+    )
+
+
 def drop_unique_user_item_note(apps, schema_editor):
     ItemNote = apps.get_model("econ", "ItemNote")
     table_name = ItemNote._meta.db_table
@@ -59,6 +95,10 @@ class Migration(migrations.Migration):
         ),
         migrations.SeparateDatabaseAndState(
             database_operations=[
+                migrations.RunPython(
+                    ensure_itemnote_user_index,
+                    reverse_code=drop_itemnote_user_index,
+                ),
                 migrations.RunPython(
                     drop_unique_user_item_note,
                     reverse_code=restore_unique_user_item_note,

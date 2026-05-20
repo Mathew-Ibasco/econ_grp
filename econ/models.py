@@ -4,8 +4,7 @@ from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
-# Default local setup uses SQLite (db_local.sqlite3).
-# If you switch ECON_DB_ENGINE=mysql, make sure the econdb database exists first.
+# Default setup uses MySQL. Make sure the econdb database exists first.
 # Generate migration files with: python manage.py makemigrations
 # Apply migrations with: python manage.py migrate
 
@@ -66,6 +65,11 @@ class ForumThread(models.Model):
         blank=True,
         related_name="forum_additional_threads",
     )
+    likes = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name="liked_forum_threads",
+    )
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="forum_threads")
     title = models.CharField(max_length=220)
     body = models.TextField()
@@ -93,6 +97,14 @@ class ForumThread(models.Model):
     def topic_titles(self):
         return ", ".join(topic.title for topic in self.all_topics)
 
+    @property
+    def all_tags(self):
+        return self.all_topics
+
+    @property
+    def tag_titles(self):
+        return self.topic_titles
+
 
 class ForumThreadImage(models.Model):
     thread = models.ForeignKey(ForumThread, on_delete=models.CASCADE, related_name="images")
@@ -118,6 +130,11 @@ class ForumReply(models.Model):
     thread = models.ForeignKey(ForumThread, on_delete=models.CASCADE, related_name="replies")
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="forum_replies")
     body = models.TextField()
+    likes = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name="liked_forum_replies",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -126,6 +143,26 @@ class ForumReply(models.Model):
 
     def __str__(self):
         return f"Reply on {self.thread_id} by {self.author_id}"
+
+
+class ForumReplyImage(models.Model):
+    reply = models.ForeignKey(ForumReply, on_delete=models.CASCADE, related_name="images")
+    image = models.ImageField(upload_to="forum_replies/%Y/%m/%d/")
+    order = models.PositiveSmallIntegerField(default=0)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "forum_reply_image"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"Image for reply {self.reply_id}"
+
+
+@receiver(post_delete, sender=ForumReplyImage)
+def delete_forum_reply_image_file(sender, instance, **kwargs):
+    if instance.image:
+        instance.image.delete(save=False)
 
 
 @receiver(post_delete, sender=ForumReply)

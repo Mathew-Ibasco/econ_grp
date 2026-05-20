@@ -2,7 +2,9 @@
 __pycache__/
 *.py[cod]
 *.pyc.*
-
 # Local SQLite databases
+db_local.sqlite3
 *.sqlite3
 *.sqlite
+.env.local
+*.pyc

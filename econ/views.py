@@ -16,10 +16,15 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 
-import os, re, sys, html, calendar, json, subprocess, sqlite3, pymysql
+import os, re, sys, html, calendar, json, subprocess, sqlite3
+
+try:
+    import pymysql
+except ImportError:  # Optional dependency; only needed for MySQL support.
+    pymysql = None
 
 from .forms import ForumReplyForm, ForumThreadCreateForm
-from .models import BlogPost, Bookmark, ForumReply, ForumThread, ForumThreadImage, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, StudyItemProgress, Topic, TopicNote, User, vlog as VlogEntry
+from .models import BlogPost, Bookmark, ForumReply, ForumReplyImage, ForumThread, ForumThreadImage, ItemNote, ItemQuizAttempt, ItemQuizProgress, ItemQuizQuestion, JournalEntry, MediaGalleryEntry, QuizAttempt, StudyItemProgress, Topic, TopicNote, User, vlog as VlogEntry
 
 
 DEFAULT_RECOMMENDATION_IMAGE = "https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg"
@@ -158,19 +163,6 @@ def _dashboard_recommendations(dashboard_topics, saved_item_keys, limit=6):
 
     return recommended_items
 
-
-def _forum_topic_queryset():
-    return Topic.objects.annotate(
-        primary_thread_count=Count("forum_threads", distinct=True),
-        additional_thread_count=Count("forum_additional_threads", distinct=True),
-        primary_reply_count=Count("forum_threads__replies", distinct=True),
-        additional_reply_count=Count("forum_additional_threads__replies", distinct=True),
-    ).annotate(
-        thread_count=F("primary_thread_count") + F("additional_thread_count"),
-        reply_count=F("primary_reply_count") + F("additional_reply_count"),
-    ).order_by("order", "title")
-
-
 def _forum_thread_queryset(topic=None):
     queryset = ForumThread.objects.select_related("topic", "author").annotate(
         reply_count=Count("replies", distinct=True),
@@ -180,45 +172,29 @@ def _forum_thread_queryset(topic=None):
     )
     if topic is not None:
         queryset = queryset.filter(Q(topic=topic) | Q(additional_topics=topic))
-    return queryset.distinct().order_by("-last_activity_at", "-created_at")
+    return queryset.distinct().order_by("-created_at", "-id")
 
 
-def _forum_page_context(active_topic=None, thread_form=None, thread_modal_open=False):
-    forum_topics = list(_forum_topic_queryset())
-    forum_threads = list(_forum_thread_queryset(active_topic))
+def _forum_page_context(thread_form=None, thread_modal_open=False):
+    forum_threads = list(_forum_thread_queryset())
     forum_stats = {
         "thread_count": ForumThread.objects.count(),
         "reply_count": ForumReply.objects.count(),
-        "active_topic_count": Topic.objects.filter(
-            Q(forum_threads__isnull=False) | Q(forum_additional_threads__isnull=False)
-        ).distinct().count(),
     }
-    visible_reply_count = sum(getattr(thread, "reply_count", 0) for thread in forum_threads)
-    if active_topic is not None:
-        forum_feed_title = f"{active_topic.title} discussions"
-        forum_feed_description = f"Showing conversations tagged with {active_topic.title}."
-        forum_feed_summary = f"{len(forum_threads)} discussions - {visible_reply_count} replies"
-    else:
-        forum_feed_title = "Latest discussions"
-        forum_feed_description = "Open threads across blogs, journals, media, and rail projects."
-        forum_feed_summary = f"{forum_stats['reply_count']} replies across {forum_stats['active_topic_count']} active topics"
+    forum_feed_title = "Latest Discussions"
+    forum_feed_description = "Open threads across blogs, journals, media, and rail projects."
+    forum_feed_summary = f"{forum_stats['reply_count']} replies across {forum_stats['thread_count']} discussions"
 
     if thread_form is None:
-        thread_form = ForumThreadCreateForm(
-            initial={
-                "topics": [active_topic.pk] if active_topic is not None else [],
-            }
-        )
+        thread_form = ForumThreadCreateForm()
 
-    thread_form.fields["topics"].queryset = Topic.objects.order_by("order", "title")
+    thread_form.fields["tags"].queryset = Topic.objects.order_by("order", "title")
 
     return {
         "date": datetime.now(),
-        "forum_topics": forum_topics,
         "forum_threads": forum_threads,
         "forum_stats": forum_stats,
         "thread_form": thread_form,
-        "active_topic": active_topic,
         "forum_feed_title": forum_feed_title,
         "forum_feed_description": forum_feed_description,
         "forum_feed_summary": forum_feed_summary,
@@ -232,14 +208,12 @@ def _forum_thread_panel_context(context):
     }
 
 
-def _forum_fragment_response(request, active_topic, thread_form=None, thread_modal_open=False):
+def _forum_fragment_response(request, thread_form=None, thread_modal_open=False):
     context = _forum_page_context(
-        active_topic=active_topic,
         thread_form=thread_form,
         thread_modal_open=thread_modal_open,
     )
     return JsonResponse({
-        "active_topic_key": active_topic.key if active_topic is not None else "",
         "forum_feed_title": context["forum_feed_title"],
         "forum_feed_description": context["forum_feed_description"],
         "forum_feed_summary": context["forum_feed_summary"],
@@ -251,10 +225,42 @@ def _forum_fragment_response(request, active_topic, thread_form=None, thread_mod
     })
 
 
-def _forum_thread_context(thread, reply_form=None):
-    context = _forum_page_context(active_topic=thread.topic)
+def _forum_thread_detail_queryset():
+    return ForumThread.objects.select_related("topic", "author").prefetch_related(
+        Prefetch("additional_topics", queryset=Topic.objects.order_by("order", "title")),
+        Prefetch("images", queryset=ForumThreadImage.objects.order_by("order", "id")),
+        "likes",
+        Prefetch(
+            "replies",
+            queryset=ForumReply.objects.select_related("author").prefetch_related(
+                Prefetch("images", queryset=ForumReplyImage.objects.order_by("order", "id")),
+                "likes",
+            ),
+        ),
+    )
+
+
+def _prepare_forum_like_state(thread, viewer):
+    viewer_id = viewer.id if getattr(viewer, "is_authenticated", False) else None
+
+    thread_likes = list(thread.likes.all())
+    thread.like_count = len(thread_likes)
+    thread.user_liked = viewer_id is not None and any(user.id == viewer_id for user in thread_likes)
+
+    replies = list(thread.replies.all())
+    for reply in replies:
+        reply_likes = list(reply.likes.all())
+        reply.like_count = len(reply_likes)
+        reply.user_liked = viewer_id is not None and any(user.id == viewer_id for user in reply_likes)
+
+    return replies
+
+
+def _forum_thread_context(thread, viewer=None, reply_form=None):
+    context = _forum_page_context()
     thread_topics = [thread.topic]
     thread_topics.extend(list(thread.additional_topics.all()))
+    replies = _prepare_forum_like_state(thread, viewer)
     context.update(
         {
             "thread": thread,
@@ -263,7 +269,7 @@ def _forum_thread_context(thread, reply_form=None):
                     Q(topic__in=thread_topics) | Q(additional_topics__in=thread_topics)
                 ).exclude(pk=thread.pk).distinct()[:4]
             ),
-            "replies": list(thread.replies.all()),
+            "replies": replies,
             "reply_form": reply_form or ForumReplyForm(),
         }
     )
@@ -635,8 +641,23 @@ def _dashboard_page_context(request):
 
     return context
 
+def _public_home_context():
+    homepage_topics = list(
+        Topic.objects.prefetch_related(
+            "blog_posts",
+            "journal_entries",
+            "vlog_entries",
+        ).order_by("order", "id")
+    )
+    return {
+        "date": datetime.now(),
+        "show_dashboard": False,
+        "recommended_items": _dashboard_recommendations(homepage_topics, set()),
+    }
+
+
 def home(request):
-    return render(request, "econ/index.html", {"date": datetime.now(), "show_dashboard": False})
+    return render(request, "econ/index.html", _public_home_context())
 
 # staff/admin only
 @login_required
@@ -749,7 +770,7 @@ def index(request):
         context = _dashboard_page_context(request)
         context["show_dashboard"] = True
         return render(request, "econ/index.html", context)
-    return render(request, "econ/index.html", {"date": datetime.now(), "show_dashboard": False})
+    return render(request, "econ/index.html", _public_home_context())
 
 @login_required
 def dashboard(request):
@@ -758,11 +779,9 @@ def dashboard(request):
     return render(request, "econ/index.html", context)
 
 def forum(request):
-    selected_topic_key = request.GET.get("topic", "").strip()
-    active_topic = Topic.objects.filter(key=selected_topic_key).first() if selected_topic_key else None
     if request.GET.get("fragment") == "1" or request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return _forum_fragment_response(request, active_topic)
-    context = _forum_page_context(active_topic=active_topic)
+        return _forum_fragment_response(request)
+    context = _forum_page_context()
     return render(request, "econ/forum.html", context)
 
 
@@ -773,16 +792,16 @@ def forum_create_thread(request):
 
     form = ForumThreadCreateForm(request.POST, request.FILES)
     if form.is_valid():
-        selected_topics = list(form.cleaned_data["topics"])
-        primary_topic = selected_topics[0]
-        secondary_topics = selected_topics[1:]
+        selected_tags = list(form.cleaned_data["tags"])
+        primary_tag = selected_tags[0]
+        secondary_tags = selected_tags[1:]
         thread = ForumThread.objects.create(
-            topic=primary_topic,
+            topic=primary_tag,
             author=request.user,
             title=form.cleaned_data["title"],
             body=form.cleaned_data["body"],
         )
-        thread.additional_topics.set(secondary_topics)
+        thread.additional_topics.set(secondary_tags)
         uploaded_images = form.cleaned_data.get("images") or []
         for order, image in enumerate(uploaded_images):
             ForumThreadImage.objects.create(thread=thread, image=image, order=order)
@@ -793,9 +812,7 @@ def forum_create_thread(request):
             messages.success(request, "Your discussion was posted.")
         return redirect("forum_thread", thread_id=thread.id)
 
-    selected_topic_ids = [value for value in request.POST.getlist("topics") if str(value).isdigit()]
-    active_topic = Topic.objects.filter(pk=selected_topic_ids[0]).first() if selected_topic_ids else None
-    context = _forum_page_context(active_topic=active_topic, thread_form=form, thread_modal_open=True)
+    context = _forum_page_context(thread_form=form, thread_modal_open=True)
     messages.error(request, "Please finish the thread details and try again.")
     return render(request, "econ/forum.html", context, status=400)
 
@@ -822,15 +839,8 @@ def _refresh_forum_thread_activity(thread):
 
 
 def forum_thread(request, thread_id):
-    thread = get_object_or_404(
-        ForumThread.objects.select_related("topic", "author").prefetch_related(
-            Prefetch("additional_topics", queryset=Topic.objects.order_by("order", "title")),
-            Prefetch("images", queryset=ForumThreadImage.objects.order_by("order", "id")),
-            Prefetch("replies", queryset=ForumReply.objects.select_related("author"))
-        ),
-        pk=thread_id,
-    )
-    context = _forum_thread_context(thread)
+    thread = get_object_or_404(_forum_thread_detail_queryset(), pk=thread_id)
+    context = _forum_thread_context(thread, request.user)
     return render(request, "econ/forum_thread.html", context)
 
 
@@ -839,28 +849,56 @@ def forum_reply(request, thread_id):
     if request.method != "POST":
         return redirect("forum_thread", thread_id=thread_id)
 
-    thread = get_object_or_404(
-        ForumThread.objects.select_related("topic", "author").prefetch_related(
-            Prefetch("additional_topics", queryset=Topic.objects.order_by("order", "title")),
-            Prefetch("replies", queryset=ForumReply.objects.select_related("author"))
-        ),
-        pk=thread_id,
-    )
-    form = ForumReplyForm(request.POST)
+    thread = get_object_or_404(_forum_thread_detail_queryset(), pk=thread_id)
+    form = ForumReplyForm(request.POST, request.FILES)
     if form.is_valid():
-        ForumReply.objects.create(
+        reply = ForumReply.objects.create(
             thread=thread,
             author=request.user,
             body=form.cleaned_data["body"],
         )
+        uploaded_images = form.cleaned_data.get("images") or []
+        for order, image in enumerate(uploaded_images):
+            ForumReplyImage.objects.create(reply=reply, image=image, order=order)
         thread.last_activity_at = timezone.now()
         thread.save(update_fields=["last_activity_at"])
-        messages.success(request, "Your reply was posted.")
+        if uploaded_images:
+            messages.success(request, "Your reply and pictures were posted.")
+        else:
+            messages.success(request, "Your reply was posted.")
         return redirect(f"{reverse('forum_thread', args=[thread.id])}#replies")
 
-    context = _forum_thread_context(thread, reply_form=form)
-    messages.error(request, "Please write a reply before posting.")
+    context = _forum_thread_context(thread, request.user, reply_form=form)
+    messages.error(request, "Please check the reply details and try again.")
     return render(request, "econ/forum_thread.html", context, status=400)
+
+
+@login_required
+def forum_toggle_thread_like(request, thread_id):
+    if request.method != "POST":
+        return redirect("forum_thread", thread_id=thread_id)
+
+    thread = get_object_or_404(ForumThread, pk=thread_id)
+    if thread.likes.filter(pk=request.user.pk).exists():
+        thread.likes.remove(request.user)
+    else:
+        thread.likes.add(request.user)
+
+    return redirect(f"{reverse('forum_thread', args=[thread.id])}#thread")
+
+
+@login_required
+def forum_toggle_reply_like(request, reply_id):
+    reply = get_object_or_404(ForumReply.objects.select_related("thread"), pk=reply_id)
+    if request.method != "POST":
+        return redirect(f"{reverse('forum_thread', args=[reply.thread_id])}#reply-{reply.id}")
+
+    if reply.likes.filter(pk=request.user.pk).exists():
+        reply.likes.remove(request.user)
+    else:
+        reply.likes.add(request.user)
+
+    return redirect(f"{reverse('forum_thread', args=[reply.thread_id])}#reply-{reply.id}")
 
 
 @login_required
@@ -1320,6 +1358,9 @@ def _sqlite_dump_stream():
 
 
 def _mysql_dump_stream():
+    if pymysql is None:
+        raise ImportError("PyMySQL is required for MySQL database support.")
+
     db = settings.DATABASES['default']
     conn = pymysql.connect(
         host=db['HOST'],
@@ -1397,6 +1438,9 @@ def _sqlite_upload(sql):
 
 
 def _mysql_upload(sql):
+    if pymysql is None:
+        raise ImportError("PyMySQL is required for MySQL database support.")
+
     db = settings.DATABASES['default']
     conn = pymysql.connect(
         host=db['HOST'],
