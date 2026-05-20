@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         {% if request.user == reply.author or request.user.is_staff or request.user.is_superuser %}
                                             <form method="post" action="{% url 'forum_delete_reply' reply.id %}">
                                                 {% csrf_token %}
-                                                <button type="button" class="forum-reply-delete" data-forum-delete-trigger data-delete-title="Delete reply?" data-delete-message="Delete this reply?" data-delete-warning="This cannot be undone." data-delete-action="Delete reply">
+                                                <button type="button" class="forum-reply-delete" data-forum-delete-trigger data-delete-title="Delete reply?" data-delete-warning="This cannot be undone." data-delete-action="Delete reply">
                                                     <i class="far fa-trash-alt"></i>
                                                 </button>
                                             </form>
@@ -1355,5 +1355,6 @@ document.addEventListener('DOMContentLoaded', function () {
 .forum-reply-count i {
     color: #ffb347 !important;
 }
+
 </style>
 {% endblock %}
