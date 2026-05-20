@@ -37,13 +37,16 @@ Add Journal Entry
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Date Created/Posted <small class="text-muted">Recorded automatically when the journal entry is created.</small></label>
-                    <input type="date" class="form-control" value="{{ date|date:'Y-m-d' }}" readonly>
+                    <label class="form-label">Date Created/Posted <small class="text-muted">Editable when a journal URL is provided; otherwise recorded automatically.</small></label>
+                    <input type="date" name="date" class="form-control" value="{{ date_value }}" data-content-date-input {% if not values.journal_url %}disabled{% endif %}>
+                    {% if errors.date %}
+                        <div class="text-danger field-error" role="alert">{{ errors.date }}</div>
+                    {% endif %}
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">Journal URL <small class="text-muted">Example: https://example.com/article</small></label>
-                    <input type="url" name="journal_url" class="form-control" value="{{ values.journal_url }}">
+                    <input type="url" name="journal_url" class="form-control" value="{{ values.journal_url }}" data-content-url-source>
                     {% if errors.journal_url %}
                         <div class="text-danger field-error" role="alert">{{ errors.journal_url }}</div>
                     {% endif %}
@@ -102,4 +105,20 @@ Add Journal Entry
         </div>
     </section>
 </main>
+<script>
+    (function () {
+        var sourceInput = document.querySelector('[data-content-url-source]');
+        var dateInput = document.querySelector('[data-content-date-input]');
+        if (!sourceInput || !dateInput) {
+            return;
+        }
+
+        function syncDateState() {
+            dateInput.disabled = !sourceInput.value.trim();
+        }
+
+        sourceInput.addEventListener('input', syncDateState);
+        syncDateState();
+    })();
+</script>
 {% endblock %}

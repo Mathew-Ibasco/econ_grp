@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, time
 from types import SimpleNamespace
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -1449,11 +1449,19 @@ def _parse_optional_content_date(value, has_url, errors):
         errors["date"] = "Enter a valid date."
         return None
 
+
+def _content_created_at(content_date):
+    return timezone.make_aware(
+        datetime.combine(content_date, time.min),
+        timezone.get_current_timezone(),
+    )
+
 @login_required
 @user_passes_test(superuser_required)
 def add_blog(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
+        posted_date = request.POST.get("date", "").strip()
         excerpt = request.POST.get("excerpt", "").strip()
         featured_image_filename = generate_filename(title)
         featured_image_url = request.POST.get("featured_image_url", "").strip()
@@ -1463,6 +1471,7 @@ def add_blog(request):
         highlights = request.POST.get("highlights", "").strip()
         gallery = request.POST.get("gallery", "").strip()
         sources = request.POST.get("sources", "").strip()
+        has_source_url = bool(sources)
 
         order = (
             BlogPost.objects.order_by("-order")
@@ -1498,9 +1507,10 @@ def add_blog(request):
             errors["gallery"] = "Gallery URLs are required."
         _validate_gallery_urls(gallery, errors)
 
-        if not sources:
-            errors["sources"] = "Sources are required."
-        _validate_sources_format(sources, errors)
+        if sources:
+            _validate_sources_format(sources, errors)
+
+        parsed_date = _parse_optional_content_date(posted_date, has_source_url, errors)
 
         if not featured_image_url:
             errors["featured_image_url"] = "Featured image URL is required."
@@ -1512,6 +1522,7 @@ def add_blog(request):
                 "econ/add_blog.html",
                 {
                     "date": datetime.now(),
+                    "date_value": posted_date or timezone.localdate().isoformat(),
                     "errors": errors,
                     "values": request.POST,
                 },
@@ -1625,6 +1636,7 @@ def add_blog(request):
             sources=source_list,
             order=order,
         )
+        BlogPost.objects.filter(pk=blog.pk).update(created_at=_content_created_at(parsed_date))
 
         messages.success(request, f"Blog '{blog.title}' created successfully.")
         return redirect("blog")
@@ -1634,6 +1646,7 @@ def add_blog(request):
         "econ/add_blog.html",
         {
             "date": datetime.now(),
+            "date_value": timezone.localdate().isoformat(),
         }
     )
 
@@ -1643,6 +1656,7 @@ def add_blog(request):
 def add_journal(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
+        posted_date = request.POST.get("date", "").strip()
         journal_url = request.POST.get("journal_url", "").strip()
         authors = request.POST.get("authors", "").strip()
         publication_year = request.POST.get("publication_year", "").strip()
@@ -1664,9 +1678,10 @@ def add_journal(request):
             errors["title"] = "A journal with this title already exists."
         _validate_text_not_number(title, "title", "Title", errors)
 
-        if not journal_url:
-            errors["journal_url"] = "Journal URL is required."
-        _validate_url(journal_url, "journal_url", "journal", errors)
+        if journal_url:
+            _validate_url(journal_url, "journal_url", "journal", errors)
+
+        parsed_date = _parse_optional_content_date(posted_date, bool(journal_url), errors)
 
         if not authors:
             errors["authors"] = "Authors are required."
@@ -1701,6 +1716,7 @@ def add_journal(request):
                 "econ/add_journal.html",
                 {
                     "date": datetime.now(),
+                    "date_value": posted_date or timezone.localdate().isoformat(),
                     "errors": errors,
                     "values": request.POST,
                 },
@@ -1720,6 +1736,7 @@ def add_journal(request):
             ],
            order=order,
         )
+        JournalEntry.objects.filter(pk=journal.pk).update(created_at=_content_created_at(parsed_date))
 
         messages.success(request, f"Journal '{journal.title}' added successfully.")
         return redirect("journal")
@@ -1729,6 +1746,7 @@ def add_journal(request):
         "econ/add_journal.html",
         {
             "date": datetime.now(),
+            "date_value": timezone.localdate().isoformat(),
         }
     )
 
