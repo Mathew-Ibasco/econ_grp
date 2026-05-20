@@ -1798,6 +1798,7 @@ def add_video(request):
         channel_name = request.POST.get("channel_name", "").strip()
         description = request.POST.get("description", "").strip()
         video_url = request.POST.get("video_url", "").strip()
+        thumbnail_url = request.POST.get("thumbnail_url", "").strip()
         date = request.POST.get("date", "").strip()
 
         errors = {}
@@ -1819,6 +1820,7 @@ def add_video(request):
         if not video_url:
             errors["video_url"] = "Video URL is required so the video can be embedded."
         _validate_url(video_url, "video_url", "video", errors)
+        _validate_url(thumbnail_url, "thumbnail_url", "thumbnail", errors)
         if not date:
             errors["date"] = "Date is required for videos."
             parsed_date = None
@@ -1851,6 +1853,7 @@ def add_video(request):
             channel_name=channel_name,
             description=description,
             video_url=video_url,
+            thumbnail_url=thumbnail_url,
             date=parsed_date,
             order=order,
         )
