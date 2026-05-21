@@ -247,6 +247,45 @@
     background: rgba(142, 68, 21, 0.95);
   }
 
+  .dashboard-gallery-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .dashboard-gallery-lightbox.is-open {
+    display: flex;
+  }
+
+  .dashboard-gallery-lightbox img {
+    max-width: min(80%, 1100px);
+    max-height: 80vh;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  }
+
+  .dashboard-gallery-lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 35px;
+    border: 0;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .dashboard-gallery-lightbox-close:hover {
+    color: #d1d5db;
+  }
+
   @media (max-width: 992px) {
     .content-carousel-card {
       flex-basis: min(78vw, 340px);
@@ -264,6 +303,10 @@
 
     .content-carousel-overlay h3 {
       font-size: 1.05rem;
+    }
+
+    .dashboard-gallery-lightbox img {
+      max-width: 92%;
     }
   }
 {% endblock %}
@@ -558,6 +601,58 @@
         updateButtons();
         startAutoplay();
       });
+
+      var galleryLightbox = document.getElementById('dashboardGalleryLightbox');
+      var galleryLightboxImg = document.getElementById('dashboardGalleryLightboxImg');
+      var galleryLightboxClose = document.querySelector('[data-dashboard-gallery-close]');
+
+      var closeGalleryLightbox = function () {
+        if (!galleryLightbox || !galleryLightboxImg) {
+          return;
+        }
+
+        galleryLightbox.classList.remove('is-open');
+        galleryLightbox.setAttribute('aria-hidden', 'true');
+        galleryLightboxImg.src = '';
+        galleryLightboxImg.alt = '';
+      };
+
+      document.querySelectorAll('[data-dashboard-gallery-image]').forEach(function (link) {
+        link.addEventListener('click', function (event) {
+          if (!galleryLightbox || !galleryLightboxImg) {
+            return;
+          }
+
+          var imageUrl = link.getAttribute('data-dashboard-gallery-image');
+          if (!imageUrl) {
+            return;
+          }
+
+          event.preventDefault();
+          galleryLightboxImg.src = imageUrl;
+          galleryLightboxImg.alt = link.getAttribute('data-dashboard-gallery-title') || 'Gallery image';
+          galleryLightbox.classList.add('is-open');
+          galleryLightbox.setAttribute('aria-hidden', 'false');
+        });
+      });
+
+      if (galleryLightboxClose) {
+        galleryLightboxClose.addEventListener('click', closeGalleryLightbox);
+      }
+
+      if (galleryLightbox) {
+        galleryLightbox.addEventListener('click', function (event) {
+          if (event.target === galleryLightbox) {
+            closeGalleryLightbox();
+          }
+        });
+      }
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          closeGalleryLightbox();
+        }
+      });
     });
   </script>
 {% endblock %}
@@ -571,7 +666,7 @@
                     <p class="dashboard-kicker">Welcome, {{ request.user.username|title }}</p>
                     <h2>Your Rail Mobility Dashboard</h2>
                     <p>Track saved topics, continue study progress, and jump back into rail transport resources from one focused workspace.</p>
-                    <a href="#saved-topics" class="btn-soft">Continue studying <i class="fas fa-arrow-down"></i></a>
+                    <a href="#saved-topics" class="btn-soft">Continue Studying <i class="fas fa-arrow-down"></i></a>
                 </div>
                 <div class="member-hero-panel">
                     <div class="member-panel-head">
@@ -709,7 +804,7 @@
                                         <div class="study-progress-fill" style="width: {{ board.progress_percent }}%;"></div>
                                     </div>
                                 </div>
-                                <p class="dashboard-muted">Open a blog, journal, or video to add notes and take checkpoints.</p>
+                                <p class="dashboard-muted">Open a blog, journal, or media item to add notes and take checkpoints.</p>
                                 {% with topic=board.topic %}
                                     <details class="study-resources">
                                         <summary>Related Resources</summary>
@@ -720,10 +815,10 @@
                                             <div class="saved-related"><h4>Journals</h4>{% for item in board.journal_items %}<a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}" target="_blank"><span>{{ item.title }}</span>{% if item.completed %}<strong>Viewed</strong>{% endif %}</a>{% endfor %}</div>
                                         {% endif %}
                                         {% if board.media_items %}
-                                            <div class="saved-related"><h4>Media</h4>{% for item in board.media_items %}<span class="resource-status-link"><span>{{ item.title }}</span></span>{% endfor %}<a href="{% url 'gallery' %}" class="text-link">Open gallery <i class="fas fa-arrow-right"></i></a></div>
+                                            <div class="saved-related"><h4>Gallery</h4>{% for item in board.media_items %}<a href="{{ item.url }}" class="resource-status-link" data-dashboard-gallery-image="{{ item.url }}" data-dashboard-gallery-title="{{ item.title }}"><span>{{ item.title }}</span></a>{% endfor %}<a href="{% url 'gallery' %}" class="text-link">Open gallery <i class="fas fa-arrow-right"></i></a></div>
                                         {% endif %}
                                         {% if board.video_items %}
-                                            <div class="saved-related"><h4>Videos</h4>{% for item in board.video_items %}<a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}" target="_blank"><span>{{ item.title }}</span>{% if item.completed %}<strong>Viewed</strong>{% endif %}</a>{% endfor %}<a href="{% url 'vlog' %}" class="text-link">Open videos <i class="fas fa-arrow-right"></i></a></div>
+                                            <div class="saved-related"><h4>Media</h4>{% for item in board.video_items %}<a href="{{ item.url }}" class="resource-status-link {% if item.completed %}is-viewed{% endif %}"><span>{{ item.title }}</span>{% if item.completed %}<strong>Viewed</strong>{% endif %}</a>{% endfor %}<a href="{% url 'vlog' %}" class="text-link">Open media <i class="fas fa-arrow-right"></i></a></div>
                                         {% endif %}
                                         {% if topic.source_url %}<div class="saved-related"><h4>Source</h4><a href="{{ topic.source_url }}" class="text-link" target="_blank">Open source <i class="fas fa-arrow-right"></i></a></div>{% endif %}
                                     </details>
@@ -756,7 +851,7 @@
                                 <span class="saved-type">Topic</span>
                                 <h3>{{ topic.title }}</h3>
                                 <p>{{ topic.summary }}</p>
-                                <p class="dashboard-muted">{{ topic.blog_posts.all|length }} blogs · {{ topic.journal_entries.all|length }} journals · {{ topic.media_entries.all|length }} media · {{ topic.vlog_entries.all|length }} videos</p>
+                                <p class="dashboard-muted">{{ topic.blog_posts.all|length }} blogs · {{ topic.journal_entries.all|length }} journals · {{ topic.media_entries.all|length }} gallery · {{ topic.vlog_entries.all|length }} media</p>
                             </div>
                             <div class="dashboard-card-actions">
                                 {% if topic.source_url %}<a href="{{ topic.source_url }}" class="text-link" target="_blank">View source</a>{% else %}<span class="dashboard-muted">Topic collection</span>{% endif %}
@@ -780,7 +875,7 @@
                     <div class="dashboard-section-heading recommended-carousel-head">
                         <div>
                             <h2 class="section-title">Recommended Next</h2>
-                            <p>Scroll through blog posts, journals, and videos matched to your rail mobility topics.</p>
+                            <p>Scroll through blog posts, journals, and media matched to your rail mobility topics.</p>
                         </div>
 
                         {% if recommended_items|length > 1 %}
@@ -846,7 +941,7 @@
                         <div class="empty-state">
                             <i class="fas fa-book-open"></i>
                             <h3>No recommendations yet</h3>
-                            <p>Save a topic to unlock blog, journal, and video suggestions in this carousel.</p>
+                            <p>Save a topic to unlock blog, journal, and media suggestions in this carousel.</p>
                         </div>
                     {% endif %}
                 </div>
@@ -862,7 +957,7 @@
                         <br><br>
                         <h2>Fast, Safe, Connected:<br>Railways shaping our cities</h2>
                         <p>Rail transport plays a vital role in improving urban accessibility and mobility — helping people travel faster, safer, and more efficiently across metropolitan areas. In the Philippines, stronger rail systems like MRT, LRT, the Metro Manila Subway, and the North-South Commuter Railway can connect communities to jobs, education, and essential services.</p>
-                        <a href="#" class="btn-soft">Explore insights <i class="fas fa-arrow-right"></i></a>
+                        <a href="{% url 'blog_detail' 'philippine-railway-system-latest-projects' %}" class="btn-soft">Explore Insights <i class="fas fa-arrow-right"></i></a>
                     </div>
                     <div class="hero-img">
                         <img src="https://cdn.britannica.com/16/123116-050-5D3AC998/Light-rail-Changchun-transit-Jilin-China.jpg" alt="Modern light rail transit system">
@@ -871,7 +966,7 @@
             </div>
 
             <div class="container">
-                <section class="info-section">
+                <section class="info-section" id="rail-insights">
                     <h2 class="section-title">What is Rail Transport?</h2>
                     <div class="card-grid">
                         <div class="info-card"><i class="fas fa-train"></i><h3>What is Rail Transport?</h3><p>Moving passengers and goods by train along metal tracks above ground, underground, or elevated. It is efficient for long-distance travel and heavy cargo.</p></div>
@@ -946,7 +1041,7 @@
                         <div class="dashboard-section-heading recommended-carousel-head">
                             <div>
                                 <h2 class="section-title">Recommended Next</h2>
-                                <p>Scroll through blog posts, journals, and videos matched to rail mobility topics.</p>
+                                <p>Scroll through blog posts, journals, and media matched to rail mobility topics.</p>
                             </div>
 
                             {% if recommended_items|length > 1 %}
@@ -996,7 +1091,7 @@
                             <div class="empty-state">
                                 <i class="fas fa-book-open"></i>
                                 <h3>No recommendations yet</h3>
-                                <p>Browse the site to surface blog, journal, and video suggestions in this carousel.</p>
+                                <p>Browse the site to surface blog, journal, and media suggestions in this carousel.</p>
                             </div>
                         {% endif %}
                     </div>
@@ -1022,5 +1117,10 @@
             </div>
         </div>
     {% endif %}
+
+    <div id="dashboardGalleryLightbox" class="dashboard-gallery-lightbox" aria-hidden="true">
+        <button type="button" class="dashboard-gallery-lightbox-close" data-dashboard-gallery-close aria-label="Close image">&times;</button>
+        <img id="dashboardGalleryLightboxImg" src="" alt="">
+    </div>
 </main>
 {% endblock %}

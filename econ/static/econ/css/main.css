@@ -413,11 +413,16 @@ body {
 }
 
 .dashboard-stats div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     min-height: 116px;
     padding: 1rem;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.1);
+    text-align: center;
 }
 
 .dashboard-stats strong {
@@ -434,6 +439,7 @@ body {
 
 .dashboard-section {
     padding: 2.5rem 0;
+    scroll-margin-top: 6rem;
 }
 
 .dashboard-section-heading {
@@ -3558,7 +3564,7 @@ hr {
 }
 
 .forum-thread-page .forum-thread-back-link:hover {
-    color: #ffcf7a;
+    color: #ffffff;
     background: rgba(255, 255, 255, 0.22);
     text-decoration: none;
 }
@@ -4372,7 +4378,7 @@ hr {
 }
 
 .blog-detail-back-link:hover {
-    color: #ffcf7a;
+    color: #ffffff;
     background: rgba(255, 255, 255, 0.22);
     text-decoration: none;
 }
@@ -4393,14 +4399,14 @@ hr {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    color: #1c6e8f;
+    color: #ffffff;
     font-weight: 800;
     text-decoration: none;
 }
 
 .back-link:hover {
-    color: #0b2b3b;
-    text-decoration: underline;
+    color: #ffffff;
+    text-decoration: none;
 }
 
 .blog-detail-layout {

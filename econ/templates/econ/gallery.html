@@ -173,10 +173,8 @@
   <section class="container gallery">
     {% for entry in gallery_entries %}
       <article class="gallery-card" id="gallery-item-{{ entry.id }}">
-        {% if entry.media_type == "image" and entry.image_url %}
+        {% if entry.image_url %}
           <a class="gallery-card-link" href="{{ entry.image_url }}" data-gallery-image="{{ entry.image_url }}" aria-label="Open {{ entry.title }} image">
-        {% elif entry.video_url %}
-          <a class="gallery-card-link" href="{{ entry.video_url }}" target="_blank" rel="noopener noreferrer" aria-label="Open {{ entry.title }} video">
         {% else %}
           <div class="gallery-card-link" aria-label="{{ entry.title }}">
         {% endif %}
@@ -187,7 +185,7 @@
                 <img src="{{ entry.image_url }}" alt="{{ entry.title }}">
               {% else %}
                 <div class="gallery-card-fallback">
-                  <i class="fas {% if entry.media_type == 'video' %}fa-circle-play{% else %}fa-image{% endif %}"></i>
+                  <i class="fas fa-image"></i>
                 </div>
               {% endif %}
             </div>
@@ -201,7 +199,7 @@
               <h3><span class="blog-card-title">{{ entry.title }}</span></h3>
               <p>{{ entry.description }}</p>
             </div>
-        {% if entry.media_type == "image" and entry.image_url or entry.video_url %}
+        {% if entry.image_url %}
           </a>
         {% else %}
           </div>

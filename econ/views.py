@@ -65,13 +65,13 @@ def _topic_study_items(topic):
             "url": journal_entry.journal_url,
             "kind": "Journal",
         })
-    for media_entry in topic.media_entries.all():
+    for media_entry in topic.media_entries.filter(media_type="image").order_by("order", "id"):
         items.append({
             "type": "media",
             "id": media_entry.id,
             "title": media_entry.title,
-            "url": reverse("gallery"),
-            "kind": "Media",
+            "url": media_entry.image_url or reverse("gallery"),
+            "kind": "Gallery",
         })
     for video_entry in topic.vlog_entries.all():
         items.append({
@@ -79,7 +79,7 @@ def _topic_study_items(topic):
             "id": video_entry.vlogID,
             "title": video_entry.title,
             "url": reverse("vlog_detail", args=[video_entry.vlogID]),
-            "kind": "Video",
+            "kind": "Media",
         })
     return items
 
@@ -130,12 +130,12 @@ def _topic_recommendation_candidates(topic):
                 topic=topic,
                 title=entry.title,
                 summary=entry.description or "Watch a short rail mobility highlight from this topic.",
-                kind="Video",
+                kind="Media",
                 kind_key="video",
                 icon="fa-circle-play",
                 url=reverse("vlog_detail", args=[entry.vlogID]),
                 preview_image=preview_image,
-                cta_label="Watch video",
+                cta_label="Open media",
             )
         )
 
@@ -637,7 +637,7 @@ def logout_process(request):
             {"Account": request.user.username, "Result": "Success"},
         )
     logout(request)
-    return redirect("index")
+    return redirect(f"{reverse('index')}#saved-topics")
 
 @login_required
 def profile(request):
@@ -1832,8 +1832,8 @@ def delete_vlog(request, vlog_id):
 
 
 def gallery(request):
-    all_gallery_entries = list(MediaGalleryEntry.objects.order_by("order", "id"))
-    gallery_page = _paginate(request, all_gallery_entries, 8)
+    all_gallery_entries = list(_gallery_image_queryset())
+    gallery_page = _paginate(request, all_gallery_entries, 6)
     gallery_entries = list(gallery_page.object_list)
     for entry in gallery_entries:
         entry.edit_values = _media_edit_values(entry)
@@ -1850,8 +1850,8 @@ def gallery(request):
     )
 
 
-def _gallery_item_page(media_id, per_page=8):
-    ordered_ids = list(MediaGalleryEntry.objects.order_by("order", "id").values_list("id", flat=True))
+def _gallery_item_page(media_id, per_page=6):
+    ordered_ids = list(_gallery_image_queryset().values_list("id", flat=True))
     try:
         position = ordered_ids.index(media_id)
     except ValueError:
@@ -1870,9 +1870,13 @@ def _media_edit_values(media):
     }
 
 
+def _gallery_image_queryset():
+    return MediaGalleryEntry.objects.filter(media_type="image").order_by("order", "id")
+
+
 def _gallery_context(extra=None):
-    all_gallery_entries = list(MediaGalleryEntry.objects.order_by("order", "id"))
-    paginator = Paginator(all_gallery_entries, 8)
+    all_gallery_entries = list(_gallery_image_queryset())
+    paginator = Paginator(all_gallery_entries, 6)
     page_number = (extra or {}).get("page_number") or 1
     try:
         gallery_page = paginator.page(page_number)
