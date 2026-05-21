@@ -98,6 +98,31 @@ class ForumThreadDeleteModalTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertFalse(self.thread.likes.filter(pk=self.user.pk).exists())
 
+    def test_thread_like_can_be_toggled_via_ajax(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("forum_toggle_thread_like", args=[self.thread.id]),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["like_count"], 1)
+        self.assertTrue(response.json()["liked"])
+        self.assertEqual(response.json()["aria_label"], "1 like")
+
+        response = self.client.post(
+            reverse("forum_toggle_thread_like", args=[self.thread.id]),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["like_count"], 0)
+        self.assertFalse(response.json()["liked"])
+        self.assertEqual(response.json()["aria_label"], "0 likes")
+
     def test_reply_like_can_be_toggled(self):
         self.client.force_login(self.user)
         reply = ForumReply.objects.create(thread=self.thread, author=self.user, body="Reply body")
@@ -111,6 +136,32 @@ class ForumThreadDeleteModalTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertFalse(reply.likes.filter(pk=self.user.pk).exists())
+
+    def test_reply_like_can_be_toggled_via_ajax(self):
+        self.client.force_login(self.user)
+        reply = ForumReply.objects.create(thread=self.thread, author=self.user, body="Reply body")
+
+        response = self.client.post(
+            reverse("forum_toggle_reply_like", args=[reply.id]),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["like_count"], 1)
+        self.assertTrue(response.json()["liked"])
+        self.assertEqual(response.json()["aria_label"], "1 like")
+
+        response = self.client.post(
+            reverse("forum_toggle_reply_like", args=[reply.id]),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["like_count"], 0)
+        self.assertFalse(response.json()["liked"])
+        self.assertEqual(response.json()["aria_label"], "0 likes")
 
     def test_forum_page_orders_latest_threads_first(self):
         older_thread = ForumThread.objects.create(

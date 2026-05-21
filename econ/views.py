@@ -223,6 +223,29 @@ def _forum_thread_panel_context(context):
     }
 
 
+def _forum_is_ajax_request(request):
+    return (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("accept", "")
+    )
+
+
+def _forum_like_label(like_count):
+    return "1 like" if like_count == 1 else f"{like_count} likes"
+
+
+def _toggle_forum_likes(likes_relation, user):
+    if likes_relation.filter(pk=user.pk).exists():
+        likes_relation.remove(user)
+        liked = False
+    else:
+        likes_relation.add(user)
+        liked = True
+
+    like_count = likes_relation.count()
+    return liked, like_count
+
+
 def _forum_fragment_response(request, thread_form=None, thread_modal_open=False):
     context = _forum_page_context(
         thread_form=thread_form,
@@ -1100,10 +1123,16 @@ def forum_toggle_thread_like(request, thread_id):
         return redirect("forum_thread", thread_id=thread_id)
 
     thread = get_object_or_404(ForumThread, pk=thread_id)
-    if thread.likes.filter(pk=request.user.pk).exists():
-        thread.likes.remove(request.user)
-    else:
-        thread.likes.add(request.user)
+    liked, like_count = _toggle_forum_likes(thread.likes, request.user)
+
+    if _forum_is_ajax_request(request):
+        return JsonResponse(
+            {
+                "liked": liked,
+                "like_count": like_count,
+                "aria_label": _forum_like_label(like_count),
+            }
+        )
 
     return redirect(f"{reverse('forum_thread', args=[thread.id])}#thread")
 
@@ -1114,10 +1143,16 @@ def forum_toggle_reply_like(request, reply_id):
     if request.method != "POST":
         return redirect(f"{reverse('forum_thread', args=[reply.thread_id])}#reply-{reply.id}")
 
-    if reply.likes.filter(pk=request.user.pk).exists():
-        reply.likes.remove(request.user)
-    else:
-        reply.likes.add(request.user)
+    liked, like_count = _toggle_forum_likes(reply.likes, request.user)
+
+    if _forum_is_ajax_request(request):
+        return JsonResponse(
+            {
+                "liked": liked,
+                "like_count": like_count,
+                "aria_label": _forum_like_label(like_count),
+            }
+        )
 
     return redirect(f"{reverse('forum_thread', args=[reply.thread_id])}#reply-{reply.id}")
 

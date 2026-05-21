@@ -188,6 +188,90 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    // --- Like buttons without page reload ---
+    if (window.fetch && window.FormData) {
+        var likeLabel = function (count) {
+            return count === 1 ? '1 like' : count + ' likes';
+        };
+
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (!form || !form.classList || !form.classList.contains('forum-like-form')) {
+                return;
+            }
+
+            event.preventDefault();
+
+            if (form.dataset.likeLoading === '1') {
+                return;
+            }
+
+            var likeButton = form.querySelector('[data-forum-like-button]') || form.querySelector('button[type="submit"]');
+            var likeIcon = likeButton ? (likeButton.querySelector('[data-forum-like-icon]') || likeButton.querySelector('i')) : null;
+            var likeCount = likeButton ? (likeButton.querySelector('[data-forum-like-count]') || likeButton.querySelector('span')) : null;
+            var previousDisabled = likeButton ? likeButton.disabled : false;
+
+            form.dataset.likeLoading = '1';
+            if (likeButton) {
+                likeButton.disabled = true;
+                likeButton.setAttribute('aria-busy', 'true');
+            }
+
+            fetch(form.action, {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            }).then(function (response) {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    return null;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Unable to update like state.');
+                }
+
+                var contentType = response.headers.get('content-type') || '';
+                if (contentType.indexOf('application/json') === -1) {
+                    throw new Error('Unexpected like response.');
+                }
+
+                return response.json();
+            }).then(function (data) {
+                if (!data || !likeButton) {
+                    return;
+                }
+
+                var liked = !!data.liked;
+                var count = typeof data.like_count === 'number' ? data.like_count : parseInt(data.like_count, 10);
+
+                likeButton.classList.toggle('is-liked', liked);
+                if (likeIcon) {
+                    likeIcon.classList.remove('fas', 'far');
+                    likeIcon.classList.add(liked ? 'fas' : 'far');
+                }
+                if (likeCount && !isNaN(count)) {
+                    likeCount.textContent = count;
+                }
+                likeButton.setAttribute('aria-label', data.aria_label || likeLabel(isNaN(count) ? 0 : count));
+            }).catch(function (error) {
+                if (window.console && window.console.error) {
+                    window.console.error(error);
+                }
+            }).finally(function () {
+                form.dataset.likeLoading = '0';
+                if (likeButton) {
+                    likeButton.disabled = previousDisabled;
+                    likeButton.removeAttribute('aria-busy');
+                }
+            });
+        });
+    }
 });
 </script>
 {% endblock %}
@@ -270,9 +354,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         {% if request.user.is_authenticated %}
                             <form method="post" action="{% url 'forum_toggle_thread_like' thread.id %}" class="forum-like-form">
                                 {% csrf_token %}
-                                <button type="submit" class="forum-like-button {% if thread.user_liked %}is-liked{% endif %}" data-forum-thread-like-trigger aria-label="{{ thread.like_count }} likes">
-                                    <i class="{% if thread.user_liked %}fas{% else %}far{% endif %} fa-heart"></i>
-                                    <span>{{ thread.like_count }}</span>
+                                <button type="submit" class="forum-like-button {% if thread.user_liked %}is-liked{% endif %}" data-forum-thread-like-trigger data-forum-like-button aria-label="{% if thread.like_count == 1 %}1 like{% else %}{{ thread.like_count }} likes{% endif %}">
+                                    <i class="{% if thread.user_liked %}fas{% else %}far{% endif %} fa-heart" data-forum-like-icon></i>
+                                    <span data-forum-like-count>{{ thread.like_count }}</span>
                                 </button>
                             </form>
                         {% else %}
@@ -374,9 +458,9 @@ document.addEventListener('DOMContentLoaded', function () {
                                     {% if request.user.is_authenticated %}
                                         <form method="post" action="{% url 'forum_toggle_reply_like' reply.id %}" class="forum-like-form">
                                             {% csrf_token %}
-                                            <button type="submit" class="forum-like-button-small {% if reply.user_liked %}is-liked{% endif %}" data-forum-reply-like-trigger>
-                                                <i class="{% if reply.user_liked %}fas{% else %}far{% endif %} fa-heart"></i>
-                                                <span>{{ reply.like_count }}</span>
+                                            <button type="submit" class="forum-like-button-small {% if reply.user_liked %}is-liked{% endif %}" data-forum-reply-like-trigger data-forum-like-button aria-label="{% if reply.like_count == 1 %}1 like{% else %}{{ reply.like_count }} likes{% endif %}">
+                                                <i class="{% if reply.user_liked %}fas{% else %}far{% endif %} fa-heart" data-forum-like-icon></i>
+                                                <span data-forum-like-count>{{ reply.like_count }}</span>
                                             </button>
                                         </form>
                                     {% else %}
